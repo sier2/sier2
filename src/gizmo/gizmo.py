@@ -6,6 +6,8 @@ class GizmoError(Exception):
 class Gizmo(param.Parameterized):
     pass
 
+_gizmo_graph = []
+
 class GizmoManager:
     @staticmethod
     def connect(src: Gizmo, dst: Gizmo, param_names: list[str]) -> None:
@@ -38,3 +40,28 @@ class GizmoManager:
 
             # print(f'connect {src}.{outp} -> {dst}.{inp}')
             setattr(dst, inp, getattr(src.param, outp))
+
+        _gizmo_graph.append((src, dst))
+
+    @staticmethod
+    def disconnect(g: Gizmo):
+        """Disconnect gizmo g from other gizmos.
+
+        We can look in the gizmo to see what it is watching,
+        but we need to look through all the other gizmos to see
+        if they watch this one.
+        """
+
+        for p, watchers in g.param.watchers.items():
+            for watcher in watchers['value']:
+                # print(f'disconnect watcher {g.name}.{watcher}')
+                g.param.unwatch(watcher)
+
+        for src, dst in _gizmo_graph:
+            if dst is g:
+                for p, watchers in src.param.watchers.items():
+                    for watcher in watchers['value']:
+                        # print(f'disconnect watcher {src.name}.{watcher}')
+                        src.param.unwatch(watcher)
+
+        _gizmo_graph[:] = [(src, dst) for src, dst in _gizmo_graph if src is not g and dst is not g]
