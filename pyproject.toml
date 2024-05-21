@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "gizmo"
+version = "0.1.0"
+description = "Gizmo code flows"
+authors = ["algol60 <algol60@users.noreply.github.com>"]
+readme = "README.md"
+packages = [{include = "gizmo", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+param = "^2.0"
+
+[[tool.mypy.overrides]]
+module = "param"
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
