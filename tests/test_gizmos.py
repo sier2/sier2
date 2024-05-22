@@ -3,12 +3,32 @@ import pytest
 from gizmo import Gizmo, GizmoManager, GizmoError
 import param
 
+@pytest.fixture(autouse=True)
+def setup():
+    """Ensure that each test starts with a clear flow graph."""
+
+    GizmoManager.clear()
+
+    yield
+
+    pass
+
 def test_input_must_have_allow_refs():
     class P(Gizmo):
         s = param.String()
 
     class Q(Gizmo):
         s = param.String()
+
+    with pytest.raises(GizmoError):
+        GizmoManager.connect(P(), Q(), ['s'])
+
+def test_output_must_not_allow_refs():
+    class P(Gizmo):
+        s = param.String(allow_refs=True)
+
+    class Q(Gizmo):
+        s = param.String(allow_refs=True)
 
     with pytest.raises(GizmoError):
         GizmoManager.connect(P(), Q(), ['s'])
@@ -60,7 +80,12 @@ def test_disconnect():
         pp = param.String()
 
     class Q(Gizmo):
-        qp = param.String(allow_refs=True)
+        qp_in = param.String(allow_refs=True)
+        qp_out = param.String()
+
+        @param.depends('qp_in', watch=True)
+        def f(self):
+            self.qp_out = '* ' + self.qp_in
 
     class R(Gizmo):
         rp1 = param.String(allow_refs=True)
@@ -84,27 +109,30 @@ def test_disconnect():
     q = Q()
     r = R()
 
-    # Nothing is being watched by anything.
+    # Nothing is being watched by anything else.
     #
     assert n_watchers(p, 'pp') == 0
-    assert n_watchers(q, 'qp') == 0
+    assert n_watchers(q, 'qp_in') == 1 # watching itself via @param.depends
+    assert n_watchers(q, 'qp_out') == 0
     assert len(r.param.watchers) == 0
     # assert n_watchers(r, 'rp1') == 0
     # assert n_watchers(r, 'rp2') == 0
 
-    GizmoManager.connect(p, q, ['pp:qp'])
-    GizmoManager.connect(q, r, ['qp:rp1'])
+    GizmoManager.connect(p, q, ['pp:qp_in'])
+    GizmoManager.connect(q, r, ['qp_out:rp1'])
     GizmoManager.connect(p, r, ['pp:rp2'])
 
     # Ensure that the flow is working.
     #
     p.pp = 'plugh'
-    assert q.qp == 'plugh'
-    assert r.rp1 == 'plugh' # p -> q -> r
+    assert q.qp_in == 'plugh' # p -> q
+    assert q.qp_out == '* plugh' # p -> q
+    assert r.rp1 == '* plugh' # p -> q -> r
     assert r.rp2 == 'plugh' # p -> r
 
     assert n_watchers(p, 'pp') == 2
-    assert n_watchers(q, 'qp') == 1
+    assert n_watchers(q, 'qp_in') == 1  # watching itself via @param.depends
+    assert n_watchers(q, 'qp_out') == 1
     assert len(r.param.watchers) == 0
     # assert n_watchers(r, 'rp1') == 0
     # assert n_watchers(r, 'rp2') == 0
@@ -115,9 +143,10 @@ def test_disconnect():
     #
     assert n_watchers(p, 'pp') == 1
 
-    # Gizmo r is no longer watching q.qp.
+    # Gizmo r is no longer watching q.qp_out.
     #
-    assert n_watchers(q, 'qp') == 0
+    assert n_watchers(q, 'qp_in') == 0
+    assert n_watchers(q, 'qp_out') == 0
 
     # Gizmo r is still not being watched.
     #
@@ -127,5 +156,79 @@ def test_disconnect():
     # Gizmo r is still watching p.pp.
     #
     p.pp = 'xyzzy'
-    assert q.qp == 'plugh'
+    assert q.qp_in == 'plugh'
+    assert q.qp_out == '* plugh'
     assert r.rp2=='xyzzy'
+
+def test_self_loop():
+    """Ensure that gizmos can't connect to themselves."""
+
+    class Q(Gizmo):
+        qp0 = param.String(allow_refs=True)
+        qp1 = param.String()
+
+    q = Q()
+
+    with pytest.raises(GizmoError):
+        GizmoManager.connect(q, q, ['qp1:qp0'])
+
+def test_loop():
+    """Ensure that connecting a gizmo doesn't create a loop in the flow DAG."""
+
+    class P(Gizmo):
+        pp0 = param.String(allow_refs=True)
+        pp1 = param.String()
+
+    class Q(Gizmo):
+        qp0 = param.String(allow_refs=True)
+        qp1 = param.String()
+
+    p = P()
+    q = Q()
+
+    GizmoManager.connect(p, q, ['pp1:qp0'])
+    with pytest.raises(GizmoError):
+        GizmoManager.connect(q, p, ['qp1:pp0'])
+
+def test_loop2():
+    class P(Gizmo):
+        pp0 = param.String(allow_refs=True)
+        pp1 = param.String()
+
+    class Q(Gizmo):
+        qp0 = param.String(allow_refs=True)
+        qp1 = param.String()
+
+    class R(Gizmo):
+        rp0 = param.String(allow_refs=True)
+        rp1 = param.String()
+
+    class S(Gizmo):
+        sp0 = param.String(allow_refs=True)
+        sp1 = param.String()
+
+    p = P()
+    q = Q()
+    r = R()
+    s = S()
+
+    GizmoManager.connect(p, q, ['pp1:qp0'])
+    GizmoManager.connect(q, r, ['qp1:rp0'])
+    with pytest.raises(GizmoError):
+        GizmoManager.connect(r, p, ['rp1:pp0'])
+
+    GizmoManager.clear()
+
+    GizmoManager.connect(p, q, ['pp1:qp0'])
+    GizmoManager.connect(q, r, ['qp1:rp0'])
+    GizmoManager.connect(s, p, ['sp1:pp0'])
+    with pytest.raises(GizmoError):
+        GizmoManager.connect(r, p, ['rp1:pp0'])
+
+    GizmoManager.clear()
+
+    GizmoManager.connect(q, r, ['qp1:rp0'])
+    GizmoManager.connect(p, q, ['pp1:qp0'])
+    GizmoManager.connect(s, p, ['sp1:pp0'])
+    with pytest.raises(GizmoError):
+        GizmoManager.connect(r, p, ['rp1:pp0'])
