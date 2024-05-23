@@ -3,6 +3,41 @@ import pytest
 from gizmo import Gizmo, GizmoManager, GizmoError
 import param
 
+class PassThrough(Gizmo):
+    """A gizmo with one input and one output."""
+
+    p_in = param.Integer(allow_refs=True)
+    p_out = param.Integer()
+
+    @param.depends('p_in', watch=True)
+    def run(self):
+        self.p_out = self.p_in
+
+class Add(Gizmo):
+    """A gizmo that adds an addend to its input."""
+
+    a_in = param.Integer(allow_refs=True)
+    a_out = param.Integer()
+
+    def __init__(self, addend: int):
+        super().__init__()
+        self.addend = addend
+
+    @param.depends('a_in', watch=True)
+    def run(self):
+        self.a_out = self.a_in + self.addend
+
+class OneIn(Gizmo):
+    """A gizmo with one input."""
+
+    o_in = param.Integer(allow_refs=True)
+
+class TwoIn(Gizmo):
+    """A gizmo with two inputs."""
+
+    t1_in = param.Integer(allow_refs=True)
+    t2_in = param.Integer(allow_refs=True)
+
 @pytest.fixture(autouse=True)
 def setup():
     """Ensure that each test starts with a clear flow graph."""
@@ -33,63 +68,28 @@ def test_output_must_not_allow_refs():
     with pytest.raises(GizmoError):
         GizmoManager.connect(P(), Q(), ['s'])
 
-def test_basic():
-    """Ensure that a value flows through the first input parameter to the lsat output parameter."""
+def test_simple():
+    """Ensure that a value flows through the first input parameter to the last output parameter."""
 
-    class P(Gizmo):
-        """A gizmo with a single output parameter."""
+    p = PassThrough()
+    a = Add(1)
+    o = OneIn()
 
-        one = param.Integer(label='output P')
+    print(f'@@@ {p.p_out=} {a.a_in=}')
+    GizmoManager.connect(p, a, ['p_out:a_in'])
+    GizmoManager.connect(a, o, ['a_out:o_in'])
 
-    class Q(param.Parameterized):
-        """A gizmo with a single input and a single output (=input+1)."""
-
-        two = param.Integer(label='Int 2', doc='input Q', allow_refs=True)
-        three = param.Integer(label='Int 3', doc='output Q')
-
-        @param.depends('two', watch=True)
-        def act(self, *args, **kwargs):
-            """Add 1 and pass it through."""
-
-            self.three = self.two + 1
-
-    class R(param.Parameterized):
-        """A gizmo with a single input."""
-
-        four = param.Integer(label='Int 4', doc='input R', allow_refs=True)
-
-    p = P()
-    q = Q()
-    r = R()
-    GizmoManager.connect(p, q, ['one:two'])
-    GizmoManager.connect(q, r, ['three:four'])
-
-    p.one = 1
-    assert p.one == 1
-    assert q.two == p.one
-    assert q.three == q.two+1
-    assert r.four == q.three
+    p.p_out = 1
+    assert p.p_out == 1
+    assert a.a_in == 1
+    assert a.a_out == 2
+    assert o.o_in == 2
 
 def test_disconnect():
     """Ensure that when gizmos are disconnected, they are no longer watching or being watched.
 
     We also ensure that other refs still work.
     """
-
-    class P(Gizmo):
-        pp = param.String()
-
-    class Q(Gizmo):
-        qp_in = param.String(allow_refs=True)
-        qp_out = param.String()
-
-        @param.depends('qp_in', watch=True)
-        def f(self):
-            self.qp_out = '* ' + self.qp_in
-
-    class R(Gizmo):
-        rp1 = param.String(allow_refs=True)
-        rp2 = param.String(allow_refs=True)
 
     def n_watchers(g: Gizmo, param_name: str):
         """The number of watchers on this param.
@@ -105,130 +105,115 @@ def test_disconnect():
 
         return len(g.param.watchers.get(param_name, {}).get('value', []))
 
-    p = P()
-    q = Q()
-    r = R()
+    p = PassThrough()
+    a = Add(1)
+    t = TwoIn()
 
     # Nothing is being watched by anything else.
     #
-    assert n_watchers(p, 'pp') == 0
-    assert n_watchers(q, 'qp_in') == 1 # watching itself via @param.depends
-    assert n_watchers(q, 'qp_out') == 0
-    assert len(r.param.watchers) == 0
-    # assert n_watchers(r, 'rp1') == 0
-    # assert n_watchers(r, 'rp2') == 0
+    assert n_watchers(p, 'p_out') == 0
+    assert n_watchers(a, 'a_in') == 1 # watching itself via @param.depends
+    assert n_watchers(a, 'a_out') == 0
+    assert len(t.param.watchers) == 0
+    # assert n_watchers(t, 't1_in') == 0
+    # assert n_watchers(t, 't2_in') == 0
 
-    GizmoManager.connect(p, q, ['pp:qp_in'])
-    GizmoManager.connect(q, r, ['qp_out:rp1'])
-    GizmoManager.connect(p, r, ['pp:rp2'])
+    GizmoManager.connect(p, a, ['p_out:a_in'])
+    GizmoManager.connect(a, t, ['a_out:t1_in'])
+    GizmoManager.connect(p, t, ['p_out:t2_in'])
 
     # Ensure that the flow is working.
     #
-    p.pp = 'plugh'
-    assert q.qp_in == 'plugh' # p -> q
-    assert q.qp_out == '* plugh' # p -> q
-    assert r.rp1 == '* plugh' # p -> q -> r
-    assert r.rp2 == 'plugh' # p -> r
+    p.p_out = 1
+    assert a.a_in == 1 # p -> a
+    assert a.a_out == 2 # p -> a
+    assert t.t1_in == 2 # p -> a -> t
+    assert t.t2_in == 1 # p -> t
 
-    assert n_watchers(p, 'pp') == 2
-    assert n_watchers(q, 'qp_in') == 1  # watching itself via @param.depends
-    assert n_watchers(q, 'qp_out') == 1
-    assert len(r.param.watchers) == 0
-    # assert n_watchers(r, 'rp1') == 0
-    # assert n_watchers(r, 'rp2') == 0
+    assert n_watchers(p, 'p_out') == 2
+    assert n_watchers(a, 'a_in') == 1  # watching itself via @param.depends
+    assert n_watchers(a, 'a_out') == 1
+    assert len(t.param.watchers) == 0
+    # assert n_watchers(t, 't1_in') == 0
+    # assert n_watchers(t, 't2_in') == 0
 
-    GizmoManager.disconnect(q)
+    GizmoManager.disconnect(a)
 
-    # Gizmo q is no longer watching p.pp.
+    # Gizmo a is no longer watching b.b_out.
     #
-    assert n_watchers(p, 'pp') == 1
+    assert n_watchers(p, 'p_out') == 1
 
-    # Gizmo r is no longer watching q.qp_out.
+    # Gizmo t is no longer watching a.a_out.
     #
-    assert n_watchers(q, 'qp_in') == 0
-    assert n_watchers(q, 'qp_out') == 0
+    assert n_watchers(a, 'a_in') == 0
+    assert n_watchers(a, 'a_out') == 0
 
-    # Gizmo r is still not being watched.
+    # Gizmo t is still not being watched.
     #
-    assert len(r.param.watchers) == 0
+    assert len(t.param.watchers) == 0
 
-    # Gizmo q is no longer watching p.pp.
-    # Gizmo r is still watching p.pp.
+    # Gizmo a is no longer watching b.b_out.
+    # Gizmo t is still watching b.b_out.
     #
-    p.pp = 'xyzzy'
-    assert q.qp_in == 'plugh'
-    assert q.qp_out == '* plugh'
-    assert r.rp2=='xyzzy'
+    p.p_out = 5
+    assert a.a_in == 1
+    assert a.a_out == 2
+    assert t.t2_in == 5
 
 def test_self_loop():
     """Ensure that gizmos can't connect to themselves."""
 
-    class Q(Gizmo):
-        qp0 = param.String(allow_refs=True)
-        qp1 = param.String()
-
-    q = Q()
+    p = PassThrough
 
     with pytest.raises(GizmoError):
-        GizmoManager.connect(q, q, ['qp1:qp0'])
+        GizmoManager.connect(p, p, ['p_out:p_in'])
 
-def test_loop():
+def test_loop1():
     """Ensure that connecting a gizmo doesn't create a loop in the flow DAG."""
 
-    class P(Gizmo):
-        pp0 = param.String(allow_refs=True)
-        pp1 = param.String()
+    p = PassThrough()
+    a = Add(1)
 
-    class Q(Gizmo):
-        qp0 = param.String(allow_refs=True)
-        qp1 = param.String()
-
-    p = P()
-    q = Q()
-
-    GizmoManager.connect(p, q, ['pp1:qp0'])
+    GizmoManager.connect(p, a, ['p_out:a_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(q, p, ['qp1:pp0'])
+        GizmoManager.connect(a, p, ['a_out:p_in'])
 
 def test_loop2():
-    class P(Gizmo):
-        pp0 = param.String(allow_refs=True)
-        pp1 = param.String()
+    """Ensure that loops aren't allowed."""
 
-    class Q(Gizmo):
-        qp0 = param.String(allow_refs=True)
-        qp1 = param.String()
+    p = PassThrough()
+    a1 = Add(1)
+    a2 = Add(2)
 
-    class R(Gizmo):
-        rp0 = param.String(allow_refs=True)
-        rp1 = param.String()
-
-    class S(Gizmo):
-        sp0 = param.String(allow_refs=True)
-        sp1 = param.String()
-
-    p = P()
-    q = Q()
-    r = R()
-    s = S()
-
-    GizmoManager.connect(p, q, ['pp1:qp0'])
-    GizmoManager.connect(q, r, ['qp1:rp0'])
+    GizmoManager.connect(p, a1, ['p_out:a_in'])
+    GizmoManager.connect(a1, a2, ['a_out:a_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(r, p, ['rp1:pp0'])
+        GizmoManager.connect(a2, p, ['a_out:p_in'])
 
-    GizmoManager.clear()
+def test_loop3():
+    """Ensure that loops aren't allowed."""
 
-    GizmoManager.connect(p, q, ['pp1:qp0'])
-    GizmoManager.connect(q, r, ['qp1:rp0'])
-    GizmoManager.connect(s, p, ['sp1:pp0'])
+    p1 = PassThrough()
+    p2 = PassThrough()
+    p3 = PassThrough()
+    p4 = PassThrough()
+
+    GizmoManager.connect(p1, p2, ['p_out:p_in'])
+    GizmoManager.connect(p2, p3, ['p_out:p_in'])
+    GizmoManager.connect(p4, p1, ['p_out:p_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(r, p, ['rp1:pp0'])
+        GizmoManager.connect(p3, p1, ['p_out:p_in'])
 
-    GizmoManager.clear()
+def test_loop4():
+    """Ensure that loops aren't allowed."""
 
-    GizmoManager.connect(q, r, ['qp1:rp0'])
-    GizmoManager.connect(p, q, ['pp1:qp0'])
-    GizmoManager.connect(s, p, ['sp1:pp0'])
+    p1 = PassThrough()
+    p2 = PassThrough()
+    p3 = PassThrough()
+    p4 = PassThrough()
+
+    GizmoManager.connect(p2, p3, ['p_out:p_in'])
+    GizmoManager.connect(p1, p2, ['p_out:p_in'])
+    GizmoManager.connect(p4, p1, ['p_out:p_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(r, p, ['rp1:pp0'])
+        GizmoManager.connect(p3, p1, ['p_out:p_in'])

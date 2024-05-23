@@ -120,6 +120,9 @@ class GizmoManager:
                 raise GizmoError(f'Destination parameter {inp} must be "allow_refs=True"')
 
             # print(f'connect {src}.{outp} -> {dst}.{inp}')
+
+            # If this doesn't work, it's possible that a gizmo didn't call super().__init__().
+            #
             setattr(dst, inp, getattr(src.param, outp))
 
         _gizmo_graph.append((src, dst))
