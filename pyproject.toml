@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gizmo"
-version = "0.1.0"
+version = "0.2.0"
 description = "Gizmo code flows"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
 readme = "README.md"

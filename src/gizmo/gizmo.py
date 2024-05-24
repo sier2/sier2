@@ -11,9 +11,15 @@ class GizmoError(Exception):
 class Gizmo(param.Parameterized):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._gizmo_name_map = {}
+
+        # Maintain a map of "gizmo+output parameter being watched" -> "input parameter".
+        # This is used by _gizmo_event() to set the correct input parameter.
+        #
+        self._gizmo_name_map: dict[tuple[str, str], str] = {}
 
     def _gizmo_event(self, *events):
+        """The callback method for param.watch()."""
+
         # print(f'WATCHER EVENT {self.__class__} {events}')
         for event in events:
             # print(f'ARG: {event.cls.name=} {event.name=} {event.new=}')
@@ -216,4 +222,11 @@ class GizmoManager:
                         # print(f'disconnect watcher {src.name}.{watcher}')
                         src.param.unwatch(watcher)
 
+        # Remove this gizmo from the graph.
+        # Check for sources and destinations.
+        #
         _gizmo_graph[:] = [(src, dst) for src, dst in _gizmo_graph if src is not g and dst is not g]
+
+        # Because this gizmo is no longer watching anything, the name map can be cleared.
+        #
+        g._gizmo_name_map.clear()

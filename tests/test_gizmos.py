@@ -134,6 +134,8 @@ def test_disconnect():
     # assert n_watchers(t, 't1_in') == 0
     # assert n_watchers(t, 't2_in') == 0
 
+    assert len(a._gizmo_name_map) == 1
+
     GizmoManager.disconnect(a)
 
     # Gizmo a is no longer watching b.b_out.
@@ -148,6 +150,8 @@ def test_disconnect():
     # Gizmo t is still not being watched.
     #
     assert len(t.param.watchers) == 0
+
+    assert len(a._gizmo_name_map) == 0
 
     # Gizmo a is no longer watching b.b_out.
     # Gizmo t is still watching b.b_out.
