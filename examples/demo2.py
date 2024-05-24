@@ -58,7 +58,7 @@ class QueryGizmo(Gizmo):
         })
 
 class GroupByGizmo(Gizmo):
-    """A class that groups a datafame by a specified column."""
+    """A class that groups a dataframe by a specified column."""
 
     # Input params.
     #
@@ -88,14 +88,13 @@ class GroupByGizmo(Gizmo):
         doc='Count of category values (column name)'
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
 
-    @param.depends('df', 'column', watch=True)
     def execute(self):
         """Group the COLOR column; ignore other columns."""
 
-        print(f'Action in {self.__class__.__name__}')
+        print(f'Action in {self.__class__.__name__}: group by {self.column}')
 
         group_df = self.df.groupby(self.column).size().reset_index().rename(columns={0:'COUNT'})
 
@@ -128,14 +127,13 @@ class BarChartGizmo(Gizmo):
         allow_refs=True
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
 
-    @param.depends('group_df', 'category', 'count', watch=True)
     def execute(self):
         """Draw a bar chart."""
 
-        print(f'Action in {self.__class__.__name__}')
+        print(f'Action in {self.__class__.__name__}: {self.category} vs {self.count}')
 
         if any(val is None for val in (self.group_df, self.category, self.count)):
             return

@@ -32,13 +32,12 @@ class AddGizmo(Gizmo):
     The action does not happen if either of the inputs is None.
     """
 
-    a = param.Integer(label='First integer', allow_None=True, allow_refs=True)
-    b = param.Integer(label='Second integer', allow_None=True, allow_refs=True)
+    a = param.Integer(label='First integer', default=None, allow_refs=True)
+    b = param.Integer(label='Second integer', default=None, allow_refs=True)
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
 
-    @param.depends('a', 'b', watch=True)
     def execute(self):
         print(f'Action {self.__class__.__name__} {self.a=} {self.b=}')
 

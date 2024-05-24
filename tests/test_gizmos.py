@@ -9,8 +9,7 @@ class PassThrough(Gizmo):
     p_in = param.Integer(allow_refs=True)
     p_out = param.Integer()
 
-    @param.depends('p_in', watch=True)
-    def run(self):
+    def execute(self):
         self.p_out = self.p_in
 
 class Add(Gizmo):
@@ -23,8 +22,7 @@ class Add(Gizmo):
         super().__init__()
         self.addend = addend
 
-    @param.depends('a_in', watch=True)
-    def run(self):
+    def execute(self):
         self.a_out = self.a_in + self.addend
 
 class OneIn(Gizmo):
@@ -75,7 +73,6 @@ def test_simple():
     a = Add(1)
     o = OneIn()
 
-    print(f'@@@ {p.p_out=} {a.a_in=}')
     GizmoManager.connect(p, a, ['p_out:a_in'])
     GizmoManager.connect(a, o, ['a_out:o_in'])
 
@@ -112,7 +109,7 @@ def test_disconnect():
     # Nothing is being watched by anything else.
     #
     assert n_watchers(p, 'p_out') == 0
-    assert n_watchers(a, 'a_in') == 1 # watching itself via @param.depends
+    assert n_watchers(a, 'a_in') == 0
     assert n_watchers(a, 'a_out') == 0
     assert len(t.param.watchers) == 0
     # assert n_watchers(t, 't1_in') == 0
@@ -131,7 +128,7 @@ def test_disconnect():
     assert t.t2_in == 1 # p -> t
 
     assert n_watchers(p, 'p_out') == 2
-    assert n_watchers(a, 'a_in') == 1  # watching itself via @param.depends
+    assert n_watchers(a, 'a_in') == 0
     assert n_watchers(a, 'a_out') == 1
     assert len(t.param.watchers) == 0
     # assert n_watchers(t, 't1_in') == 0

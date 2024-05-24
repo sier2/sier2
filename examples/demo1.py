@@ -27,8 +27,8 @@ class Gizmo1(Gizmo):
         default=-1
     )
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    # def __init__(self, **kwargs):
+    #     super().__init__(**kwargs)
 
     def update(self, s):
         """Updates the outputs separately, causing two watch events."""
@@ -50,7 +50,6 @@ class Gizmo2(Gizmo):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @param.depends('a_string', 'length', watch=True)
     def execute(self):
         print(f'Action in {self.__class__.__name__}: {self.a_string=} {self.length=}')
 

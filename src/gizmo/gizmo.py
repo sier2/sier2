@@ -9,7 +9,27 @@ class GizmoError(Exception):
     pass
 
 class Gizmo(param.Parameterized):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._gizmo_name_map = {}
+
+    def _gizmo_event(self, *events):
+        # print(f'WATCHER EVENT {self.__class__} {events}')
+        for event in events:
+            # print(f'ARG: {event.cls.name=} {event.name=} {event.new=}')
+            cls = event.cls.name
+            name = event.name
+            inp = self._gizmo_name_map[cls, name]
+            setattr(self, inp, event.new)
+
+        # At least one parameter has changed.
+        # Execute this gizmo.
+        #
+        self.execute()
+
+    def execute(self):
+        # print(f'** EXECUTE {self.__class__=}')
+        pass
 
 _gizmo_graph: list[tuple[Gizmo, Gizmo]] = []
 
@@ -83,25 +103,73 @@ class GizmoManager:
         _gizmo_graph.clear()
 
     @staticmethod
-    def connect(src: Gizmo, dst: Gizmo, param_names: list[str]) -> None:
-        """Connect a source gizmo to a destination gizmo.
+    def connect(src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
+        """Connect parameters in a source gizmo to parameters in a destination gizmo.
 
-        Input parameters in the destination gizmo watch output parameters
-        in the source gizmo so that changes in the source are reflected in
-        the destination.
+        Connecting parameters in two gizmos creates a watcher for each pair of parameters.
+        Assigning a value to an output parameter triggers an event that is handled
+        by a callback method in the destination gizmo that sets the corresponding input
+        parameter and calls ``dst.execute()``.
+
+        The `param_names`` list specifies the parameters that should be connected.
+        For example::
+
+            GizmoManager.connect(query, report, ['result:data'])
+
+        connects ``query.result`` to ``report.data``, so that setting ``query.result``
+        causes ``report.data`` to be updated and ``report.execute()`` to be called.
+
+        If the output and input parameters have the same name, only the one name is required.::
+
+            GizmoManager.connect(query, report, [':data'])
+
+        connects ``query.date`` to ``report.data``.
+
+        Input parameters must have ``allow_refs=True``. This is used solely as a check
+        to differentiate inputs from outputs - it isn't actually used as a reference.
+
+        The ``onlychanged``, ``queued``, and ``precedence`` values are passed through
+        to ``src.param.watch()``.
 
         Parameters
         ----------
         src: Gizmo
             A Gizmo with output parameters.
-        dst:
+            Output parameters must be specified with ``allow_refs=False`` (the default).
+        dst: Gizmo
             A Gizmo with input parameters.
+            Input parameters must be specified with ``allow_refs=True``.
+        param_names: list[str]
+            A list of 'out_param:in_param' strings.
+        onlychanged: bool
+            By default, always triggers an event when the
+            watched parameter changes, but if ``onlychanged=True`` only triggers
+            an event when the parameter is set to something other than its current value.
+            Note that this is the opposite of the param default.
+        queued: bool
+            By default, additional watcher events generated
+            inside the callback method are dispatched immediately, effectively
+            doing depth-first processing of Watcher events. However, in
+            certain scenarios, it is helpful to wait to dispatch such
+            downstream events until all events that triggered this watcher
+            have been processed. In such cases setting ``queued=True`` on
+            this Watcher will queue up new downstream events generated
+            during the callback until it completes and all other watchers
+            invoked by that same event have finished executing),
+            effectively doing breadth-first processing of Watcher events.
+        precedence: int
+            Declares a precedence level for the Watcher that
+            determines the priority with which the callback is executed.
+            Lower precedence levels are executed earlier. Negative
+            precedences are reserved for internal Watchers, i.e. those
+            set up by param.depends.
         """
 
         if _DISALLOW_LOOPS:
             if _has_loop(src, dst):
                 raise GizmoError('This connection would create a loop')
 
+        src_out_params = []
         for name in param_names:
             names = name.split(':')
             if len(names)==1:
@@ -111,19 +179,19 @@ class GizmoManager:
             else:
                 raise GizmoError(f'Name {name} cannot have more than one ":"')
 
-            srcp = getattr(src.param, outp)
-            if srcp.allow_refs:
-                raise GizmoError(f'Source parameter {inp} must not be "allow_refs=True"')
-
             dstp = getattr(dst.param, inp)
             if not dstp.allow_refs:
-                raise GizmoError(f'Destination parameter {inp} must be "allow_refs=True"')
+                raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
 
-            # print(f'connect {src}.{outp} -> {dst}.{inp}')
+            srcp = getattr(src.param, outp)
+            if srcp.allow_refs:
+                raise GizmoError(f'Source parameter {src}.{outp} must not be "allow_refs=True"')
 
-            # If this doesn't work, it's possible that a gizmo didn't call super().__init__().
-            #
-            setattr(dst, inp, getattr(src.param, outp))
+            dst._gizmo_name_map[src.name, outp] = inp
+            src_out_params.append(outp)
+
+        # print(f'{dst} watch {src} {src_out_params}')
+        watcher = src.param.watch(dst._gizmo_event, src_out_params, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
         _gizmo_graph.append((src, dst))
 
