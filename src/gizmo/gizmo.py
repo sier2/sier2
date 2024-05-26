@@ -6,9 +6,32 @@ from typing import Callable
 _DISALLOW_LOOPS = True
 
 class GizmoError(Exception):
+    """Raised if a Gizmo configuration is invalid."""
+
     pass
 
 class Gizmo(param.Parameterized):
+    """The base class for gizmos.
+
+    A gizmo is implemented as:
+
+    .. code-block:: python
+
+        class MyGizmo(Gizmo):
+            ...
+
+    A typical gizmo will have at least one input parameter, and an ``execute()``
+    method that is called when an input parameter value changes.
+
+    .. code-block:: python
+
+        class MyGizmo(Gizmo):
+            value_in = param.String(label='Input Value')
+
+            def execute(self):
+                print(f'New value is {self.value_in}')
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -51,9 +74,9 @@ class Gizmo(param.Parameterized):
     def execute(self):
         """This method is called when one or more of the input parameters causes an event.
 
-        Override this method in a Gizmp subclass.
+        Override this method in a Gizmo subclass.
 
-        If the method has a parameter, the events will be passed as a tuple.
+        If ``execute()`` has a parameter, the triggered events will be passed as a tuple.
         """
 
         # print(f'** EXECUTE {self.__class__=}')
@@ -227,9 +250,12 @@ class GizmoManager:
     def disconnect(g: Gizmo) -> None:
         """Disconnect gizmo g from other gizmos.
 
-        We can look in the gizmo to see what it is watching,
-        but we need to look through all the other gizmos to see
-        if they watch this one.
+        All parameters (input and output) will be disconnected.
+
+        Parameters
+        ----------
+        g: Gizmo
+            The gizmo to be disconnected.
         """
 
         for p, watchers in g.param.watchers.items():

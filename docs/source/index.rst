@@ -4,7 +4,7 @@ Gizmos
 Connect modular pieces of Python code ("gizmos") into
 a processing flow pipeline.
 
-See the ``examples`` directory for examples.
+See the ``examples`` directory in the source code for examples.
 
 Description
 -----------
@@ -18,12 +18,12 @@ in another gizmo. The connections need not be one-to-one: parameters in multiple
 can be connected to parameters in a single gizmo; conversely, parameters in a single gizmo
 can be connected to parameters in multiple gizmos.
 
-Gizmo parameters use `param <https://param.holoviz.org/>`, which not only implement
+Gizmo parameters use `param <https://param.holoviz.org/>`_, which not only implements
 triggering and watching of events, but allow parameters to be named and documented.
 
 A typical Gizmo implementation looks like this.
 
-.. code-block:: python
+.. code-block:: Python
 
     class Increment(Gizmo):
         """A gizmo that adds one to the input value."""
@@ -33,3 +33,18 @@ A typical Gizmo implementation looks like this.
 
         def execute(self):
             self.int_out = self.int_in + 1
+
+The ``execute()`` method is called automatically when an input parameter is assigned a value.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   api
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
