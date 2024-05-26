@@ -18,22 +18,44 @@ class Gizmo(param.Parameterized):
         self._gizmo_name_map: dict[tuple[str, str], str] = {}
 
     def _gizmo_event(self, *events):
-        """The callback method for param.watch()."""
+        """The callback method for param.watch().
 
-        # print(f'WATCHER EVENT {self.__class__} {events}')
-        for event in events:
-            # print(f'ARG: {event.cls.name=} {event.name=} {event.new=}')
-            cls = event.cls.name
-            name = event.name
-            inp = self._gizmo_name_map[cls, name]
-            setattr(self, inp, event.new)
+        When watched parameters produce events, this callback is called
+        with the events. The events are matched with self's input parameter name,
+        and sets the parameter values accordingly.
+
+        If Gizmo.execute() has a parameter, the events are passed as a tuple.
+        """
+
+        # print(f'WATCHER EVENT {self.__class__} {type(events)} {events}')
+
+        # If an input parameter is being watched and is specified more than once,
+        # only cause one event.
+        #
+        with param.parameterized.batch_call_watchers(self):
+            for event in events:
+                # print(f'ARG: {event.cls.name=} {event.name=} {event.new=}')
+                cls = event.cls.name
+                name = event.name
+                inp = self._gizmo_name_map[cls, name]
+                setattr(self, inp, event.new)
 
         # At least one parameter has changed.
         # Execute this gizmo.
         #
-        self.execute()
+        if self.execute.__code__.co_argcount==1:
+            self.execute()
+        else:
+            self.execute(events)
 
     def execute(self):
+        """This method is called when one or more of the input parameters causes an event.
+
+        Override this method in a Gizmp subclass.
+
+        If the method has a parameter, the events will be passed as a tuple.
+        """
+
         # print(f'** EXECUTE {self.__class__=}')
         pass
 
@@ -185,9 +207,9 @@ class GizmoManager:
             else:
                 raise GizmoError(f'Name {name} cannot have more than one ":"')
 
-            dstp = getattr(dst.param, inp)
-            if not dstp.allow_refs:
-                raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
+            # dstp = getattr(dst.param, inp)
+            # if not dstp.allow_refs:
+            #     raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
 
             srcp = getattr(src.param, outp)
             if srcp.allow_refs:

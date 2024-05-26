@@ -2,6 +2,10 @@
 
 # A basic demonstration of connecting gizmos into a flow.
 #
+# The first gizmo (P) outputs an integer.
+# The second gizmo (Q) takes an integer output, and outputs the input+1.
+# The third gizmo (R) prints its input.
+#
 
 from gizmo import Gizmo, GizmoManager
 import param
@@ -35,10 +39,12 @@ r = R()
 GizmoManager.connect(p, q, ['one:two'])
 GizmoManager.connect(q, r, ['three:four'])
 
-p.one = 1
+start_number = 1
+p.one = start_number
+
 print(f'''
-    {p.one=} (1)
-    {q.two=} (1)
-    {q.three=} (2)
-    {r.four=} (2)
+    {p.one=} (expecting {start_number})
+    {q.two=} (expecting {start_number})
+    {q.three=} (expecting {start_number+1})
+    {r.four=} (expecting {start_number+1})
 ''')

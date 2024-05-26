@@ -2,9 +2,11 @@
 
 # A demonstration of gizmos and individual vs batch updates.
 #
+# Assigning values to outputs separately triggers an event for each assignment.
+# Assigning values to outputs using ``update()`` triggers a single event.
+#
 
 import param
-# import gizmo.gizmo as gizmo
 from gizmo import Gizmo, GizmoManager
 
 class Gizmo1(Gizmo):
@@ -30,14 +32,14 @@ class Gizmo1(Gizmo):
     # def __init__(self, **kwargs):
     #     super().__init__(**kwargs)
 
-    def update(self, s):
-        """Updates the outputs separately, causing two watch events."""
+    def separate(self, s):
+        """Updates the outputs separately, triggering two events."""
 
         self.a_string = s
         self.length = len(s)
 
-    def update_batch(self, s):
-        """Updates the outputs in batch, causing a single watch event."""
+    def update(self, s):
+        """Updates the outputs together, triggering a single event."""
 
         self.param.update({'a_string': s, 'length': len(s)})
 

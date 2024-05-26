@@ -1,9 +1,12 @@
 #
 
-# A demonstration of two gizmos.
+# This demonstrates that two gizmos can provide inputs to a single gizmo.
+#
 # - NumberGizmo outputs a number.
 # - AddGizmo takes outputs from two instances of NumberGizmo and adds them.
-#   This demonstrates that different input/output param names cab be connected.
+#
+# AddGizmo must allow for either or both of the inputs being None, and only
+# continue if both inputs are valid.
 #
 
 import random

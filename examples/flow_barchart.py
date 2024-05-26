@@ -150,23 +150,15 @@ class BarChartGizmo(Gizmo):
 
         print()
 
-def main():
-    """Pretend to be a gizmo manager."""
+q = QueryGizmo()
+g = GroupByGizmo()
+GizmoManager.connect(q, g, ['df', 'column'])
 
-    q = QueryGizmo()
-    g = GroupByGizmo()
-    GizmoManager.connect(q, g, ['df', 'column'])
+b = BarChartGizmo()
+GizmoManager.connect(g, b, ['group_df', 'category', 'count'])
 
-    b = BarChartGizmo()
-    GizmoManager.connect(g, b, ['group_df', 'category', 'count'])
-
-    while input('Enter to run a query; q to quit:').strip().lower()[:1]!='q':
-        # Give the query gizmo something to do,
-        # and watch the result cascade through the grouping to the chart.
-        #
-        q.query('SELECT color,count FROM the_table')
-
-    return q, g, b
-
-if __name__=='__main__':
-    q, g, b = main()
+while input('Enter to run a query; q to quit:').strip().lower()[:1]!='q':
+    # Give the query gizmo something to do,
+    # and watch the result cascade through the grouping to the chart.
+    #
+    q.query('SELECT color,count FROM the_table')
