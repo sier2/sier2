@@ -53,15 +53,17 @@ class Gizmo(param.Parameterized):
         # print(f'WATCHER EVENT {self.__class__} {type(events)} {events}')
 
         # If an input parameter is being watched and is specified more than once,
-        # only cause one event.
+        # use self.param.update() to only cause one event.
         #
-        with param.parameterized.batch_call_watchers(self):
-            for event in events:
-                # print(f'ARG: {event.cls.name=} {event.name=} {event.new=}')
-                cls = event.cls.name
-                name = event.name
-                inp = self._gizmo_name_map[cls, name]
-                setattr(self, inp, event.new)
+        kwargs = {}
+        for event in events:
+            # print(f'ARG: {event.cls.name=} {event.name=} {event.new=}')
+            cls = event.cls.name
+            name = event.name
+            inp = self._gizmo_name_map[cls, name]
+            kwargs[inp] = event.new
+
+        self.param.update(**kwargs)
 
         # At least one parameter has changed.
         # Execute this gizmo.
@@ -82,44 +84,20 @@ class Gizmo(param.Parameterized):
         # print(f'** EXECUTE {self.__class__=}')
         pass
 
-_gizmo_graph: list[tuple[Gizmo, Gizmo]] = []
+_gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
 
-def _has_loop(src: Gizmo, dst: Gizmo) -> bool:
-    """Find loops in the gizmo graph.
+def _get_ranks(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
+    """Use the connected gizmos to make a graph.
 
-    Use _gizmo_graph to build a dictionary of relative ranks
-    based on src -> dst connections. If the new src has a
-    greater rank than the new dst, then a loop would be created.
-
-    It's probably a bit inefficient to redo the ranks for every
-    new connection, but we don't have to maintain another global,
-    and I doubt if any flow will be big enough for anyone to notice.
-
-    Returns
-    -------
-    bool
-        True if connecting src to dst would create a loop.
+    Parameters
+    ----------
+    gizmo_pairs: list[tuple[Gizmo, Gizmo]]
+        A list of (src, dst) gizmos built using ``connect()``.
     """
-
-    if src is dst:
-        # A self-loop.
-        #
-        raise GizmoError('Gizmos cannot be connected to themselves')
-
-    if not _gizmo_graph:
-        # Can't create a loop if there is only one connection.
-        #
-        return False
-
-    # A unique key for a gizmo.
-    #
-    uniq: Callable[[Gizmo], int] = lambda g: id(g)
 
     rank = 0
     ranks: dict[int, int] = {}
-    for s, d in _gizmo_graph + [(src, dst)]:
-        sid = uniq(s)
-        did = uniq(d)
+    for sid, did in gizmo_pairs:
         if sid in ranks and did in ranks:
             # Both gizmos are already in the graph.
             # Not a problem (a bit strange, though).
@@ -138,8 +116,91 @@ def _has_loop(src: Gizmo, dst: Gizmo) -> bool:
         elif did not in ranks:
             ranks[did] = ranks[sid] + 1
 
-    srank = ranks[uniq(src)]
-    drank = ranks[uniq(dst)]
+    return ranks
+
+# def _has_loop(src: Gizmo, dst: Gizmo) -> bool:
+#     """Find loops in the gizmo graph.
+
+#     Use _gizmo_graph to build a dictionary of relative ranks
+#     based on src -> dst connections. If the new src has a
+#     greater rank than the new dst, then a loop would be created.
+
+#     It's probably a bit inefficient to redo the ranks for every
+#     new connection, but we don't have to maintain another global,
+#     and I doubt if any flow will be big enough for anyone to notice.
+
+#     Returns
+#     -------
+#     bool
+#         True if connecting src to dst would create a loop.
+#     """
+
+#     if src is dst:
+#         # A self-loop.
+#         #
+#         raise GizmoError('Gizmos cannot be connected to themselves')
+
+#     if not _gizmo_pairs:
+#         # Can't create a loop if there is only one connection.
+#         #
+#         return False
+
+#     # A unique key for a gizmo.
+#     #
+#     uniq: Callable[[Gizmo], int] = lambda g: id(g)
+
+#     rank = 0
+#     ranks: dict[int, int] = {}
+#     for s, d in _gizmo_pairs + [(src, dst)]:
+#         sid = uniq(s)
+#         did = uniq(d)
+#         if sid in ranks and did in ranks:
+#             # Both gizmos are already in the graph.
+#             # Not a problem (a bit strange, though).
+#             #
+#             pass
+#         elif sid not in ranks and did not in ranks:
+#             # Neither gizmo is in the graph,
+#             # so they don't connect to anything else.
+#             # Not a problem.
+#             #
+#             ranks[sid] = rank
+#             ranks[did] = rank + 1
+#             rank += 2
+#         elif sid not in ranks:
+#             ranks[sid] = ranks[did] - 1
+#         elif did not in ranks:
+#             ranks[did] = ranks[sid] + 1
+
+#     srank = ranks[uniq(src)]
+#     drank = ranks[uniq(dst)]
+
+#     if srank < drank:
+#         return False
+
+#     return True
+
+def _has_loop(src: Gizmo, dst: Gizmo) -> bool:
+    """Find loops in the gizmo graph.
+
+    Use _get_ranks to build a dictionary of relative ranks
+    based on src -> dst connections. If the new src has a
+    greater rank than the new dst, then a loop would be created.
+
+    It's probably a bit inefficient to redo the ranks for every
+    new connection, but we don't have to maintain another global,
+    and I doubt if any flow will be big enough for anyone to notice.
+
+    Returns
+    -------
+    bool
+        True if connecting src to dst would create a loop.
+    """
+
+    ranks = _get_ranks(_gizmo_pairs + [(src, dst)])
+
+    srank = ranks[src]
+    drank = ranks[dst]
 
     if srank < drank:
         return False
@@ -151,7 +212,7 @@ class GizmoManager:
     def clear() -> None:
         """Clear the flow graph."""
 
-        _gizmo_graph.clear()
+        _gizmo_pairs.clear()
 
     @staticmethod
     def connect(src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
@@ -244,7 +305,7 @@ class GizmoManager:
         # print(f'{dst} watch {src} {src_out_params}')
         watcher = src.param.watch(dst._gizmo_event, src_out_params, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
-        _gizmo_graph.append((src, dst))
+        _gizmo_pairs.append((src, dst))
 
     @staticmethod
     def disconnect(g: Gizmo) -> None:
@@ -263,7 +324,7 @@ class GizmoManager:
                 # print(f'disconnect watcher {g.name}.{watcher}')
                 g.param.unwatch(watcher)
 
-        for src, dst in _gizmo_graph:
+        for src, dst in _gizmo_pairs:
             if dst is g:
                 for p, watchers in src.param.watchers.items():
                     for watcher in watchers['value']:
@@ -273,8 +334,26 @@ class GizmoManager:
         # Remove this gizmo from the graph.
         # Check for sources and destinations.
         #
-        _gizmo_graph[:] = [(src, dst) for src, dst in _gizmo_graph if src is not g and dst is not g]
+        _gizmo_pairs[:] = [(src, dst) for src, dst in _gizmo_pairs if src is not g and dst is not g]
 
         # Because this gizmo is no longer watching anything, the name map can be cleared.
         #
         g._gizmo_name_map.clear()
+
+    @staticmethod
+    def get_ranks():
+        """Make a dictionary of gizmo -> rank, where rank is the order in the flow of the gizmos.
+
+        This is useful for arranging the gizmos in a GUI, for example.
+
+        The returned dictionary is in no particular order:
+        the rank values determine the order of the gizmos.
+
+        Returns
+        -------
+        dict[Gizmo, int]
+            A mapping of gizmo to rank
+        """
+
+        return _get_ranks(_gizmo_pairs)
+

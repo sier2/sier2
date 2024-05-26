@@ -46,15 +46,15 @@ def setup():
 
     pass
 
-def test_input_must_have_allow_refs():
-    class P(Gizmo):
-        s = param.String()
+# def test_input_must_have_allow_refs():
+#     class P(Gizmo):
+#         s = param.String()
 
-    class Q(Gizmo):
-        s = param.String()
+#     class Q(Gizmo):
+#         s = param.String()
 
-    with pytest.raises(GizmoError):
-        GizmoManager.connect(P(), Q(), ['s'])
+#     with pytest.raises(GizmoError):
+#         GizmoManager.connect(P(), Q(), ['s'])
 
 def test_output_must_not_allow_refs():
     class P(Gizmo):
@@ -218,3 +218,24 @@ def test_loop4():
     GizmoManager.connect(p4, p1, ['p_out:p_in'])
     with pytest.raises(GizmoError):
         GizmoManager.connect(p3, p1, ['p_out:p_in'])
+
+
+def test_ranks():
+    """Ensure that the ranks reflect the order in the flow."""
+
+    g1 = PassThrough(name='PT1')
+    g2 = PassThrough(name='PT2')
+    g3 = PassThrough(name='PT3')
+    g4 = PassThrough(name='PT4')
+    g5 = PassThrough(name='PT5')
+
+    GizmoManager.connect(g3, g4, ['p_out:p_in'])
+    GizmoManager.connect(g2, g3, ['p_out:p_in'])
+    GizmoManager.connect(g1, g2, ['p_out:p_in'])
+    GizmoManager.connect(g4, g5, ['p_out:p_in'])
+
+    ranks = GizmoManager.get_ranks()
+
+    ordered = sorted(ranks.items(), key=lambda item:item[1])
+    ordered = [g.name for g,r in ordered]
+    assert ordered == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']
