@@ -33,3 +33,5 @@ A typical Gizmo implementation looks like this.
 
         def execute(self):
             self.int_out = self.int_in + 1
+
+See the examples in ``examples`` (Python scripts) and ``examples-panel`` (scripts that use Panel as a UI).
