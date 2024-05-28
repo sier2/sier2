@@ -60,7 +60,7 @@ class QueryWidget(Query, Viewer):
             Two instances of a barchart widget display the counts (one normal, one inverted).
         '''
 
-        return pn.Row(pn.Column(height, text), df_pane)
+        return pn.Card(pn.Row(pn.Column(height, text), df_pane), title=self.name)
 
 class BarchartWidget(Gizmo, Viewer):
     """A barchart widget.
@@ -95,7 +95,7 @@ class BarchartWidget(Gizmo, Viewer):
         return pn.pane.HoloViews(bars, sizing_mode='stretch_width')
 
     def __panel__(self):
-        return pn.Row(pn.panel(self.execute))#, sizing_mode='stretch_width'))
+        return pn.Card(pn.panel(self.execute), title=self.name)#, sizing_mode='stretch_width'))
 
 def main():
     title = 'Example GUI'

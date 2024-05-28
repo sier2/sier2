@@ -18,7 +18,7 @@ in another gizmo. The connections need not be one-to-one: parameters in multiple
 can be connected to parameters in a single gizmo; conversely, parameters in a single gizmo
 can be connected to parameters in multiple gizmos.
 
-Gizmo parameters use `param <https://param.holoviz.org/>`, which not only implement
+Gizmo parameters use `param <https://param.holoviz.org/>`_, which not only implement
 triggering and watching of events, but allow parameters to be named and documented.
 
 A typical Gizmo implementation looks like this.
@@ -34,4 +34,4 @@ A typical Gizmo implementation looks like this.
         def execute(self):
             self.int_out = self.int_in + 1
 
-See the examples in ``examples`` (Python scripts) and ``examples-panel`` (scripts that use Panel as a UI).
+See the examples in ``examples`` (Python scripts) and ``examples-panel`` (scripts that use `Panel <https://panel.holoviz.org/>`_ as a UI).

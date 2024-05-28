@@ -219,8 +219,25 @@ def test_loop4():
     with pytest.raises(GizmoError):
         GizmoManager.connect(p3, p1, ['p_out:p_in'])
 
+def test_nonloop1():
+    """Ensure that non-loops are allowed."""
 
-def test_ranks():
+    gs = [PassThrough(name=f'P{i}') for i in range(4)]
+    GizmoManager.connect(gs[2], gs[3], ['p_out:p_in'])
+    GizmoManager.connect(gs[0], gs[1], ['p_out:p_in'])
+    GizmoManager.connect(gs[1], gs[2], ['p_out:p_in'])
+
+def test_ranks1():
+    gs = [PassThrough(name=f'PT{i}') for i in range(4)]
+    GizmoManager.connect(gs[2], gs[3], ['p_out:p_in'])
+    GizmoManager.connect(gs[0], gs[1], ['p_out:p_in'])
+    GizmoManager.connect(gs[1], gs[2], ['p_out:p_in'])
+    ranks = GizmoManager.get_sorted()
+
+    ranks = [g.name for g in ranks]
+    assert ranks == ['PT0', 'PT1', 'PT2', 'PT3']
+
+def test_ranks2():
     """Ensure that the ranks reflect the order in the flow."""
 
     g1 = PassThrough(name='PT1')
@@ -229,13 +246,12 @@ def test_ranks():
     g4 = PassThrough(name='PT4')
     g5 = PassThrough(name='PT5')
 
+    GizmoManager.connect(g4, g5, ['p_out:p_in'])
     GizmoManager.connect(g3, g4, ['p_out:p_in'])
     GizmoManager.connect(g2, g3, ['p_out:p_in'])
     GizmoManager.connect(g1, g2, ['p_out:p_in'])
-    GizmoManager.connect(g4, g5, ['p_out:p_in'])
 
-    ranks = GizmoManager.get_ranks()
+    ranks = GizmoManager.get_sorted()
 
-    ordered = sorted(ranks.items(), key=lambda item:item[1])
-    ordered = [g.name for g,r in ordered]
-    assert ordered == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']
+    ranks = [g.name for g in ranks]
+    assert ranks == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']

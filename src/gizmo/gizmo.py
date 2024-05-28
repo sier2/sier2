@@ -1,9 +1,10 @@
 import param
 from typing import Callable
+from collections import defaultdict
 
 # By default, loops in a flow DAG aren't allowed.
 #
-_DISALLOW_LOOPS = True
+_DISALLOW_CYCLES = True
 
 class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
@@ -86,126 +87,71 @@ class Gizmo(param.Parameterized):
 
 _gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
 
-def _get_ranks(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
-    """Use the connected gizmos to make a graph.
+def topological_sort(pairs):
+    """Implement a topological sort as described at
+    `Topological sorting <https://en.wikipedia.org/wiki/Topological_sorting>`_.
 
-    Parameters
-    ----------
-    gizmo_pairs: list[tuple[Gizmo, Gizmo]]
-        A list of (src, dst) gizmos built using ``connect()``.
+    code-block:: python
+
+        L ← Empty list that will contain the sorted elements
+        S ← Set of all nodes with no incoming edge
+
+        while S is not empty do
+            remove a node n from S
+            add n to L
+            for each node m with an edge e from n to m do
+                remove edge e from the graph
+                if m has no other incoming edges then
+                    insert m into S
+
+        if graph has edges then
+            return error   (graph has at least one cycle)
+        else
+            return L   (a topologically sorted order)
     """
 
-    rank = 0
-    ranks: dict[int, int] = {}
-    for sid, did in gizmo_pairs:
-        if sid in ranks and did in ranks:
-            # Both gizmos are already in the graph.
-            # Not a problem (a bit strange, though).
-            #
-            pass
-        elif sid not in ranks and did not in ranks:
-            # Neither gizmo is in the graph,
-            # so they don't connect to anything else.
-            # Not a problem.
-            #
-            ranks[sid] = rank
-            ranks[did] = rank + 1
-            rank += 2
-        elif sid not in ranks:
-            ranks[sid] = ranks[did] - 1
-        elif did not in ranks:
-            ranks[did] = ranks[sid] + 1
+    def edge(pairs, n, m):
+        for ix, pair in enumerate(pairs):
+            if pair==(n, m):
+                return ix
 
-    return ranks
+        return None
 
-# def _has_loop(src: Gizmo, dst: Gizmo) -> bool:
-#     """Find loops in the gizmo graph.
+    def has_incoming(pairs, m):
+        return any(d is m for _,d in pairs)
 
-#     Use _gizmo_graph to build a dictionary of relative ranks
-#     based on src -> dst connections. If the new src has a
-#     greater rank than the new dst, then a loop would be created.
+    remaining = pairs[:]
+    L = []
 
-#     It's probably a bit inefficient to redo the ranks for every
-#     new connection, but we don't have to maintain another global,
-#     and I doubt if any flow will be big enough for anyone to notice.
+    srcs, dsts = zip(*remaining)
+    S = list(set([s for s in srcs if s not in dsts]))
+    # print(S)
 
-#     Returns
-#     -------
-#     bool
-#         True if connecting src to dst would create a loop.
-#     """
+    while S:
+        n = S.pop(0)
+        L.append(n)
+        print(f'{n=}')
+        for _, m in remaining[:]:
+            if (e:=edge(remaining, n, m))is not None:
+                del remaining[e]
+                if not has_incoming(remaining, m):
+                    S.append(m)
 
-#     if src is dst:
-#         # A self-loop.
-#         #
-#         raise GizmoError('Gizmos cannot be connected to themselves')
+    # print(f'Remaining: {remaining}')
+    return L, remaining
 
-#     if not _gizmo_pairs:
-#         # Can't create a loop if there is only one connection.
-#         #
-#         return False
+def _has_cycle(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
+    _, remaining = topological_sort(gizmo_pairs)
 
-#     # A unique key for a gizmo.
-#     #
-#     uniq: Callable[[Gizmo], int] = lambda g: id(g)
+    return len(remaining)>0
 
-#     rank = 0
-#     ranks: dict[int, int] = {}
-#     for s, d in _gizmo_pairs + [(src, dst)]:
-#         sid = uniq(s)
-#         did = uniq(d)
-#         if sid in ranks and did in ranks:
-#             # Both gizmos are already in the graph.
-#             # Not a problem (a bit strange, though).
-#             #
-#             pass
-#         elif sid not in ranks and did not in ranks:
-#             # Neither gizmo is in the graph,
-#             # so they don't connect to anything else.
-#             # Not a problem.
-#             #
-#             ranks[sid] = rank
-#             ranks[did] = rank + 1
-#             rank += 2
-#         elif sid not in ranks:
-#             ranks[sid] = ranks[did] - 1
-#         elif did not in ranks:
-#             ranks[did] = ranks[sid] + 1
+def _get_sorted(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
+    ordered, remaining = topological_sort(gizmo_pairs)
 
-#     srank = ranks[uniq(src)]
-#     drank = ranks[uniq(dst)]
+    if remaining:
+        raise GizmoError('flow contains a cycle')
 
-#     if srank < drank:
-#         return False
-
-#     return True
-
-def _has_loop(src: Gizmo, dst: Gizmo) -> bool:
-    """Find loops in the gizmo graph.
-
-    Use _get_ranks to build a dictionary of relative ranks
-    based on src -> dst connections. If the new src has a
-    greater rank than the new dst, then a loop would be created.
-
-    It's probably a bit inefficient to redo the ranks for every
-    new connection, but we don't have to maintain another global,
-    and I doubt if any flow will be big enough for anyone to notice.
-
-    Returns
-    -------
-    bool
-        True if connecting src to dst would create a loop.
-    """
-
-    ranks = _get_ranks(_gizmo_pairs + [(src, dst)])
-
-    srank = ranks[src]
-    drank = ranks[dst]
-
-    if srank < drank:
-        return False
-
-    return True
+    return ordered
 
 class GizmoManager:
     @staticmethod
@@ -277,9 +223,9 @@ class GizmoManager:
             set up by param.depends.
         """
 
-        if _DISALLOW_LOOPS:
-            if _has_loop(src, dst):
-                raise GizmoError('This connection would create a loop')
+        if _DISALLOW_CYCLES:
+            if _has_cycle(_gizmo_pairs + [(src, dst)]):
+                raise GizmoError('This connection would create a cycle')
 
         src_out_params = []
         for name in param_names:
@@ -341,8 +287,8 @@ class GizmoManager:
         g._gizmo_name_map.clear()
 
     @staticmethod
-    def get_ranks():
-        """Make a dictionary of gizmo -> rank, where rank is the order in the flow of the gizmos.
+    def get_sorted():
+        """Return the gizmos in this dag in topological order.
 
         This is useful for arranging the gizmos in a GUI, for example.
 
@@ -355,5 +301,12 @@ class GizmoManager:
             A mapping of gizmo to rank
         """
 
-        return _get_ranks(_gizmo_pairs)
+        return _get_sorted(_gizmo_pairs)
 
+    @staticmethod
+    def has_cycle():
+        return _has_cycle(_gizmo_pairs)
+
+    @staticmethod
+    def gizmo_pairs():
+        return _gizmo_pairs
