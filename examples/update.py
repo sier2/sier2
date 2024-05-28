@@ -7,7 +7,7 @@
 #
 
 import param
-from gizmo import Gizmo, GizmoManager
+from gizmo import Gizmo, DagManager
 
 class Gizmo1(Gizmo):
     """A gizmo that creates pointless outputs.
@@ -60,7 +60,8 @@ class Gizmo2(Gizmo):
 g1 = Gizmo1()
 g2 = Gizmo2()
 
-GizmoManager.connect(g1, g2, ['a_string', 'length'])
+dag = DagManager()
+dag.connect(g1, g2, ['a_string', 'length'])
 
 print('Entering a string in gizmo1 will cause output of two params to gizmo2.')
 

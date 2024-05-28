@@ -4,7 +4,7 @@ from panel.viewable import Viewer
 import random
 import pandas as pd
 
-from gizmo import Gizmo, GizmoManager
+from gizmo import Gizmo, DagManager
 import param
 
 hv.extension('bokeh', inline=True)
@@ -71,8 +71,8 @@ class BarchartWidget(Gizmo, Viewer):
 
     df_in = param.DataFrame(default=None)
 
-    def __init__(self, inverted=False):
-        super().__init__()
+    def __init__(self, inverted=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.inverted = inverted
 
@@ -100,7 +100,7 @@ class BarchartWidget(Gizmo, Viewer):
 def main():
     title = 'Example GUI'
 
-    template = pn.template.BootstrapTemplate(
+    template = pn.template.MaterialTemplate(
         title=title,
         theme='dark',
         site='PoC ',
@@ -108,11 +108,13 @@ def main():
         collapsed_sidebar=True
     )
 
-    q = QueryWidget()
-    b = BarchartWidget()
-    bi = BarchartWidget(inverted=True)
-    GizmoManager.connect(q, b, ['df_out:df_in'])
-    GizmoManager.connect(q, bi, ['df_out:df_in'])
+    q = QueryWidget(name='Run a query')
+    b = BarchartWidget(name='Results bars')
+    bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
+
+    dag = DagManager()
+    dag.connect(q, b, ['df_out:df_in'])
+    dag.connect(q, bi, ['df_out:df_in'])
 
     template.main.objects = [pn.Column(q, b, bi)]
     template.show(threaded=False)

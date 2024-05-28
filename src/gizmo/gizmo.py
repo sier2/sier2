@@ -85,7 +85,7 @@ class Gizmo(param.Parameterized):
         # print(f'** EXECUTE {self.__class__=}')
         pass
 
-_gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
+# _gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
 
 def topological_sort(pairs):
     """Implement a topological sort as described at
@@ -130,7 +130,6 @@ def topological_sort(pairs):
     while S:
         n = S.pop(0)
         L.append(n)
-        print(f'{n=}')
         for _, m in remaining[:]:
             if (e:=edge(remaining, n, m))is not None:
                 del remaining[e]
@@ -153,15 +152,13 @@ def _get_sorted(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
 
     return ordered
 
-class GizmoManager:
-    @staticmethod
-    def clear() -> None:
-        """Clear the flow graph."""
+class DagManager:
+    """The manager of a directed acyclic grapf of gizmos."""
 
-        _gizmo_pairs.clear()
+    def __init__(self):
+        self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
 
-    @staticmethod
-    def connect(src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
+    def connect(self, src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
         """Connect parameters in a source gizmo to parameters in a destination gizmo.
 
         Connecting parameters in two gizmos creates a watcher for each pair of parameters.
@@ -172,14 +169,14 @@ class GizmoManager:
         The `param_names`` list specifies the parameters that should be connected.
         For example::
 
-            GizmoManager.connect(query, report, ['result:data'])
+            dag.connect(query, report, ['result:data'])
 
         connects ``query.result`` to ``report.data``, so that setting ``query.result``
         causes ``report.data`` to be updated and ``report.execute()`` to be called.
 
         If the output and input parameters have the same name, only the one name is required.::
 
-            GizmoManager.connect(query, report, [':data'])
+            dag.connect(query, report, [':data'])
 
         connects ``query.date`` to ``report.data``.
 
@@ -224,7 +221,7 @@ class GizmoManager:
         """
 
         if _DISALLOW_CYCLES:
-            if _has_cycle(_gizmo_pairs + [(src, dst)]):
+            if _has_cycle(self._gizmo_pairs + [(src, dst)]):
                 raise GizmoError('This connection would create a cycle')
 
         src_out_params = []
@@ -251,10 +248,9 @@ class GizmoManager:
         # print(f'{dst} watch {src} {src_out_params}')
         watcher = src.param.watch(dst._gizmo_event, src_out_params, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
-        _gizmo_pairs.append((src, dst))
+        self._gizmo_pairs.append((src, dst))
 
-    @staticmethod
-    def disconnect(g: Gizmo) -> None:
+    def disconnect(self, g: Gizmo) -> None:
         """Disconnect gizmo g from other gizmos.
 
         All parameters (input and output) will be disconnected.
@@ -270,24 +266,23 @@ class GizmoManager:
                 # print(f'disconnect watcher {g.name}.{watcher}')
                 g.param.unwatch(watcher)
 
-        for src, dst in _gizmo_pairs:
+        for src, dst in self._gizmo_pairs:
             if dst is g:
                 for p, watchers in src.param.watchers.items():
                     for watcher in watchers['value']:
                         # print(f'disconnect watcher {src.name}.{watcher}')
                         src.param.unwatch(watcher)
 
-        # Remove this gizmo from the graph.
+        # Remove this gizmo from the dag.
         # Check for sources and destinations.
         #
-        _gizmo_pairs[:] = [(src, dst) for src, dst in _gizmo_pairs if src is not g and dst is not g]
+        self._gizmo_pairs[:] = [(src, dst) for src, dst in self._gizmo_pairs if src is not g and dst is not g]
 
         # Because this gizmo is no longer watching anything, the name map can be cleared.
         #
         g._gizmo_name_map.clear()
 
-    @staticmethod
-    def get_sorted():
+    def get_sorted(self):
         """Return the gizmos in this dag in topological order.
 
         This is useful for arranging the gizmos in a GUI, for example.
@@ -301,12 +296,7 @@ class GizmoManager:
             A mapping of gizmo to rank
         """
 
-        return _get_sorted(_gizmo_pairs)
+        return _get_sorted(self._gizmo_pairs)
 
-    @staticmethod
-    def has_cycle():
-        return _has_cycle(_gizmo_pairs)
-
-    @staticmethod
-    def gizmo_pairs():
-        return _gizmo_pairs
+    def has_cycle(self):
+        return _has_cycle(self._gizmo_pairs)

@@ -6,7 +6,7 @@
 # **** NOT WORKING YET ****
 #
 
-from gizmo import Gizmo, GizmoManager
+from gizmo import Gizmo, DagManager
 import param
 
 class ThisGizmo(Gizmo):
@@ -44,12 +44,13 @@ class Gizmo4(Gizmo):
 if __name__=='__main__':
     thisg = ThisGizmo()
 
-    from pprint import pprint
     g1 = Gizmo1()
-    pprint(GizmoManager.compatible_outputs(thisg, g1))
-
     g2 = Gizmo2()
-    pprint(GizmoManager.compatible_outputs(thisg, g2))
-
     g3 = Gizmo3()
-    pprint(GizmoManager.compatible_outputs(thisg, g3))
+
+    from pprint import pprint
+    pprint(DagManager.compatible_outputs(thisg, g1))
+
+    pprint(DagManager.compatible_outputs(thisg, g2))
+
+    pprint(DagManager.compatible_outputs(thisg, g3))

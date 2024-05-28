@@ -1,1 +1,1 @@
-from .gizmo import Gizmo, GizmoError, GizmoManager
+from .gizmo import Gizmo, GizmoError, DagManager

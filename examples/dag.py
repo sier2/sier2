@@ -7,7 +7,7 @@
 # The third gizmo (R) prints its input.
 #
 
-from gizmo import Gizmo, GizmoManager
+from gizmo import Gizmo, DagManager
 import param
 
 class P(Gizmo):
@@ -36,8 +36,10 @@ class R(Gizmo):
 p = P()
 q = Q()
 r = R()
-GizmoManager.connect(p, q, ['one:two'])
-GizmoManager.connect(q, r, ['three:four'])
+
+dag = DagManager()
+dag.connect(p, q, ['one:two'])
+dag.connect(q, r, ['three:four'])
 
 start_number = 1
 p.one = start_number

@@ -10,7 +10,7 @@ Description
 -----------
 
 A gizmo is a self-contained piece of code with input and output parameters.
-Gizmos can be connected to each other using the ``GizmoManager`` to a create
+Gizmos can be connected to each other using the ``DagManager`` to a create
 a "flow".
 
 More precisely, output parameters in one gizmo can be connected to input parameters

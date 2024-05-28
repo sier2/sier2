@@ -1,4 +1,4 @@
-from gizmo import Gizmo, GizmoManager
+from gizmo import Gizmo, DagManager
 import param
 
 class IfEvenElseOdd(Gizmo):
@@ -45,7 +45,8 @@ if_else = IfEvenElseOdd()
 is_even = Notify('even')
 is_odd = Notify('odd')
 
-GizmoManager.connect(if_else, is_even, ['true_out:b', 'value'])
-GizmoManager.connect(if_else, is_odd, ['false_out:b', 'value'])
+dag = DagManager()
+dag.connect(if_else, is_even, ['true_out:b', 'value'])
+dag.connect(if_else, is_odd, ['false_out:b', 'value'])
 
 if_else.user_input()

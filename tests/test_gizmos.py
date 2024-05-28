@@ -1,6 +1,6 @@
 import pytest
 
-from gizmo import Gizmo, GizmoManager, GizmoError
+from gizmo import Gizmo, DagManager, GizmoError
 import param
 
 class PassThrough(Gizmo):
@@ -36,17 +36,13 @@ class TwoIn(Gizmo):
     t1_in = param.Integer(allow_refs=True)
     t2_in = param.Integer(allow_refs=True)
 
-@pytest.fixture(autouse=True)
-def setup():
+@pytest.fixture
+def dag():
     """Ensure that each test starts with a clear flow graph."""
 
-    GizmoManager.clear()
+    return DagManager()
 
-    yield
-
-    pass
-
-# def test_input_must_have_allow_refs():
+# def test_input_must_have_allow_refs(dag):
 #     class P(Gizmo):
 #         s = param.String()
 
@@ -54,9 +50,9 @@ def setup():
 #         s = param.String()
 
 #     with pytest.raises(GizmoError):
-#         GizmoManager.connect(P(), Q(), ['s'])
+#         dag.connect(P(), Q(), ['s'])
 
-def test_output_must_not_allow_refs():
+def test_output_must_not_allow_refs(dag):
     class P(Gizmo):
         s = param.String(allow_refs=True)
 
@@ -64,17 +60,17 @@ def test_output_must_not_allow_refs():
         s = param.String(allow_refs=True)
 
     with pytest.raises(GizmoError):
-        GizmoManager.connect(P(), Q(), ['s'])
+        dag.connect(P(), Q(), ['s'])
 
-def test_simple():
+def test_simple(dag):
     """Ensure that a value flows through the first input parameter to the last output parameter."""
 
     p = PassThrough()
     a = Add(1)
     o = OneIn()
 
-    GizmoManager.connect(p, a, ['p_out:a_in'])
-    GizmoManager.connect(a, o, ['a_out:o_in'])
+    dag.connect(p, a, ['p_out:a_in'])
+    dag.connect(a, o, ['a_out:o_in'])
 
     p.p_out = 1
     assert p.p_out == 1
@@ -82,7 +78,7 @@ def test_simple():
     assert a.a_out == 2
     assert o.o_in == 2
 
-def test_disconnect():
+def test_disconnect(dag):
     """Ensure that when gizmos are disconnected, they are no longer watching or being watched.
 
     We also ensure that other refs still work.
@@ -115,9 +111,9 @@ def test_disconnect():
     # assert n_watchers(t, 't1_in') == 0
     # assert n_watchers(t, 't2_in') == 0
 
-    GizmoManager.connect(p, a, ['p_out:a_in'])
-    GizmoManager.connect(a, t, ['a_out:t1_in'])
-    GizmoManager.connect(p, t, ['p_out:t2_in'])
+    dag.connect(p, a, ['p_out:a_in'])
+    dag.connect(a, t, ['a_out:t1_in'])
+    dag.connect(p, t, ['p_out:t2_in'])
 
     # Ensure that the flow is working.
     #
@@ -136,7 +132,7 @@ def test_disconnect():
 
     assert len(a._gizmo_name_map) == 1
 
-    GizmoManager.disconnect(a)
+    dag.disconnect(a)
 
     # Gizmo a is no longer watching b.b_out.
     #
@@ -161,37 +157,37 @@ def test_disconnect():
     assert a.a_out == 2
     assert t.t2_in == 5
 
-def test_self_loop():
+def test_self_loop(dag):
     """Ensure that gizmos can't connect to themselves."""
 
     p = PassThrough
 
     with pytest.raises(GizmoError):
-        GizmoManager.connect(p, p, ['p_out:p_in'])
+        dag.connect(p, p, ['p_out:p_in'])
 
-def test_loop1():
+def test_loop1(dag):
     """Ensure that connecting a gizmo doesn't create a loop in the flow DAG."""
 
     p = PassThrough()
     a = Add(1)
 
-    GizmoManager.connect(p, a, ['p_out:a_in'])
+    dag.connect(p, a, ['p_out:a_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(a, p, ['a_out:p_in'])
+        dag.connect(a, p, ['a_out:p_in'])
 
-def test_loop2():
+def test_loop2(dag):
     """Ensure that loops aren't allowed."""
 
     p = PassThrough()
     a1 = Add(1)
     a2 = Add(2)
 
-    GizmoManager.connect(p, a1, ['p_out:a_in'])
-    GizmoManager.connect(a1, a2, ['a_out:a_in'])
+    dag.connect(p, a1, ['p_out:a_in'])
+    dag.connect(a1, a2, ['a_out:a_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(a2, p, ['a_out:p_in'])
+        dag.connect(a2, p, ['a_out:p_in'])
 
-def test_loop3():
+def test_loop3(dag):
     """Ensure that loops aren't allowed."""
 
     p1 = PassThrough()
@@ -199,13 +195,13 @@ def test_loop3():
     p3 = PassThrough()
     p4 = PassThrough()
 
-    GizmoManager.connect(p1, p2, ['p_out:p_in'])
-    GizmoManager.connect(p2, p3, ['p_out:p_in'])
-    GizmoManager.connect(p4, p1, ['p_out:p_in'])
+    dag.connect(p1, p2, ['p_out:p_in'])
+    dag.connect(p2, p3, ['p_out:p_in'])
+    dag.connect(p4, p1, ['p_out:p_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(p3, p1, ['p_out:p_in'])
+        dag.connect(p3, p1, ['p_out:p_in'])
 
-def test_loop4():
+def test_loop4(dag):
     """Ensure that loops aren't allowed."""
 
     p1 = PassThrough()
@@ -213,31 +209,31 @@ def test_loop4():
     p3 = PassThrough()
     p4 = PassThrough()
 
-    GizmoManager.connect(p2, p3, ['p_out:p_in'])
-    GizmoManager.connect(p1, p2, ['p_out:p_in'])
-    GizmoManager.connect(p4, p1, ['p_out:p_in'])
+    dag.connect(p2, p3, ['p_out:p_in'])
+    dag.connect(p1, p2, ['p_out:p_in'])
+    dag.connect(p4, p1, ['p_out:p_in'])
     with pytest.raises(GizmoError):
-        GizmoManager.connect(p3, p1, ['p_out:p_in'])
+        dag.connect(p3, p1, ['p_out:p_in'])
 
-def test_nonloop1():
+def test_nonloop1(dag):
     """Ensure that non-loops are allowed."""
 
     gs = [PassThrough(name=f'P{i}') for i in range(4)]
-    GizmoManager.connect(gs[2], gs[3], ['p_out:p_in'])
-    GizmoManager.connect(gs[0], gs[1], ['p_out:p_in'])
-    GizmoManager.connect(gs[1], gs[2], ['p_out:p_in'])
+    dag.connect(gs[2], gs[3], ['p_out:p_in'])
+    dag.connect(gs[0], gs[1], ['p_out:p_in'])
+    dag.connect(gs[1], gs[2], ['p_out:p_in'])
 
-def test_ranks1():
+def test_ranks1(dag):
     gs = [PassThrough(name=f'PT{i}') for i in range(4)]
-    GizmoManager.connect(gs[2], gs[3], ['p_out:p_in'])
-    GizmoManager.connect(gs[0], gs[1], ['p_out:p_in'])
-    GizmoManager.connect(gs[1], gs[2], ['p_out:p_in'])
-    ranks = GizmoManager.get_sorted()
+    dag.connect(gs[2], gs[3], ['p_out:p_in'])
+    dag.connect(gs[0], gs[1], ['p_out:p_in'])
+    dag.connect(gs[1], gs[2], ['p_out:p_in'])
+    ranks = dag.get_sorted()
 
     ranks = [g.name for g in ranks]
     assert ranks == ['PT0', 'PT1', 'PT2', 'PT3']
 
-def test_ranks2():
+def test_ranks2(dag):
     """Ensure that the ranks reflect the order in the flow."""
 
     g1 = PassThrough(name='PT1')
@@ -246,12 +242,12 @@ def test_ranks2():
     g4 = PassThrough(name='PT4')
     g5 = PassThrough(name='PT5')
 
-    GizmoManager.connect(g4, g5, ['p_out:p_in'])
-    GizmoManager.connect(g3, g4, ['p_out:p_in'])
-    GizmoManager.connect(g2, g3, ['p_out:p_in'])
-    GizmoManager.connect(g1, g2, ['p_out:p_in'])
+    dag.connect(g4, g5, ['p_out:p_in'])
+    dag.connect(g3, g4, ['p_out:p_in'])
+    dag.connect(g2, g3, ['p_out:p_in'])
+    dag.connect(g1, g2, ['p_out:p_in'])
 
-    ranks = GizmoManager.get_sorted()
+    ranks = dag.get_sorted()
 
     ranks = [g.name for g in ranks]
     assert ranks == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']

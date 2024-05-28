@@ -11,7 +11,7 @@
 
 import random
 
-from gizmo import Gizmo, GizmoManager
+from gizmo import Gizmo, DagManager
 import param
 
 class NumberGizmo(Gizmo):
@@ -59,8 +59,9 @@ def main():
     ngb = NumberGizmo()
     addg = AddGizmo()
 
-    GizmoManager.connect(nga, addg, ['n:a'])
-    GizmoManager.connect(ngb, addg, ['n:b'])
+    dag = DagManager()
+    dag.connect(nga, addg, ['n:a'])
+    dag.connect(ngb, addg, ['n:b'])
 
     print(f'\nSet gizmo {nga}')
     nga.go()
