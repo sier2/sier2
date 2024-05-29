@@ -9,6 +9,7 @@ import param
 
 hv.extension('bokeh', inline=True)
 pn.extension(inline=True)
+# hv.renderer('bokeh').theme = 'dark_minimal'
 
 MAX_HEIGHT = 10
 
@@ -117,6 +118,7 @@ def main():
     dag.connect(q, bi, ['df_out:df_in'])
 
     template.main.objects = [pn.Column(q, b, bi)]
+    template.sidebar.objects = [pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))]
     template.show(threaded=False)
 
 if __name__=='__main__':

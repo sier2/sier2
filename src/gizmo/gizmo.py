@@ -1,6 +1,7 @@
 import param
 from typing import Callable
 from collections import defaultdict
+import holoviews as hv
 
 # By default, loops in a flow DAG aren't allowed.
 #
@@ -125,7 +126,6 @@ def topological_sort(pairs):
 
     srcs, dsts = zip(*remaining)
     S = list(set([s for s in srcs if s not in dsts]))
-    # print(S)
 
     while S:
         n = S.pop(0)
@@ -136,7 +136,6 @@ def topological_sort(pairs):
                 if not has_incoming(remaining, m):
                     S.append(m)
 
-    # print(f'Remaining: {remaining}')
     return L, remaining
 
 def _has_cycle(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
@@ -153,7 +152,7 @@ def _get_sorted(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
     return ordered
 
 class DagManager:
-    """The manager of a directed acyclic grapf of gizmos."""
+    """The manager of a directed acyclic graph of gizmos."""
 
     def __init__(self):
         self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
@@ -321,3 +320,71 @@ class DagManager:
 
     def has_cycle(self):
         return _has_cycle(self._gizmo_pairs)
+
+    def hv_graph(self):
+        """Build a HoloViews Graph to visualise the gizmo connections."""
+
+        src = []
+        dst = []
+
+        def build_layers():
+            """Traverse the gizmo pairs and organise them into layers.
+
+            The first layer contains the root (no input) nodes.
+            """
+
+            ranks = {}
+            remaining = self._gizmo_pairs[:]
+
+            #Find the root nodes and assign thema layer.
+            #
+            src[:], dst[:] = zip(*remaining)
+            S = list(set([s for s in src if s not in dst]))
+            for s in S:
+                ranks[s.name] = 0
+
+            n_layers = 1
+            while remaining:
+                for s, d in remaining:
+                    if s.name in ranks:
+                        # This destination could be from sources at different layers.
+                        # Make sure the deepest one is used.
+                        #
+                        ranks[d.name] = max(ranks.get(d.name, 0), ranks[s.name] + 1)
+                        n_layers = max(n_layers, ranks[d.name])
+
+                remaining = [(s,d) for s,d in remaining if d.name not in ranks]
+
+            return n_layers, ranks
+
+        def layout(_):
+            """Arrange the graph nodes."""
+
+            max_width = 0
+
+            # Arrange the graph y by layer from top to bottom.
+            # For x, for no we start at 0 and +1 in each layer.
+            #
+            yx = {y:0 for y in ranks.values()}
+            gxy = {}
+            for g, y in ranks.items():
+                gxy[g] = [yx[y], y]
+                yx[y] += 1
+                max_width = max(max_width, yx[y])
+
+            # Balance out the x in each layer.
+            #
+            for y in range(n_layers+1):
+                layer = {name: xy for name,xy in gxy.items() if xy[1]==y}
+                if len(layer)<max_width:
+                    for x, (name, xy) in enumerate(layer.items(), 1):
+                        gxy[name][0] = x/max_width
+
+            return gxy
+
+        n_layers, ranks = build_layers()
+
+        src_names = [g.name for g in src]
+        dst_names = [g.name for g in dst]
+        g = hv.Graph(((src_names, dst_names),))
+        return hv.element.graphs.layout_nodes(g, layout=layout)
