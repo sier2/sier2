@@ -157,10 +157,36 @@ def test_disconnect(dag):
     assert a.a_out == 2
     assert t.t2_in == 5
 
+def test_cannot_connect_twice(dag):
+    """Ensure that two gizmos cannot be connected more than once."""
+
+    p0 = PassThrough()
+    p1 = PassThrough()
+
+    dag.connect(p0, p1, ['p_out:p_in'])
+    with pytest.raises(GizmoError):
+        dag.connect(p0, p1, ['p_out:p_in'])
+
+def test_not_same_names(dag):
+    p0 = PassThrough(name='This')
+    p1 = PassThrough(name='This')
+
+    with pytest.raises(GizmoError):
+        dag.connect(p0, p1, ['p_out:p_in'])
+
+def test_not_existing_name(dag):
+    p0 = PassThrough(name='This')
+    p1 = PassThrough(name='That')
+    p2 = PassThrough(name='This')
+
+    dag.connect(p0, p1, ['p_out:p_in'])
+    with pytest.raises(GizmoError):
+        dag.connect(p1, p2, ['p_out:p_in'])
+
 def test_self_loop(dag):
     """Ensure that gizmos can't connect to themselves."""
 
-    p = PassThrough
+    p = PassThrough()
 
     with pytest.raises(GizmoError):
         dag.connect(p, p, ['p_out:p_in'])
@@ -223,17 +249,17 @@ def test_nonloop1(dag):
     dag.connect(gs[0], gs[1], ['p_out:p_in'])
     dag.connect(gs[1], gs[2], ['p_out:p_in'])
 
-def test_ranks1(dag):
+def test_sorted1(dag):
     gs = [PassThrough(name=f'PT{i}') for i in range(4)]
     dag.connect(gs[2], gs[3], ['p_out:p_in'])
     dag.connect(gs[0], gs[1], ['p_out:p_in'])
     dag.connect(gs[1], gs[2], ['p_out:p_in'])
-    ranks = dag.get_sorted()
 
-    ranks = [g.name for g in ranks]
-    assert ranks == ['PT0', 'PT1', 'PT2', 'PT3']
+    tsorted = [g.name for g in dag.get_sorted()]
 
-def test_ranks2(dag):
+    assert tsorted == ['PT0', 'PT1', 'PT2', 'PT3']
+
+def test_sorted2(dag):
     """Ensure that the ranks reflect the order in the flow."""
 
     g1 = PassThrough(name='PT1')
@@ -247,7 +273,6 @@ def test_ranks2(dag):
     dag.connect(g2, g3, ['p_out:p_in'])
     dag.connect(g1, g2, ['p_out:p_in'])
 
-    ranks = dag.get_sorted()
+    tsorted = [g.name for g in dag.get_sorted()]
 
-    ranks = [g.name for g in ranks]
-    assert ranks == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']
+    assert tsorted == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']

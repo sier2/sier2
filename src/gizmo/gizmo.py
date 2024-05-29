@@ -158,6 +158,16 @@ class DagManager:
     def __init__(self):
         self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
 
+    def _for_each_once(self):
+        """Yield each connected gizmo once."""
+
+        seen = set()
+        for s, d in self._gizmo_pairs:
+            for g in s, d:
+                if g not in seen:
+                    seen.add(g)
+                    yield g
+
     def connect(self, src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
         """Connect parameters in a source gizmo to parameters in a destination gizmo.
 
@@ -223,6 +233,17 @@ class DagManager:
         if _DISALLOW_CYCLES:
             if _has_cycle(self._gizmo_pairs + [(src, dst)]):
                 raise GizmoError('This connection would create a cycle')
+
+        if src.name==dst.name:
+            raise GizmoError('Cannot add two gizmos with the same name')
+
+        for g in self._for_each_once():
+            if (g is not src and g.name==src.name) or (g is not dst and g.name==dst.name):
+                raise GizmoError('A gizmo with this name already exists')
+
+        for s, d in self._gizmo_pairs:
+            if src is s and dst is d:
+                raise GizmoError('These gizmos are already connected')
 
         src_out_params = []
         for name in param_names:

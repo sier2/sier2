@@ -33,7 +33,7 @@ class Query(Gizmo):
 
         self.df_out = _make_df(max_height)
 
-class QueryWidget(Query, Viewer):
+class QueryWidget(Query):#, Viewer):
     def __panel__(self):
         def query_value(max_height):
             """A function that returns self.df.
@@ -62,7 +62,7 @@ class QueryWidget(Query, Viewer):
 
         return pn.Card(pn.Row(pn.Column(height, text), df_pane), title=self.name)
 
-class BarchartWidget(Gizmo, Viewer):
+class BarchartWidget(Gizmo):#, Viewer):
     """A barchart widget.
 
     This could have been written as separate Gizmo + Viewer classes,
