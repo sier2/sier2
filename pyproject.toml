@@ -1,15 +1,18 @@
 [tool.poetry]
 name = "gizmo"
-version = "0.3.0"
+version = "0.4.1"
 description = "Gizmo code flows"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
-readme = "README.md"
+readme = "README.rst"
 packages = [{include = "gizmo", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 
 param = "^2.0"
+
+[tool.poetry.plugins."gizmo.library"]
+export = "gizmo.provided:gizmos"
 
 [[tool.mypy.overrides]]
 module = "param"
