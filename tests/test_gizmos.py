@@ -246,14 +246,26 @@ def test_nonloop1(dag):
 
     gs = [PassThrough(name=f'P{i}') for i in range(4)]
     dag.connect(gs[2], gs[3], ['p_out:p_in'])
-    dag.connect(gs[0], gs[1], ['p_out:p_in'])
     dag.connect(gs[1], gs[2], ['p_out:p_in'])
+    dag.connect(gs[0], gs[1], ['p_out:p_in'])
+
+def test_must_connect(dag):
+    """Ensure that new gizmos are connected to existing gizmos."""
+
+    p1 = PassThrough()
+    p2 = PassThrough()
+    p3 = PassThrough()
+    p4 = PassThrough()
+
+    dag.connect(p1, p2, ['p_out:p_in'])
+    with pytest.raises(GizmoError):
+        dag.connect(p3, p4, ['p_out:p_in'])
 
 def test_sorted1(dag):
     gs = [PassThrough(name=f'PT{i}') for i in range(4)]
     dag.connect(gs[2], gs[3], ['p_out:p_in'])
-    dag.connect(gs[0], gs[1], ['p_out:p_in'])
     dag.connect(gs[1], gs[2], ['p_out:p_in'])
+    dag.connect(gs[0], gs[1], ['p_out:p_in'])
 
     tsorted = [g.name for g in dag.get_sorted()]
 

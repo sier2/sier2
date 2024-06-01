@@ -42,6 +42,17 @@ class Gizmo(param.Parameterized):
         #
         self._gizmo_name_map: dict[tuple[str, str], str] = {}
 
+    @classmethod
+    def gizmo_name(cls):
+        """The unique name of this gizmo class.
+
+        Gizmos require a unique name so they can be identified in the gizmo library.
+        The default implementation should be sufficient, but can be overridden
+        in case of refactoring or name clashes.
+        """
+
+        return f'{cls.__module__}.{cls.__name__}'
+
     def _gizmo_event(self, *events):
         """The callback method for param.watch().
 
@@ -244,6 +255,11 @@ class DagManager:
             if src is s and dst is d:
                 raise GizmoError('These gizmos are already connected')
 
+        if self._gizmo_pairs:
+            connected = any(src is s or src is d or dst is s or dst is d for s,d in self._gizmo_pairs)
+            if not connected:
+                raise GizmoError('New gizmos must connect to existing gizmos')
+
         src_out_params = []
         for name in param_names:
             names = name.split(':')
@@ -321,6 +337,80 @@ class DagManager:
     def has_cycle(self):
         return _has_cycle(self._gizmo_pairs)
 
+    def dump(self):
+        """Dump the dag to a serialisable (eg to JSON) dictionary.
+
+        The gizmos and connections are reduced to simple representations.
+        There is no need to serialize code: the gizmos themselves are assumed
+        to be available when loaded - it is just the attributes of the gizmos
+        that need to be saved.
+
+        Two sets of attributes in particular are saved.
+        * The name of the gizmo class. Each gizmo has a name by virtue of it
+            being a Parameterized subclass.
+        * The ``__init__`` parameters, where possible. For each parameter,
+            if the gizmo object has a matching instance name, the value of
+            the name is saved.
+
+        TODO other connect() parameters.
+        """
+
+        gizmo_instances = {}
+
+        instance = 0
+        for s, d in self._gizmo_pairs:
+            if s not in gizmo_instances:
+                gizmo_instances[s] = instance
+                instance += 1
+            if d not in gizmo_instances:
+                gizmo_instances[d] = instance
+                instance += 1
+
+        gizmos = []
+        for g, i in gizmo_instances.items():
+            # We have to pass some arguments to the gizmo when it is reconstituted.
+            # `name` is mandatory - what else?
+            #
+            args = {'name': g.name}
+
+            # What are __init__'s plain Python parameters?
+            # The first parameter is always self - skip that.
+            #
+            vars = g.__init__.__code__.co_varnames[1:g.__init__.__code__.co_argcount]
+            for var in vars:
+                if hasattr(g, var):
+                    args[var] = getattr(g, var)
+
+            gizmo = {
+                'gizmo': g.gizmo_name(),
+                'instance': i,
+                'args': args
+            }
+            gizmos.append(gizmo)
+
+        connections = []
+        for s, d in self._gizmo_pairs:
+            connection = {
+                'src': gizmo_instances[s],
+                'dst': gizmo_instances[d]
+            }
+            params_map = {k:v for k,v in d._gizmo_name_map.items() if k[0]==s.name}
+            params = [f'{k[1]}:{v}' for k,v in params_map.items()]
+            connection['param_names'] = params
+
+            connections.append(connection)
+
+        return {
+            'gizmos': gizmos,
+            'connections': connections
+        }
+
+    @staticmethod
+    def load(ser):
+        """Create a dag from a serialisation produced by dump()."""
+
+        pass
+
     def hv_graph(self):
         """Build a HoloViews Graph to visualise the gizmo connections."""
 
@@ -336,7 +426,7 @@ class DagManager:
             ranks = {}
             remaining = self._gizmo_pairs[:]
 
-            #Find the root nodes and assign thema layer.
+            # Find the root nodes and assign them a layer.
             #
             src[:], dst[:] = zip(*remaining)
             S = list(set([s for s in src if s not in dst]))
