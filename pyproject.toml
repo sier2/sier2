@@ -15,7 +15,10 @@ param = "^2.0"
 export = "gizmo.provided:gizmos"
 
 [[tool.mypy.overrides]]
-module = "param"
+module = [
+    "holoviews",
+    "param"
+]
 ignore_missing_imports = true
 
 [build-system]

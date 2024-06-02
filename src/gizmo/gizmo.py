@@ -81,7 +81,7 @@ class Gizmo(param.Parameterized):
         else:
             self.execute(events)
 
-    def execute(self):
+    def execute(self, *args, **kwargs):
         """This method is called when one or more of the input parameters causes an event.
 
         Override this method in a Gizmo subclass.

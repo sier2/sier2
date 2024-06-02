@@ -1,5 +1,6 @@
 from .gizmo import Gizmo, GizmoError
 import holoviews as hv
+from typing import Any
 
 # By default, loops in a flow DAG aren't allowed.
 #
@@ -201,6 +202,7 @@ class DagManager:
         that need to be saved.
 
         Two sets of attributes in particular are saved.
+
         * The name of the gizmo class. Each gizmo has a name by virtue of it
             being a Parameterized subclass.
         * The ``__init__`` parameters, where possible. For each parameter,
@@ -208,6 +210,11 @@ class DagManager:
             the name is saved.
 
         TODO other connect() parameters.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the serialised dag.
         """
 
         gizmo_instances = {}
@@ -231,7 +238,7 @@ class DagManager:
             # What are __init__'s plain Python parameters?
             # The first parameter is always self - skip that.
             #
-            vars = g.__init__.__code__.co_varnames[1:g.__init__.__code__.co_argcount]
+            vars = g.__init__.__code__.co_varnames[1:g.__init__.__code__.co_argcount] # type: ignore[misc]
             for var in vars:
                 if hasattr(g, var):
                     args[var] = getattr(g, var)
@@ -245,7 +252,7 @@ class DagManager:
 
         connections = []
         for s, d in self._gizmo_pairs:
-            connection = {
+            connection: dict[str, Any] = {
                 'src': gizmo_instances[s],
                 'dst': gizmo_instances[d]
             }
@@ -263,8 +270,8 @@ class DagManager:
     def hv_graph(self):
         """Build a HoloViews Graph to visualise the gizmo connections."""
 
-        src = []
-        dst = []
+        src: list[Gizmo] = []
+        dst: list[Gizmo] = []
 
         def build_layers():
             """Traverse the gizmo pairs and organise them into layers.

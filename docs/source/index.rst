@@ -40,7 +40,9 @@ The ``execute()`` method is called automatically when an input parameter is assi
    :maxdepth: 2
    :caption: Contents:
 
-   api
+   gizmo
+   dag
+   library
 
 Indices and tables
 ==================

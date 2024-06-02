@@ -1,6 +1,6 @@
 import sys
 from importlib.metadata import entry_points
-from typing import Any, Type
+from typing import Any
 
 from gizmo import Gizmo, DagManager, GizmoError
 
@@ -8,7 +8,7 @@ _gizmo_library = {}
 
 class Library:
     @staticmethod
-    def collect() -> dict[str, Type[Gizmo]]:
+    def collect() -> dict[str, type[Gizmo]]:
         """Collect gizmo implementations.
 
         This function uses ``importlib.metadata.entry_points`` to look up
@@ -38,6 +38,9 @@ class Library:
                     del gizmos_dict[key]
                     print(f'{key} is not a Gizmo: removed')
 
+                if key in _gizmo_library:
+                    raise GizmoError(f'Key {key} already in library')
+
             _gizmo_library.update(gizmos_dict)
 
         return _gizmo_library
@@ -59,20 +62,23 @@ class Library:
             The Gizmo's class.
         """
 
+        if not issubclass(gizmo_class, Gizmo):
+            print(f'{key} is not a Gizmo')
+
         if key in _gizmo_library:
-            raise GizmoError(f'Name {key} is already in the library')
+            raise GizmoError(f'Gizmo {key} is already in the library')
 
         _gizmo_library[key] = gizmo_class
 
     @staticmethod
-    def get(key: str) -> Type[Gizmo]:
+    def get(key: str) -> type[Gizmo]:
         if key in _gizmo_library:
             return _gizmo_library[key]
 
         raise GizmoError(f'Name {key} is not in the library')
 
     @staticmethod
-    def load(d: dict[str, Any]) -> Type[Gizmo]:
+    def load(d: dict[str, Any]) -> DagManager:
         """Load a dag from a serialised structure produced by Gizmo.dump().
 
         TODO param.watch parameters
