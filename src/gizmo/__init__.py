@@ -1,2 +1,3 @@
-from .gizmo import Gizmo, GizmoError, DagManager
-from . import library
+from .gizmo import Gizmo, GizmoError
+from .dag import DagManager
+from .library import Library
