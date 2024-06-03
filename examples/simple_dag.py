@@ -1,13 +1,13 @@
 #
 
-# A basic demonstration of connecting gizmos into a flow.
+# A basic demonstration of connecting gizmos into a dag.
 #
 # The first gizmo (P) outputs an integer.
 # The second gizmo (Q) takes an integer output, and outputs the input+1.
 # The third gizmo (R) prints its input.
 #
 
-from gizmo import Gizmo, DagManager
+from gizmo import Gizmo, Dag
 import param
 
 class P(Gizmo):
@@ -18,7 +18,7 @@ class P(Gizmo):
 class Q(Gizmo):
     """A gizmo with a single input and a single output."""
 
-    two = param.Integer(label='Int 2', doc='input Q', allow_refs=True)
+    two = param.Integer(label='Int 2', doc='input Q')
     three = param.Integer(label='Int 3', doc='output Q')
 
     def execute(self, *args, **kwargs):
@@ -28,7 +28,7 @@ class Q(Gizmo):
 class R(Gizmo):
     """A gizmo with a single input."""
 
-    four = param.Integer(label='Int 4', doc='input R', allow_refs=True)
+    four = param.Integer(label='Int 4', doc='input R')
 
     def execute(self):
         print(f'R acting {self.four=}')
@@ -37,7 +37,7 @@ p = P()
 q = Q()
 r = R()
 
-dag = DagManager()
+dag = Dag()
 dag.connect(p, q, ['one:two'])
 dag.connect(q, r, ['three:four'])
 

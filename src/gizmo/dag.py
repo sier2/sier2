@@ -2,11 +2,11 @@ from .gizmo import Gizmo, GizmoError
 import holoviews as hv
 from typing import Any
 
-# By default, loops in a flow DAG aren't allowed.
+# By default, loops in a dag aren't allowed.
 #
 _DISALLOW_CYCLES = True
 
-class DagManager:
+class Dag:
     """The manager of a directed acyclic graph of gizmos."""
 
     def __init__(self):
@@ -44,9 +44,6 @@ class DagManager:
 
         connects ``query.date`` to ``report.data``.
 
-        Input parameters must have ``allow_refs=True``. This is used solely as a check
-        to differentiate inputs from outputs - it isn't actually used as a reference.
-
         The ``onlychanged``, ``queued``, and ``precedence`` values are passed through
         to ``src.param.watch()``.
 
@@ -54,10 +51,8 @@ class DagManager:
         ----------
         src: Gizmo
             A Gizmo with output parameters.
-            Output parameters must be specified with ``allow_refs=False`` (the default).
         dst: Gizmo
             A Gizmo with input parameters.
-            Input parameters must be specified with ``allow_refs=True``.
         param_names: list[str]
             A list of 'out_param:in_param' strings.
         onlychanged: bool
@@ -114,9 +109,9 @@ class DagManager:
             else:
                 raise GizmoError(f'Name {name} cannot have more than one ":"')
 
-            # dstp = getattr(dst.param, inp)
-            # if not dstp.allow_refs:
-            #     raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
+            dstp = getattr(dst.param, inp)
+            if dstp.allow_refs:
+                raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
 
             srcp = getattr(src.param, outp)
             if srcp.allow_refs:
@@ -394,7 +389,7 @@ def _get_sorted(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
     ordered, remaining = topological_sort(gizmo_pairs)
 
     if remaining:
-        raise GizmoError('flow contains a cycle')
+        raise GizmoError('Dag contains a cycle')
 
     return ordered
 

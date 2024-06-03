@@ -2,7 +2,7 @@ Gizmos
 ======
 
 Connect modular pieces of Python code ("gizmos") into
-a processing flow pipeline.
+a processing dag pipeline.
 
 See the ``examples`` directory for examples.
 
@@ -10,8 +10,8 @@ Description
 -----------
 
 A gizmo is a self-contained piece of code with input and output parameters.
-Gizmos can be connected to each other using the ``DagManager`` to a create
-a "flow".
+Gizmos can be connected to each other using a ``Dag`` to create
+a dag of gizmos.
 
 More precisely, output parameters in one gizmo can be connected to input parameters
 in another gizmo. The connections need not be one-to-one: parameters in multiple gizmos

@@ -1,5 +1,5 @@
 Dag
 ===
 
-.. autoclass:: gizmo.DagManager
+.. autoclass:: gizmo.Dag
     :members:

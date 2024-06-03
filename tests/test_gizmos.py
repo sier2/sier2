@@ -1,12 +1,12 @@
 import pytest
 
-from gizmo import Gizmo, DagManager, GizmoError
+from gizmo import Gizmo, Dag, GizmoError
 import param
 
 class PassThrough(Gizmo):
     """A gizmo with one input and one output."""
 
-    p_in = param.Integer(allow_refs=True)
+    p_in = param.Integer()
     p_out = param.Integer()
 
     def execute(self):
@@ -15,7 +15,7 @@ class PassThrough(Gizmo):
 class Add(Gizmo):
     """A gizmo that adds an addend to its input."""
 
-    a_in = param.Integer(allow_refs=True)
+    a_in = param.Integer()
     a_out = param.Integer()
 
     def __init__(self, addend: int):
@@ -28,33 +28,23 @@ class Add(Gizmo):
 class OneIn(Gizmo):
     """A gizmo with one input."""
 
-    o_in = param.Integer(allow_refs=True)
+    o_in = param.Integer()
 
 class TwoIn(Gizmo):
     """A gizmo with two inputs."""
 
-    t1_in = param.Integer(allow_refs=True)
-    t2_in = param.Integer(allow_refs=True)
+    t1_in = param.Integer()
+    t2_in = param.Integer()
 
 @pytest.fixture
 def dag():
-    """Ensure that each test starts with a clear flow graph."""
+    """Ensure that each test starts with a clear dag."""
 
-    return DagManager()
-
-# def test_input_must_have_allow_refs(dag):
-#     class P(Gizmo):
-#         s = param.String()
-
-#     class Q(Gizmo):
-#         s = param.String()
-
-#     with pytest.raises(GizmoError):
-#         dag.connect(P(), Q(), ['s'])
+    return Dag()
 
 def test_output_must_not_allow_refs(dag):
     class P(Gizmo):
-        s = param.String(allow_refs=True)
+        s = param.String()
 
     class Q(Gizmo):
         s = param.String(allow_refs=True)
@@ -63,7 +53,7 @@ def test_output_must_not_allow_refs(dag):
         dag.connect(P(), Q(), ['s'])
 
 def test_simple(dag):
-    """Ensure that a value flows through the first input parameter to the last output parameter."""
+    """Ensure that a value flows from the first input parameter, through the dag, to the last output parameter."""
 
     p = PassThrough()
     a = Add(1)
@@ -115,7 +105,7 @@ def test_disconnect(dag):
     dag.connect(a, t, ['a_out:t1_in'])
     dag.connect(p, t, ['p_out:t2_in'])
 
-    # Ensure that the flow is working.
+    # Ensure that the dag is working.
     #
     p.p_out = 1
     assert a.a_in == 1 # p -> a
@@ -192,7 +182,7 @@ def test_self_loop(dag):
         dag.connect(p, p, ['p_out:p_in'])
 
 def test_loop1(dag):
-    """Ensure that connecting a gizmo doesn't create a loop in the flow DAG."""
+    """Ensure that connecting a gizmo doesn't create a loop in the dag."""
 
     p = PassThrough()
     a = Add(1)
@@ -272,7 +262,7 @@ def test_sorted1(dag):
     assert tsorted == ['PT0', 'PT1', 'PT2', 'PT3']
 
 def test_sorted2(dag):
-    """Ensure that the ranks reflect the order in the flow."""
+    """Ensure that the ranks reflect the order in the dag."""
 
     g1 = PassThrough(name='PT1')
     g2 = PassThrough(name='PT2')

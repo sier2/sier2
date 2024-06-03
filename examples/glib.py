@@ -3,7 +3,7 @@
 # Demonstrate how the gizmo library works.
 #
 
-from gizmo import library, DagManager
+from gizmo import library, Dag
 
 def main():
     lib = library.collect()
@@ -62,7 +62,7 @@ def main():
 
     # Connect the gizmos.
     #
-    dag = DagManager()
+    dag = Dag()
     for conn in dagj['connections']:
         param_names = conn['params']
         dag.connect(instances[conn['src']], instances[conn['dst']], param_names)
@@ -75,7 +75,6 @@ def main():
     #
     instances[0].go()
     instances[1].go()
-
 
 if __name__=='__main__':
     main()

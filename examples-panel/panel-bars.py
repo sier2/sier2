@@ -4,7 +4,7 @@ from panel.viewable import Viewer
 import random
 import pandas as pd
 
-from gizmo import Gizmo, DagManager
+from gizmo import Gizmo, Dag
 import param
 
 hv.extension('bokeh', inline=True)
@@ -113,7 +113,7 @@ def main():
     b = BarchartWidget(name='Results bars')
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 
-    dag = DagManager()
+    dag = Dag()
     dag.connect(q, b, ['df_out:df_in'])
     dag.connect(q, bi, ['df_out:df_in'])
 

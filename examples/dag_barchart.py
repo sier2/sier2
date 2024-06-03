@@ -10,7 +10,7 @@ import pandas as pd
 import random
 import uuid
 
-from gizmo import Gizmo, DagManager
+from gizmo import Gizmo, Dag
 import param
 
 class QueryGizmo(Gizmo):
@@ -64,13 +64,11 @@ class GroupByGizmo(Gizmo):
     #
     df = param.DataFrame(
         label='Input df',
-        doc='A dataframe from another gizmo',
-        allow_refs=True
+        doc='A dataframe from another gizmo'
     )
     column = param.String(
         label='Group column',
-        doc='Name of category to group by',
-        allow_refs=True
+        doc='Name of category to group by'
     )
 
     # Output params.
@@ -113,18 +111,15 @@ class BarChartGizmo(Gizmo):
     #
     group_df = param.DataFrame(
         label='Grouped dataframe',
-        doc='A dataframe that has been grouped',
-        allow_refs=True
+        doc='A dataframe that has been grouped'
     )
     category = param.String(
         label='Category',
-        doc='The column containing the category values',
-        allow_refs=True
+        doc='The column containing the category values'
     )
     count = param.String(
         label='Count',
-        doc='The column containing the count of categories',
-        allow_refs=True
+        doc='The column containing the count of categories'
     )
 
     # def __init__(self, *args, **kwargs):
@@ -154,7 +149,7 @@ q = QueryGizmo()
 g = GroupByGizmo()
 b = BarChartGizmo()
 
-dag = DagManager()
+dag = Dag()
 dag.connect(q, g, ['df', 'column'])
 dag.connect(g, b, ['group_df', 'category', 'count'])
 

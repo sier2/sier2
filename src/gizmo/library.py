@@ -2,7 +2,7 @@ import sys
 from importlib.metadata import entry_points
 from typing import Any
 
-from gizmo import Gizmo, DagManager, GizmoError
+from gizmo import Gizmo, Dag, GizmoError
 
 _gizmo_library = {}
 
@@ -78,7 +78,7 @@ class Library:
         raise GizmoError(f'Name {key} is not in the library')
 
     @staticmethod
-    def load(d: dict[str, Any]) -> DagManager:
+    def load(d: dict[str, Any]) -> Dag:
         """Load a dag from a serialised structure produced by Gizmo.dump().
 
         TODO param.watch parameters
@@ -98,7 +98,7 @@ class Library:
 
         # Connect the gizmos.
         #
-        dag = DagManager()
+        dag = Dag()
         for conn in d['connections']:
             kwargs = conn['args']
             dag.connect(instances[conn['src']], instances[conn['dst']], **kwargs)

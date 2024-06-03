@@ -5,7 +5,7 @@
 
 import pytest
 
-from gizmo import Gizmo, DagManager, GizmoError, Library
+from gizmo import Gizmo, Dag, GizmoError, Library
 import param
 
 class P(Gizmo):
@@ -25,11 +25,13 @@ class Increment(Gizmo):
 
 @pytest.fixture
 def dag():
-    """Ensure that each test starts with a clear flow graph."""
+    """Ensure that each test starts with a clear dag."""
 
-    return DagManager()
+    return Dag()
 
 def test_serialise(dag):
+    """Ensure that a dag can be serialised and restored."""
+
     p1 = P()
     p2 = P()
     incr2 = Increment(2)
@@ -44,7 +46,11 @@ def test_serialise(dag):
     p1.pout = 1
     assert p2.pin == 6
 
+    # We have a working dag.
+    # Dump it out.
+    #
     dump = dag.dump()
+    del dag
 
     assert len(dump['gizmos']) == 4
     assert len(dump['connections']) == 3
@@ -53,13 +59,13 @@ def test_serialise(dag):
     assert len(incr_gizmos) == 2
     assert set([g['args']['incr'] for g in incr_gizmos]) == set([2, 3])
 
-    from pprint import pprint
-    print()
-    pprint(dump)
-
+    # Gizmos must be in the library to be restored.
+    #
     Library.add(P.gizmo_key(), P)
     Library.add(Increment.gizmo_key(), Increment)
 
+    # Start again.
+    #
     dag2 = Library.load(dump)
 
     first_g = dag2.gizmo_by_name(first_name)

@@ -11,7 +11,7 @@
 
 import random
 
-from gizmo import Gizmo, DagManager
+from gizmo import Gizmo, Dag
 import param
 
 class NumberGizmo(Gizmo):
@@ -35,8 +35,8 @@ class AddGizmo(Gizmo):
     The action does not happen if either of the inputs is None.
     """
 
-    a = param.Integer(label='First integer', default=None, allow_refs=True)
-    b = param.Integer(label='Second integer', default=None, allow_refs=True)
+    a = param.Integer(label='First integer', default=None)
+    b = param.Integer(label='Second integer', default=None)
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -59,7 +59,7 @@ def main():
     ngb = NumberGizmo()
     addg = AddGizmo()
 
-    dag = DagManager()
+    dag = Dag()
     dag.connect(nga, addg, ['n:a'])
     dag.connect(ngb, addg, ['n:b'])
 

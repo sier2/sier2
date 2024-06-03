@@ -6,15 +6,15 @@
 # **** NOT WORKING YET ****
 #
 
-from gizmo import Gizmo, DagManager
+from gizmo import Gizmo, Dag
 import param
 
 class ThisGizmo(Gizmo):
     # Inputs.
     #
-    intp = param.Integer(label='An integer', allow_refs=True)
-    strp = param.Integer(label='A string', allow_refs=True)
-    dfp = param.DataFrame(label='A dataframe', allow_refs=True)
+    intp = param.Integer(label='An integer')
+    strp = param.Integer(label='A string')
+    dfp = param.DataFrame(label='A dataframe')
 
 class Gizmo1(Gizmo):
     # Outputs.
@@ -49,8 +49,8 @@ if __name__=='__main__':
     g3 = Gizmo3()
 
     from pprint import pprint
-    pprint(DagManager.compatible_outputs(thisg, g1))
+    pprint(Dag.compatible_outputs(thisg, g1))
 
-    pprint(DagManager.compatible_outputs(thisg, g2))
+    pprint(Dag.compatible_outputs(thisg, g2))
 
-    pprint(DagManager.compatible_outputs(thisg, g3))
+    pprint(Dag.compatible_outputs(thisg, g3))
