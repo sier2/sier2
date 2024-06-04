@@ -50,6 +50,8 @@ def test_serialise(dag):
     # Dump it out.
     #
     dump = dag.dump()
+    # from pprint import pprint
+    # pprint(dump)
     del dag
 
     assert len(dump['gizmos']) == 4
@@ -61,8 +63,8 @@ def test_serialise(dag):
 
     # Gizmos must be in the library to be restored.
     #
-    Library.add(P.gizmo_key(), P)
-    Library.add(Increment.gizmo_key(), Increment)
+    Library.add(P)
+    Library.add(Increment)
 
     # Start again.
     #
@@ -73,3 +75,7 @@ def test_serialise(dag):
 
     first_g.pout = 1
     assert last_g.pin == 6
+
+    # Dumping again should produce the same dump.
+    #
+    assert dump == dag2.dump()

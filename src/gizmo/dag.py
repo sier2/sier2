@@ -120,7 +120,6 @@ class Dag:
             dst._gizmo_name_map[src.name, outp] = inp
             src_out_params.append(outp)
 
-        # print(f'{dst} watch {src} {src_out_params}')
         watcher = src.param.watch(dst._gizmo_event, src_out_params, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
         self._gizmo_pairs.append((src, dst))
@@ -254,6 +253,16 @@ class Dag:
             params_map = {k:v for k,v in d._gizmo_name_map.items() if k[0]==s.name}
             params = [f'{k[1]}:{v}' for k,v in params_map.items()]
             connection['args'] = {'param_names': params}
+
+            # TODO onlychanged, queued, precedence must be per param, not per connection.
+            #
+            for pname, data in s.param.watchers.items():
+                watcher = data['value'][0] # Use the first watcher for now, the values are the same. TODO see above.
+                connection['args'].update({
+                    'onlychanged': watcher.onlychanged,
+                    'precedence': watcher.precedence,
+                    'queued': watcher.queued
+                })
 
             connections.append(connection)
 

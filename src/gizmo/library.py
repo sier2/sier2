@@ -46,24 +46,28 @@ class Library:
         return _gizmo_library
 
     @staticmethod
-    def add(key: str, gizmo_class: type[Gizmo]):
+    def add(gizmo_class: type[Gizmo], key: str=None):
         """Add a local gizmo class to the library.
 
         The library initially loads gizmo classes using Python's entry_points() mechanism.
         This method allows local Gizmos to be added to the libray.
 
-        This is useful fo teting, for example.
+        This is useful fo testing, for example.
 
         Parameters
         ----------
-        key: str
-            The Gizmo's unique key string.
-        gizmo_cclass: type[Gizmo]
+        gizmo_class: type[Gizmo]
             The Gizmo's class.
+        key: str
+            The Gizmo's unique key string. By default, the gizmo's gizmo_key()
+            class method will be used to obtain the key.
         """
 
         if not issubclass(gizmo_class, Gizmo):
             print(f'{key} is not a Gizmo')
+
+        if not key:
+            key = gizmo_class.gizmo_key()
 
         if key in _gizmo_library:
             raise GizmoError(f'Gizmo {key} is already in the library')

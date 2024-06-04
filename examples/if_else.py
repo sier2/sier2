@@ -34,16 +34,16 @@ class Notify(Gizmo):
     b = param.Boolean()
     value = param.Integer()
 
-    def __init__(self, msg):
-        super().__init__()
+    def __init__(self, *, name, msg):
+        super().__init__(name=name)
         self.msg = msg
 
     def execute(self):
         print(f'In gizmo {self.name}, {self.b} branch: value is {self.msg}')
 
 if_else = IfEvenElseOdd()
-is_even = Notify('even')
-is_odd = Notify('odd')
+is_even = Notify(name='EvenGizmo', msg='even')
+is_odd = Notify(name='OddGizmo', msg='odd')
 
 dag = Dag()
 dag.connect(if_else, is_even, ['true_out:b', 'value'])

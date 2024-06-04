@@ -65,7 +65,7 @@ dag.connect(g1, g2, ['a_string', 'length'])
 
 print('Entering a string in gizmo1 will cause output of two params to gizmo2.')
 
-print('To see the difference between individual and batch updating,')
+print('To see the difference between separate and batch updating,')
 print('strings that start with S will do separate assignments,')
 print('B will do an update of all parameters with only one event triggered.')
 print()
