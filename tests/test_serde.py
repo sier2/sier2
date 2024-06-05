@@ -5,7 +5,7 @@
 
 import pytest
 
-from gizmo import Gizmo, Dag, GizmoError, Library
+from gizmo import Gizmo, Dag, Connection, GizmoError, Library
 import param
 
 class P(Gizmo):
@@ -36,9 +36,9 @@ def test_serialise(dag):
     p2 = P()
     incr2 = Increment(2)
     incr3 = Increment(3)
-    dag.connect(p1, incr2, ['pout:iin'])
-    dag.connect(incr2, incr3, ['iout:iin'])
-    dag.connect(incr3, p2, ['iout:pin'])
+    dag.connect(p1, incr2, Connection('pout', 'iin'))
+    dag.connect(incr2, incr3, Connection('iout', 'iin'))
+    dag.connect(incr3, p2, Connection('iout', 'pin'))
 
     first_name = p1.name
     last_name = p2.name

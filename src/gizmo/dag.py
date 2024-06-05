@@ -1,10 +1,27 @@
 from .gizmo import Gizmo, GizmoError
+from dataclasses import dataclass, KW_ONLY
+from  collections import defaultdict
 import holoviews as hv
 from typing import Any
 
 # By default, loops in a dag aren't allowed.
 #
 _DISALLOW_CYCLES = True
+
+@dataclass
+class Connection:
+    """Define a connection between an output parameter and an input parameter."""
+
+    src_param_name: str
+    dst_param_name: str = None
+    _: KW_ONLY
+    onlychanged: bool = False
+    queued: bool = False
+    precedence: int = 0
+
+    def __post_init__(self):
+        if self.dst_param_name is None:
+            self.dst_param_name = self.src_param_name
 
 class Dag:
     """The manager of a directed acyclic graph of gizmos."""
@@ -22,7 +39,59 @@ class Dag:
                     seen.add(g)
                     yield g
 
-    def connect(self, src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
+    def connect(self, src: Gizmo, dst: Gizmo, *connections: Connection):
+        if any(not isinstance(c, Connection) for c in connections):
+            raise GizmoError('All arguments must be Connection instances')
+
+        if _DISALLOW_CYCLES:
+            if _has_cycle(self._gizmo_pairs + [(src, dst)]):
+                raise GizmoError('This connection would create a cycle')
+
+        if src.name==dst.name:
+            raise GizmoError('Cannot add two gizmos with the same name')
+
+        for g in self._for_each_once():
+            if (g is not src and g.name==src.name) or (g is not dst and g.name==dst.name):
+                raise GizmoError('A gizmo with this name already exists')
+
+        for s, d in self._gizmo_pairs:
+            if src is s and dst is d:
+                raise GizmoError('These gizmos are already connected')
+
+        if self._gizmo_pairs:
+            connected = any(src is s or src is d or dst is s or dst is d for s, d in self._gizmo_pairs)
+            if not connected:
+                raise GizmoError('New gizmos must connect to existing gizmos')
+
+        # Group watchers by their attributes.
+        # This optimises the number of watchers.
+        #
+        # If we just add a watcher per param in the loop, then
+        # param.update() won't batch the events.
+        #
+        src_out_params = defaultdict(list)
+
+        for conn in connections:
+            dst_param = getattr(dst.param, conn.dst_param_name)
+            # if dst_param.allow_refs:
+            #     raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
+
+            src_param = getattr(src.param, conn.src_param_name)
+            if src_param.allow_refs:
+                raise GizmoError(f'Source parameter {src}.{conn.src_param_name} must not be "allow_refs=True"')
+
+            dst._gizmo_name_map[src.name, conn.src_param_name] = conn.dst_param_name
+            src_out_params[conn.onlychanged, conn.queued, conn.precedence].append(conn.src_param_name)
+
+            # print(f'**** WATCH {src} {src_out_params} -> {dst} {src_out_params}')
+            # watcher = src.param.watch(dst._gizmo_event, [conn.src_param_name], onlychanged=conn.onlychanged, queued=conn.queued, precedence=conn.precedence)
+
+        for (onlychanged, queued, precedence), names in src_out_params.items():
+            src.param.watch(dst._gizmo_event, names, onlychanged=onlychanged, queued=queued, precedence=precedence)
+
+        self._gizmo_pairs.append((src, dst))
+
+    def connect_old(self, src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
         """Connect parameters in a source gizmo to parameters in a destination gizmo.
 
         Connecting parameters in two gizmos creates a watcher for each pair of parameters.

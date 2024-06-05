@@ -64,11 +64,12 @@ class Gizmo(param.Parameterized):
         # use self.param.update() to only cause one event.
         #
         kwargs = {}
+        # print(f'EVENTS: {events}')
         for event in events:
-            # print(f'ARG: {event.cls.name=} {event.name=} {event.new=}')
             cls = event.cls.name
             name = event.name
             inp = self._gizmo_name_map[cls, name]
+            # print(f'EVENT {cls} {name} {inp} {event.new}')
             kwargs[inp] = event.new
 
         self.param.update(**kwargs)

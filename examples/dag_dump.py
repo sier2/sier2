@@ -3,7 +3,9 @@
 # Demonstrate how the gizmo library works.
 #
 
-from gizmo import Library, Dag
+from pprint import pprint
+
+from gizmo import Library, Dag, Connection
 from gizmo.provided import AddGizmo, RandomNumberGizmo
 
 def main():
@@ -13,13 +15,14 @@ def main():
     r2 = RandomNumberGizmo(name='random2')
     a = AddGizmo(name='adder')
     dag = Dag()
-    dag.connect(r1, a, ['n:a'])
-    dag.connect(r2, a, ['n:b'])
+    dag.connect(r1, a, Connection('n', 'a'))
+    dag.connect(r2, a, Connection('n', 'b'))
 
     r1.go()
     r2.go()
 
     dump = dag.dump()
+    pprint(dump)
 
     dag2 = Library.load(dump)
 

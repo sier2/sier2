@@ -1,6 +1,6 @@
 import pytest
 
-from gizmo import Gizmo, Dag, GizmoError
+from gizmo import Gizmo, Dag, Connection, GizmoError
 import param
 
 class PassThrough(Gizmo):
@@ -59,8 +59,8 @@ def test_simple(dag):
     a = Add(1)
     o = OneIn()
 
-    dag.connect(p, a, ['p_out:a_in'])
-    dag.connect(a, o, ['a_out:o_in'])
+    dag.connect(p, a, Connection('p_out', 'a_in'))
+    dag.connect(a, o, Connection('a_out', 'o_in'))
 
     p.p_out = 1
     assert p.p_out == 1
@@ -101,9 +101,9 @@ def test_disconnect(dag):
     # assert n_watchers(t, 't1_in') == 0
     # assert n_watchers(t, 't2_in') == 0
 
-    dag.connect(p, a, ['p_out:a_in'])
-    dag.connect(a, t, ['a_out:t1_in'])
-    dag.connect(p, t, ['p_out:t2_in'])
+    dag.connect(p, a, Connection('p_out', 'a_in'))
+    dag.connect(a, t, Connection('a_out' ,'t1_in'))
+    dag.connect(p, t, Connection('p_out', 't2_in'))
 
     # Ensure that the dag is working.
     #
@@ -153,9 +153,9 @@ def test_cannot_connect_twice(dag):
     p0 = PassThrough()
     p1 = PassThrough()
 
-    dag.connect(p0, p1, ['p_out:p_in'])
+    dag.connect(p0, p1, Connection('p_out', 'p_in'))
     with pytest.raises(GizmoError):
-        dag.connect(p0, p1, ['p_out:p_in'])
+        dag.connect(p0, p1, Connection('p_out' ,'p_in'))
 
 def test_not_same_names(dag):
     p0 = PassThrough(name='This')
@@ -169,9 +169,9 @@ def test_not_existing_name(dag):
     p1 = PassThrough(name='That')
     p2 = PassThrough(name='This')
 
-    dag.connect(p0, p1, ['p_out:p_in'])
+    dag.connect(p0, p1, Connection('p_out', 'p_in'))
     with pytest.raises(GizmoError):
-        dag.connect(p1, p2, ['p_out:p_in'])
+        dag.connect(p1, p2, Connection('p_out', 'p_in'))
 
 def test_self_loop(dag):
     """Ensure that gizmos can't connect to themselves."""
@@ -187,9 +187,9 @@ def test_loop1(dag):
     p = PassThrough()
     a = Add(1)
 
-    dag.connect(p, a, ['p_out:a_in'])
+    dag.connect(p, a, Connection('p_out', 'a_in'))
     with pytest.raises(GizmoError):
-        dag.connect(a, p, ['a_out:p_in'])
+        dag.connect(a, p, Connection('a_out', 'p_in'))
 
 def test_loop2(dag):
     """Ensure that loops aren't allowed."""
@@ -198,10 +198,10 @@ def test_loop2(dag):
     a1 = Add(1)
     a2 = Add(2)
 
-    dag.connect(p, a1, ['p_out:a_in'])
-    dag.connect(a1, a2, ['a_out:a_in'])
+    dag.connect(p, a1, Connection('p_out', 'a_in'))
+    dag.connect(a1, a2, Connection('a_out', 'a_in'))
     with pytest.raises(GizmoError):
-        dag.connect(a2, p, ['a_out:p_in'])
+        dag.connect(a2, p, Connection('a_out', 'p_in'))
 
 def test_loop3(dag):
     """Ensure that loops aren't allowed."""
@@ -211,11 +211,11 @@ def test_loop3(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p1, p2, ['p_out:p_in'])
-    dag.connect(p2, p3, ['p_out:p_in'])
-    dag.connect(p4, p1, ['p_out:p_in'])
+    dag.connect(p1, p2, Connection('p_out', 'p_in'))
+    dag.connect(p2, p3, Connection('p_out','p_in'))
+    dag.connect(p4, p1, Connection('p_out','p_in'))
     with pytest.raises(GizmoError):
-        dag.connect(p3, p1, ['p_out:p_in'])
+        dag.connect(p3, p1, Connection('p_out', 'p_in'))
 
 def test_loop4(dag):
     """Ensure that loops aren't allowed."""
@@ -225,19 +225,19 @@ def test_loop4(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p2, p3, ['p_out:p_in'])
-    dag.connect(p1, p2, ['p_out:p_in'])
-    dag.connect(p4, p1, ['p_out:p_in'])
+    dag.connect(p2, p3, Connection('p_out', 'p_in'))
+    dag.connect(p1, p2, Connection('p_out', 'p_in'))
+    dag.connect(p4, p1, Connection('p_out', 'p_in'))
     with pytest.raises(GizmoError):
-        dag.connect(p3, p1, ['p_out:p_in'])
+        dag.connect(p3, p1, Connection('p_out', 'p_in'))
 
 def test_nonloop1(dag):
     """Ensure that non-loops are allowed."""
 
     gs = [PassThrough(name=f'P{i}') for i in range(4)]
-    dag.connect(gs[2], gs[3], ['p_out:p_in'])
-    dag.connect(gs[1], gs[2], ['p_out:p_in'])
-    dag.connect(gs[0], gs[1], ['p_out:p_in'])
+    dag.connect(gs[2], gs[3], Connection('p_out', 'p_in'))
+    dag.connect(gs[1], gs[2], Connection('p_out', 'p_in'))
+    dag.connect(gs[0], gs[1], Connection('p_out', 'p_in'))
 
 def test_must_connect(dag):
     """Ensure that new gizmos are connected to existing gizmos."""
@@ -247,15 +247,15 @@ def test_must_connect(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p1, p2, ['p_out:p_in'])
+    dag.connect(p1, p2, Connection('p_out', 'p_in'))
     with pytest.raises(GizmoError):
-        dag.connect(p3, p4, ['p_out:p_in'])
+        dag.connect(p3, p4, Connection('p_out', 'p_in'))
 
 def test_sorted1(dag):
     gs = [PassThrough(name=f'PT{i}') for i in range(4)]
-    dag.connect(gs[2], gs[3], ['p_out:p_in'])
-    dag.connect(gs[1], gs[2], ['p_out:p_in'])
-    dag.connect(gs[0], gs[1], ['p_out:p_in'])
+    dag.connect(gs[2], gs[3], Connection('p_out', 'p_in'))
+    dag.connect(gs[1], gs[2], Connection('p_out', 'p_in'))
+    dag.connect(gs[0], gs[1], Connection('p_out', 'p_in'))
 
     tsorted = [g.name for g in dag.get_sorted()]
 
@@ -270,10 +270,10 @@ def test_sorted2(dag):
     g4 = PassThrough(name='PT4')
     g5 = PassThrough(name='PT5')
 
-    dag.connect(g4, g5, ['p_out:p_in'])
-    dag.connect(g3, g4, ['p_out:p_in'])
-    dag.connect(g2, g3, ['p_out:p_in'])
-    dag.connect(g1, g2, ['p_out:p_in'])
+    dag.connect(g4, g5, Connection('p_out', 'p_in'))
+    dag.connect(g3, g4, Connection('p_out', 'p_in'))
+    dag.connect(g2, g3, Connection('p_out', 'p_in'))
+    dag.connect(g1, g2, Connection('p_out', 'p_in'))
 
     tsorted = [g.name for g in dag.get_sorted()]
 

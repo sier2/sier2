@@ -10,7 +10,7 @@ import pandas as pd
 import random
 import uuid
 
-from gizmo import Gizmo, Dag
+from gizmo import Gizmo, Dag, Connection
 import param
 
 class QueryGizmo(Gizmo):
@@ -150,8 +150,8 @@ g = GroupByGizmo()
 b = BarChartGizmo()
 
 dag = Dag()
-dag.connect(q, g, ['df', 'column'])
-dag.connect(g, b, ['group_df', 'category', 'count'])
+dag.connect(q, g, Connection('df'), Connection('column'))
+dag.connect(g, b, Connection('group_df'), Connection('category'), Connection('count'))
 
 while input('Enter to run a query; q to quit:').strip().lower()[:1]!='q':
     # Give the query gizmo something to do,

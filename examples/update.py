@@ -7,7 +7,7 @@
 #
 
 import param
-from gizmo import Gizmo, Dag
+from gizmo import Gizmo, Dag, Connection
 
 class Gizmo1(Gizmo):
     """A gizmo that creates pointless outputs.
@@ -57,17 +57,18 @@ class Gizmo2(Gizmo):
 
 # Get gizmo instances and connect them via their params.
 #
-g1 = Gizmo1()
-g2 = Gizmo2()
+g1 = Gizmo1(name='Input')
+g2 = Gizmo2(name='Output')
 
 dag = Dag()
-dag.connect(g1, g2, ['a_string', 'length'])
+# dag.connect(g1, g2, ['a_string', 'length'])
+dag.connect(g1, g2, Connection('a_string'), Connection('length'))
 
 print('Entering a string in gizmo1 will cause output of two params to gizmo2.')
 
-print('To see the difference between separate and batch updating,')
-print('strings that start with S will do separate assignments,')
-print('B will do an update of all parameters with only one event triggered.')
+print('To see the difference between separate and batch updating;')
+print('S: strings that start with S will do separate assignments,')
+print('B: strings that start with B will do an update of all parameters with only one event triggered.')
 print()
 
 while (s:=input('Enter an alphanumeric string [Enter to quit]: ').strip()):
@@ -79,3 +80,4 @@ while (s:=input('Enter an alphanumeric string [Enter to quit]: ').strip()):
             g1.update(s)
     except ValueError as e:
         print(e)
+        raise

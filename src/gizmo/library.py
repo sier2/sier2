@@ -105,6 +105,7 @@ class Library:
         dag = Dag()
         for conn in d['connections']:
             kwargs = conn['args']
+            print(f'{kwargs=}')
             dag.connect(instances[conn['src']], instances[conn['dst']], **kwargs)
 
         return dag
