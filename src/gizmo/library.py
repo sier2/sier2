@@ -2,7 +2,7 @@ import sys
 from importlib.metadata import entry_points
 from typing import Any
 
-from gizmo import Gizmo, Dag, GizmoError
+from gizmo import Gizmo, Dag, Connection, GizmoError
 
 _gizmo_library = {}
 
@@ -82,16 +82,14 @@ class Library:
         raise GizmoError(f'Name {key} is not in the library')
 
     @staticmethod
-    def load(d: dict[str, Any]) -> Dag:
+    def load(dump: dict[str, Any]) -> Dag:
         """Load a dag from a serialised structure produced by Gizmo.dump().
-
-        TODO param.watch parameters
         """
 
         # Create new instances of the specified gizmos.
         #
         instances = {}
-        for g in d['gizmos']:
+        for g in dump['gizmos']:
             class_name = g['gizmo']
             instance = g['instance']
             if instance not in instances:
@@ -103,9 +101,8 @@ class Library:
         # Connect the gizmos.
         #
         dag = Dag()
-        for conn in d['connections']:
-            kwargs = conn['args']
-            print(f'{kwargs=}')
-            dag.connect(instances[conn['src']], instances[conn['dst']], **kwargs)
+        for conn in dump['connections']:
+            conns = [Connection(**kwargs) for kwargs in conn['conn_args']]
+            dag.connect(instances[conn['src']], instances[conn['dst']], *conns)
 
         return dag

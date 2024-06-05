@@ -26,14 +26,34 @@ class RandomNumberGizmo(Gizmo):
         print(f'Random: {n}')
         self.n = n
 
+class ConstantNumberGizmo(Gizmo):
+    """Produce a constant number specified when the gizmo is created."""
+
+    constant = param.Number(
+        label='A constant number',
+        doc='The number is determined at gizmo creation time'
+    )
+
+    def __init__(self, x, name=None):
+        """Initialise the number. Use id(self) to allow two gizmos with the same constant."""
+
+        if name is None:
+            name = f'Number{x}-{id(self)}'
+
+        super().__init__(name=name)
+        self.x = x
+
+    def go(self):
+        self.constant = self.x
+
 class AddGizmo(Gizmo):
     """Add two numbers.
 
     The action does not happen if either of the inputs is None.
     """
 
-    a = param.Integer(label='First integer', default=None)
-    b = param.Integer(label='Second integer', default=None)
+    a = param.Number(label='First number', default=None)
+    b = param.Number(label='Second number', default=None)
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -51,5 +71,5 @@ def _name(cls):
 
 def gizmos() -> dict[str, Type[Gizmo]]:
     return {
-        _name(cls): cls for cls in [RandomNumberGizmo, AddGizmo]
+        _name(cls): cls for cls in [RandomNumberGizmo, ConstantNumberGizmo, AddGizmo]
     }

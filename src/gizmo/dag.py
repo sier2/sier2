@@ -317,21 +317,29 @@ class Dag:
         for s, d in self._gizmo_pairs:
             connection: dict[str, Any] = {
                 'src': gizmo_instances[s],
-                'dst': gizmo_instances[d]
+                'dst': gizmo_instances[d],
+                'conn_args': []
             }
-            params_map = {k:v for k,v in d._gizmo_name_map.items() if k[0]==s.name}
-            params = [f'{k[1]}:{v}' for k,v in params_map.items()]
-            connection['args'] = {'param_names': params}
 
-            # TODO onlychanged, queued, precedence must be per param, not per connection.
+            # Get src params that have been connected to dst params.
             #
-            for pname, data in s.param.watchers.items():
-                watcher = data['value'][0] # Use the first watcher for now, the values are the same. TODO see above.
-                connection['args'].update({
-                    'onlychanged': watcher.onlychanged,
-                    'precedence': watcher.precedence,
-                    'queued': watcher.queued
-                })
+            nmap = {(gname, sname): dname for (gname, sname), dname in d._gizmo_name_map.items() if gname==s.name}
+
+            for (gname, sname), dname in nmap.items():
+                args = {
+                    'src_param_name': sname,
+                    'dst_param_name': dname
+                }
+
+                for pname, data in s.param.watchers.items():
+                    if pname==sname:
+                        for watcher in data['value']:
+                            args['onlychanged'] = watcher.onlychanged
+                            args['queued'] = watcher.queued
+                            args['precedence'] = watcher.precedence
+
+
+                connection['conn_args'].append(args)
 
             connections.append(connection)
 
