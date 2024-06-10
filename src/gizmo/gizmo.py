@@ -1,5 +1,5 @@
 import param
-from typing import Callable
+from typing import Any, Callable
 from collections import defaultdict
 import threading
 
@@ -14,6 +14,9 @@ class _Stopper:
     @is_stopped.getter
     def is_stopped(self) -> bool:
         return self.event.is_set()
+
+    def __repr__(self):
+        return f'stopped={self.is_stopped}'
 
 class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
@@ -94,17 +97,31 @@ class Gizmo(param.Parameterized):
         # At least one parameter has changed.
         # Execute this gizmo.
         #
-        if self.execute.__code__.co_argcount==1:
-            self.execute()
-        else:
-            self.execute(events)
+        xparams = self.execute.__code__.co_varnames[1:self.execute.__code__.co_argcount] # type: ignore[misc]
+        xkwargs: dict[str, Any] = {}
+        for arg in xparams:
+            if arg=='stopper':
+                xkwargs[arg] = stopper
+            elif arg=='events':
+                xkwargs[arg] = events
+            else:
+                raise TypeError(f'Unrecognised argument {arg}')
 
-    def execute(self, *args, **kwargs):
+        self.execute(**xkwargs)
+
+    def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.
 
         Override this method in a Gizmo subclass.
 
-        If ``execute()`` has a parameter, the triggered events will be passed as a tuple.
+        The ``execute()`` method can have arguments. The arguments can be specified
+        in any order. It is not necessary to specify all, or any, arguments.
+        Arguments will not be passed via ``*args`` or ``**kwargs``.
+
+        * ``stopper`` - an indicator that the dag has been stopped. This may be
+            set while the gizmo is executing, in which case the gizmo should
+            stop executing as soon as possible.
+        * ``events`` -  the param events that caused execute() to be called.
         """
 
         # print(f'** EXECUTE {self.__class__=}')

@@ -46,7 +46,7 @@ class Library:
         return _gizmo_library
 
     @staticmethod
-    def add(gizmo_class: type[Gizmo], key: str=None):
+    def add(gizmo_class: type[Gizmo], key: str|None=None):
         """Add a local gizmo class to the library.
 
         The library initially loads gizmo classes using Python's entry_points() mechanism.

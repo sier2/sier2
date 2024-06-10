@@ -14,14 +14,14 @@ class Connection:
     """Define a connection between an output parameter and an input parameter."""
 
     src_param_name: str
-    dst_param_name: str = None
+    dst_param_name: str = ''
     _: KW_ONLY
     onlychanged: bool = False
     queued: bool = False
     precedence: int = 0
 
     def __post_init__(self):
-        if self.dst_param_name is None:
+        if not self.dst_param_name:
             self.dst_param_name = self.src_param_name
 
 class Dag:
@@ -40,6 +40,16 @@ class Dag:
                 if g not in seen:
                     seen.add(g)
                     yield g
+
+    def stop(self):
+        """Stop further execution of Gizmo instances in this dag."""
+
+        self._stopper.event.set()
+
+    def unstop(self):
+        """Enable further execution of Gizmo instances in this dag."""
+
+        self._stopper.event.clear()
 
     def connect(self, src: Gizmo, dst: Gizmo, *connections: Connection):
         if any(not isinstance(c, Connection) for c in connections):

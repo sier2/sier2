@@ -71,7 +71,7 @@ def main():
     # Wait for s2 to start executing, then stop the dag.
     #
     event.wait()
-    dag._stopper.event.set()
+    dag.stop()
 
     # Wait for the dag thread to finish.
     #
@@ -94,7 +94,7 @@ def main():
     # Unstop the dag, and run the dag again.
     # All of the Sleepers will have their markers incrmented.
     #
-    dag._stopper.event.clear()
+    dag.unstop()
     runner(dag, 2)
     print(s1)
     print(s2)
