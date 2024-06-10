@@ -117,6 +117,10 @@ def main():
     dag.connect(q, b, Connection('df_out', 'df_in'))
     dag.connect(q, bi, Connection('df_out', 'df_in'))
 
+    # import json
+    # with open('dag.json', 'w', encoding='utf-8') as f:
+    #     json.dump(dag.dump(), f, indent=2)
+
     template.main.objects = [pn.Column(q, b, bi)]
     template.sidebar.objects = [pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))]
     template.show(threaded=False)

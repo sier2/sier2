@@ -1,6 +1,19 @@
 import param
 from typing import Callable
 from collections import defaultdict
+import threading
+
+class _Stopper:
+    def __init__(self):
+        self.event = threading.Event()
+
+    @property
+    def is_stopped(self):
+        return self.event
+
+    @is_stopped.getter
+    def is_stopped(self) -> bool:
+        return self.event.is_set()
 
 class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
@@ -48,15 +61,19 @@ class Gizmo(param.Parameterized):
 
         return f'{cls.__module__}.{cls.__name__}'
 
-    def _gizmo_event(self, *events):
+    def _gizmo_event(self, stopper: _Stopper, *events):
         """The callback method for param.watch().
 
         When watched parameters produce events, this callback is called
-        with the events. The events are matched with self's input parameter name,
-        and sets the parameter values accordingly.
+        with the events. The events caused by another Gizmo's output params
+        are matched with self's input parameter name, and the param
+        values are set accordingly.
 
         If Gizmo.execute() has a parameter, the events are passed as a tuple.
         """
+
+        if stopper.is_stopped:
+            return
 
         # print(f'WATCHER EVENT {self.__class__} {type(events)} {events}')
 

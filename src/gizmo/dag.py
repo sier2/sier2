@@ -1,7 +1,8 @@
-from .gizmo import Gizmo, GizmoError
+from .gizmo import Gizmo, GizmoError, _Stopper
 from dataclasses import dataclass, KW_ONLY
-from  collections import defaultdict
+from collections import defaultdict
 import holoviews as hv
+import threading
 from typing import Any
 
 # By default, loops in a dag aren't allowed.
@@ -28,6 +29,7 @@ class Dag:
 
     def __init__(self):
         self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
+        self._stopper = _Stopper()
 
     def _for_each_once(self):
         """Yield each connected gizmo once."""
@@ -87,109 +89,7 @@ class Dag:
             # watcher = src.param.watch(dst._gizmo_event, [conn.src_param_name], onlychanged=conn.onlychanged, queued=conn.queued, precedence=conn.precedence)
 
         for (onlychanged, queued, precedence), names in src_out_params.items():
-            src.param.watch(dst._gizmo_event, names, onlychanged=onlychanged, queued=queued, precedence=precedence)
-
-        self._gizmo_pairs.append((src, dst))
-
-    def connect_old(self, src: Gizmo, dst: Gizmo, param_names: list[str], *, onlychanged=False, queued=False, precedence=0):
-        """Connect parameters in a source gizmo to parameters in a destination gizmo.
-
-        Connecting parameters in two gizmos creates a watcher for each pair of parameters.
-        Assigning a value to an output parameter triggers an event that is handled
-        by a callback method in the destination gizmo that sets the corresponding input
-        parameter and calls ``dst.execute()``.
-
-        The `param_names`` list specifies the parameters that should be connected.
-        For example::
-
-            dag.connect(query, report, ['result:data'])
-
-        connects ``query.result`` to ``report.data``, so that setting ``query.result``
-        causes ``report.data`` to be updated and ``report.execute()`` to be called.
-
-        If the output and input parameters have the same name, only the one name is required.::
-
-            dag.connect(query, report, [':data'])
-
-        connects ``query.date`` to ``report.data``.
-
-        The ``onlychanged``, ``queued``, and ``precedence`` values are passed through
-        to ``src.param.watch()``.
-
-        Parameters
-        ----------
-        src: Gizmo
-            A Gizmo with output parameters.
-        dst: Gizmo
-            A Gizmo with input parameters.
-        param_names: list[str]
-            A list of 'out_param:in_param' strings.
-        onlychanged: bool
-            By default, always triggers an event when the
-            watched parameter changes, but if ``onlychanged=True`` only triggers
-            an event when the parameter is set to something other than its current value.
-            Note that this is the opposite of the param default.
-        queued: bool
-            By default, additional watcher events generated
-            inside the callback method are dispatched immediately, effectively
-            doing depth-first processing of Watcher events. However, in
-            certain scenarios, it is helpful to wait to dispatch such
-            downstream events until all events that triggered this watcher
-            have been processed. In such cases setting ``queued=True`` on
-            this Watcher will queue up new downstream events generated
-            during the callback until it completes and all other watchers
-            invoked by that same event have finished executing),
-            effectively doing breadth-first processing of Watcher events.
-        precedence: int
-            Declares a precedence level for the Watcher that
-            determines the priority with which the callback is executed.
-            Lower precedence levels are executed earlier. Negative
-            precedences are reserved for internal Watchers, i.e. those
-            set up by param.depends.
-        """
-
-        if _DISALLOW_CYCLES:
-            if _has_cycle(self._gizmo_pairs + [(src, dst)]):
-                raise GizmoError('This connection would create a cycle')
-
-        if src.name==dst.name:
-            raise GizmoError('Cannot add two gizmos with the same name')
-
-        for g in self._for_each_once():
-            if (g is not src and g.name==src.name) or (g is not dst and g.name==dst.name):
-                raise GizmoError('A gizmo with this name already exists')
-
-        for s, d in self._gizmo_pairs:
-            if src is s and dst is d:
-                raise GizmoError('These gizmos are already connected')
-
-        if self._gizmo_pairs:
-            connected = any(src is s or src is d or dst is s or dst is d for s,d in self._gizmo_pairs)
-            if not connected:
-                raise GizmoError('New gizmos must connect to existing gizmos')
-
-        src_out_params = []
-        for name in param_names:
-            names = name.split(':')
-            if len(names)==1:
-                outp = inp = names[0]
-            elif len(names)==2:
-                outp, inp = names
-            else:
-                raise GizmoError(f'Name {name} cannot have more than one ":"')
-
-            dstp = getattr(dst.param, inp)
-            if dstp.allow_refs:
-                raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
-
-            srcp = getattr(src.param, outp)
-            if srcp.allow_refs:
-                raise GizmoError(f'Source parameter {src}.{outp} must not be "allow_refs=True"')
-
-            dst._gizmo_name_map[src.name, outp] = inp
-            src_out_params.append(outp)
-
-        watcher = src.param.watch(dst._gizmo_event, src_out_params, onlychanged=onlychanged, queued=queued, precedence=precedence)
+            src.param.watch(lambda events:dst._gizmo_event(self._stopper, events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
         self._gizmo_pairs.append((src, dst))
 
@@ -225,7 +125,7 @@ class Dag:
         #
         g._gizmo_name_map.clear()
 
-    def gizmo_by_name(self, name):
+    def gizmo_by_name(self, name) -> Gizmo | None:
         """Get a specific gizmo by name."""
 
         for s, d in self._gizmo_pairs:
