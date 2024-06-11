@@ -1,6 +1,8 @@
 import sys
 from importlib.metadata import entry_points
+import traceback
 from typing import Any
+import warnings
 
 from gizmo import Gizmo, Dag, Connection, GizmoError
 
@@ -27,21 +29,27 @@ class Library:
         library = entry_points(group='gizmo.library')
 
         for shelf in library:
-            gizmos_func = shelf.load()
-            gizmos_dict = gizmos_func()
+            try:
+                gizmos_func = shelf.load()
+                gizmos_dict = gizmos_func()
 
-            # Check that they really are gizmos.
-            #
-            for key in list(gizmos_dict):
-                g = gizmos_dict[key]
-                if not issubclass(g, Gizmo):
-                    del gizmos_dict[key]
-                    print(f'{key} is not a Gizmo: removed')
+                # Check that they really are gizmos.
+                #
+                for key in list(gizmos_dict):
+                    g = gizmos_dict[key]
+                    if not issubclass(g, Gizmo):
+                        del gizmos_dict[key]
+                        warnings.warn(f'{key} is not a Gizmo: removed')
 
-                if key in _gizmo_library:
-                    raise GizmoError(f'Key {key} already in library')
+                    if key in _gizmo_library:
+                        warnings.warn(f'Gizmo key {key} already in library: removing duplicate')
+                        del gizmos_dict[key]
 
-            _gizmo_library.update(gizmos_dict)
+                _gizmo_library.update(gizmos_dict)
+
+            except Exception as e:
+                print(f'While loading {shelf}:', file=sys.stderr)
+                traceback.print_stack()
 
         return _gizmo_library
 
@@ -106,3 +114,5 @@ class Library:
             dag.connect(instances[conn['src']], instances[conn['dst']], *conns)
 
         return dag
+
+Library.collect()

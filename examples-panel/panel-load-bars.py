@@ -1,10 +1,17 @@
+#
+
+# Demonstrate that a dag can be loaded from a dump.
+# First, run panel-bars.py to create a dumped dag in dag.json.
+# Then run this to load and start the dumped dag.
+#
+
 import holoviews as hv
 import panel as pn
 import json
 from pathlib import Path
 import tempfile
 
-from gizmo import Gizmo, Dag, Connection
+from gizmo import Gizmo, Dag, Connection, Library
 import param
 
 from _panel_widgets import QueryWidget, BarchartWidget
@@ -14,31 +21,15 @@ pn.extension(inline=True)
 # hv.renderer('bokeh').theme = 'dark_minimal'
 
 def main():
-    # Build a dag.
-    #
-    q = QueryWidget(name='Run a query')
-    b = BarchartWidget(name='Results bars')
-    bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
-
-    dag = Dag()
-    dag.connect(q, b, Connection('df_out', 'df_in'))
-    dag.connect(q, bi, Connection('df_out', 'df_in'))
-
-    title = 'Random weighted barcharts'
-
-    # Dump the dag and add panel information.
-    #
-    dump = dag.dump()
-    dump['panel'] = {
-        'title': title
-    }
-
-    # Save the dump.
+    # Load the dag.
     #
     p = Path(tempfile.gettempdir()) / 'dag.json'
-    print(f'Saving dag to {p} ...')
-    with open(p, 'w', encoding='utf-8') as f:
-        json.dump(dump, f, indent=2)
+    print(f'Loading dag from {p} ...')
+    with open(p, encoding='utf-8') as f:
+        dump = json.load(f)
+
+    dag = Library.load(dump)
+    title = dump['panel']['title']
 
     # Build a panel app.
     #
@@ -49,9 +40,16 @@ def main():
         sidebar=pn.Column('## Gizmos'),
         collapsed_sidebar=True
     )
-    template.main.objects = [pn.Column(q, b, bi)]
+    gizmos = dag.get_sorted()
+    template.main.objects = [pn.Column(*gizmos)]
     template.sidebar.objects = [pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))]
     template.show(threaded=False)
 
 if __name__=='__main__':
+    # Gizmos that are loaded from a dumped dag must be in the dag library.
+    # Because this is a demonstration, we load the required gizmo classes manually.
+    #
+    Library.add(QueryWidget)
+    Library.add(BarchartWidget)
+
     main()

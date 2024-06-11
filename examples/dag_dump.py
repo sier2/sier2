@@ -10,8 +10,6 @@ from gizmo import Library, Dag, Connection
 from gizmo.provided import AddGizmo, ConstantNumberGizmo
 
 def main():
-    lib = Library.collect()
-
     n1 = random.randint(1, 100)
     n2 = random.randint(1, 100)
 
