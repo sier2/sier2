@@ -1,7 +1,10 @@
 import param
 from typing import Any, Callable
 from collections import defaultdict
+import logging
 import threading
+
+LOGGER = logging.getLogger(__name__)
 
 class _Stopper:
     def __init__(self):
@@ -92,7 +95,13 @@ class Gizmo(param.Parameterized):
             # print(f'EVENT {cls} {name} {inp} {event.new}')
             kwargs[inp] = event.new
 
-        self.param.update(**kwargs)
+        try:
+            self.param.update(**kwargs)
+        except ValueError as e:
+            msg = f'While in{self.name} setting a parameter: {e}'
+            LOGGER.exception(msg)
+            stopper.event.set()
+            raise GizmoError(msg) from e
 
         # At least one parameter has changed.
         # Execute this gizmo.
@@ -107,7 +116,14 @@ class Gizmo(param.Parameterized):
             else:
                 raise TypeError(f'Unrecognised argument {arg}')
 
-        self.execute(**xkwargs)
+        LOGGER.debug('execute %s', self.name)
+        try:
+            self.execute(**xkwargs)
+        except Exception as e:
+            msg = f'While in {self.name}.execute(): {e}'
+            LOGGER.exception(msg)
+            stopper.event.set()
+            raise GizmoError(msg) from e
 
     def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.
