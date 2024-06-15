@@ -25,7 +25,7 @@ class Connection:
             self.dst_param_name = self.src_param_name
 
 class Dag:
-    """The manager of a directed acyclic graph of gizmos."""
+    """A directed acyclic graph of gizmos."""
 
     def __init__(self):
         self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []

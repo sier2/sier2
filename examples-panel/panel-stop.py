@@ -26,7 +26,7 @@ class QueryWidget(Gizmo):
 
         pn.bind(on_button, button, watch=True)
 
-        return pn.Card(pn.Row(int_input, button), title=self.name, sizing_mode='stretch_width')
+        return pn.Row(int_input, button)
 
 class ProgressWidget(Gizmo):
     timer_in = param.Integer()
@@ -37,7 +37,7 @@ class ProgressWidget(Gizmo):
         self.progress = pn.indicators.Progress(name='Progress', value=0, max=self.timer_in)
 
     def execute(self, stopper):
-        self.value = 0
+        self.progress.value = 0
         self.progress.max = self.timer_in
         for t in range(1, self.timer_in+1):
             time.sleep(1)
@@ -49,10 +49,28 @@ class ProgressWidget(Gizmo):
         self.timer_out = self.timer_in
 
     def __panel__(self):
-        return pn.Card(self.progress, title=self.name, sizing_mode='stretch_width')
+        running_status = pn.indicators.BooleanStatus(value=True,color='primary', align=('end', 'center'))
+
+        return self.progress
+
+class StatusContext:
+    def __init__(self, status):
+        self.status = status
+
+    def __enter__(self):
+        print('ENTER')
+        self.status.value = True
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print('EXIT')
+        # self.status.value = False
+        if exc_type is None:
+            self.status.color = 'success'
+        else:
+            self.status.color = 'danger'
 
 def main():
-    title = 'Stop Start'
+    title = 'Stop'
 
     template = pn.template.MaterialTemplate(
         title=title,
@@ -74,17 +92,38 @@ def main():
     # with open('dag.json', 'w', encoding='utf-8') as f:
     #     json.dump(dag.dump(), f, indent=2)
 
-    switch = pn.widgets.Switch(name='Stop / Start')
+    switch = pn.widgets.Switch(name='Stop')
 
     def on_switch(event):
         if switch.value:
             dag.stop()
+            reset()
         else:
             dag.unstop()
+            # TODO reset status for each card
 
     pn.bind(on_switch, switch, watch=True)
 
-    template.main.objects = [pn.Column(q, b1, b2)]
+    def wrap(w: Gizmo):
+        running_status = pn.indicators.BooleanStatus(value=False,color='primary', align=('end', 'center'))
+        w._gizmo_context = StatusContext(running_status)
+        return pn.Card(
+            w,
+            header=pn.Row(
+                running_status,
+                pn.pane.HTML(f'<h3 class="card-title">{w.name}</h3>', css_classes=['card-title'], margin=(0, 0)),
+            ),
+            sizing_mode='stretch_width'
+        )
+
+    def reset():
+        """Experiment."""
+        col = template.main.objects[0]
+        for card in col:
+            status = card.header[0]
+
+    # template.main.objects = [pn.Column(q, b1, b2)]
+    template.main.objects = [pn.Column(*(wrap(gw) for gw in (q, b1, b2)))]
     template.sidebar.objects = [
         pn.Column(
             switch,

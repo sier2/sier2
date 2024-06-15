@@ -21,6 +21,12 @@ class _Stopper:
     def __repr__(self):
         return f'stopped={self.is_stopped}'
 
+class _EmptyContext:
+    def __enter__(self):
+        pass
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
 class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
 
@@ -55,6 +61,7 @@ class Gizmo(param.Parameterized):
         # This is used by _gizmo_event() to set the correct input parameter.
         #
         self._gizmo_name_map: dict[tuple[str, str], str] = {}
+        self._gizmo_context = _EmptyContext()
 
     @classmethod
     def gizmo_key(cls):
@@ -118,7 +125,8 @@ class Gizmo(param.Parameterized):
 
         LOGGER.debug('execute %s', self.name)
         try:
-            self.execute(**xkwargs)
+            with self._gizmo_context:
+                self.execute(**xkwargs)
         except Exception as e:
             msg = f'While in {self.name}.execute(): {e}'
             LOGGER.exception(msg)
@@ -137,7 +145,7 @@ class Gizmo(param.Parameterized):
         * ``stopper`` - an indicator that the dag has been stopped. This may be
             set while the gizmo is executing, in which case the gizmo should
             stop executing as soon as possible.
-        * ``events`` -  the param events that caused execute() to be called.
+        * ``events`` - the param events that caused execute() to be called.
         """
 
         # print(f'** EXECUTE {self.__class__=}')
