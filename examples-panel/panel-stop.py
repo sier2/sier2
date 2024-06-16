@@ -3,14 +3,34 @@ import panel as pn
 from panel.viewable import Viewer
 import random
 import pandas as pd
+import threading
 import time
+import ctypes
 
 from gizmo import Gizmo, Dag, Connection
 import param
 
+NTHREADS = 2
+
 hv.extension('bokeh', inline=True)
-pn.extension(nthreads=2, inline=True)
+pn.extension(nthreads=NTHREADS, inline=True)
 # hv.renderer('bokeh').theme = 'dark_minimal'
+
+def interrupt_thread(tid, exctype):
+    """Raise exception exctype in thread tid."""
+
+    r = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_ulong(tid),
+        ctypes.py_object(exctype)
+    )
+    if r==0:
+        raise ValueError('Invalid thread id')
+    elif r!=1:
+        # "if it returns a number greater than one, you're in trouble,
+        # and you should call it again with exc=NULL to revert the effect"
+        #
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
+        raise SystemError('PyThreadState_SetAsyncExc failed')
 
 class QueryWidget(Gizmo):
     """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
@@ -42,6 +62,7 @@ class ProgressWidget(Gizmo):
         for t in range(1, self.timer_in+1):
             time.sleep(1)
             self.progress.value = t
+            print(f'Progress {self.name} {self.progress.value}')
 
             if stopper.is_stopped:
                 return
@@ -98,6 +119,20 @@ def main():
         if switch.value:
             dag.stop()
             reset()
+
+            # Which thread are we running on?
+            #
+            current_tid = threading.current_thread().ident
+
+            # What other threads are running?
+            # There are multiple threads running, including the main thread
+            # and the bokeh server thread. We need to find the panel threads.
+            # Unfortunately, there is nothing special about them.
+            #
+            all_threads = [t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')]
+            assert len(all_threads)==NTHREADS, f'{all_threads=}'
+            other_thread = [t for t in all_threads if t.ident!=current_tid][0]
+            interrupt_thread(other_thread.ident, KeyboardInterrupt)
         else:
             dag.unstop()
             # TODO reset status for each card

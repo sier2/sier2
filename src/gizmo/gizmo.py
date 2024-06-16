@@ -132,6 +132,9 @@ class Gizmo(param.Parameterized):
             LOGGER.exception(msg)
             stopper.event.set()
             raise GizmoError(msg) from e
+        except KeyboardInterrupt:
+            stopper.event.set()
+            print(f'KEYBOARD INTERRUPT IN {self.name}')
 
     def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.
