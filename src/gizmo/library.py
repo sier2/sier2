@@ -108,7 +108,7 @@ class Library:
 
         # Connect the gizmos.
         #
-        dag = Dag()
+        dag = Dag(doc=dump['dag']['doc'])
         for conn in dump['connections']:
             conns = [Connection(**kwargs) for kwargs in conn['conn_args']]
             dag.connect(instances[conn['src']], instances[conn['dst']], *conns)

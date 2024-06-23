@@ -37,7 +37,7 @@ p = P()
 q = Q()
 r = R()
 
-dag = Dag()
+dag = Dag(doc='Simple dag')
 dag.connect(p, q, Connection('one', 'two'))
 dag.connect(q, r, Connection('three', 'four'))
 

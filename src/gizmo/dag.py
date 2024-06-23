@@ -27,9 +27,10 @@ class Connection:
 class Dag:
     """A directed acyclic graph of gizmos."""
 
-    def __init__(self):
+    def __init__(self, *, doc: str):
         self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
         self._stopper = _Stopper()
+        self.doc = doc
 
     def _for_each_once(self):
         """Yield each connected gizmo once."""
@@ -254,6 +255,9 @@ class Dag:
             connections.append(connection)
 
         return {
+            'dag': {
+                'doc': self.doc
+            },
             'gizmos': gizmos,
             'connections': connections
         }

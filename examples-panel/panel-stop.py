@@ -64,8 +64,8 @@ class ProgressWidget(Gizmo):
             self.progress.value = t
             print(f'Progress {self.name} {self.progress.value}')
 
-            if stopper.is_stopped:
-                return
+            # if stopper.is_stopped:
+            #     return
 
         self.timer_out = self.timer_in
 
@@ -140,13 +140,13 @@ def main():
     pn.bind(on_switch, switch, watch=True)
 
     def wrap(w: Gizmo):
-        running_status = pn.indicators.BooleanStatus(value=False,color='primary', align=('end', 'center'))
+        running_status = pn.indicators.BooleanStatus(value=False, color='primary', align=('end', 'center'))
         w._gizmo_context = StatusContext(running_status)
         return pn.Card(
             w,
             header=pn.Row(
                 running_status,
-                pn.pane.HTML(f'<h3 class="card-title">{w.name}</h3>', css_classes=['card-title'], margin=(0, 0)),
+                pn.pane.HTML(f'<h3 class="card-title">{w.name}</h3>', css_classes=['card-title'], margin=(0, 0))
             ),
             sizing_mode='stretch_width'
         )
@@ -157,7 +157,6 @@ def main():
         for card in col:
             status = card.header[0]
 
-    # template.main.objects = [pn.Column(q, b1, b2)]
     template.main.objects = [pn.Column(*(wrap(gw) for gw in (q, b1, b2)))]
     template.sidebar.objects = [
         pn.Column(

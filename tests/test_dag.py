@@ -1,13 +1,21 @@
 import pytest
 
-from gizmo import Gizmo, Dag, Connection, GizmoError
+from gizmo import Gizmo, Dag, Connection, GizmoError, Library
 import param
 
 @pytest.fixture
 def dag():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag()
+    return Dag(doc='test-dag')
+
+def test_load_doc(dag):
+    """Ensure that a dag's doc is loaded."""
+
+    dump = dag.dump()
+    dag2 = Library.load(dump)
+
+    assert dag2.doc == dag.doc
 
 def test_mismatched_types(dag):
     """Ensure that mismatched parameter values can't be assigned, and raise a GizmoError."""
