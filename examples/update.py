@@ -60,8 +60,7 @@ class Gizmo2(Gizmo):
 g1 = Gizmo1(name='Input')
 g2 = Gizmo2(name='Output')
 
-dag = Dag()
-# dag.connect(g1, g2, ['a_string', 'length'])
+dag = Dag(doc='Example: assign vs update')
 dag.connect(g1, g2, Connection('a_string'), Connection('length'))
 
 print('Entering a string in gizmo1 will cause output of two params to gizmo2.')

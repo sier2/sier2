@@ -22,7 +22,7 @@ def main():
     r1name = r1.name
     r2name = r2.name
 
-    dag = Dag()
+    dag = Dag(doc='Example: dump dag')
     dag.connect(r1, a, Connection('constant', 'a'))
     dag.connect(r2, a, Connection('constant', 'b'))
 

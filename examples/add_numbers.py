@@ -23,11 +23,13 @@ class NumberGizmo(Gizmo):
         default=None
     )
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def go(self):
-        self.n = random.randint(1, 100)
+        r = random.randint(1, 100)
+        print(f'{self.name}={r}')
+        self.n = r
 
 class AddGizmo(Gizmo):
     """Add two numbers.
@@ -55,11 +57,11 @@ class AddGizmo(Gizmo):
 def main():
     """Pretend to be a gizmo manager."""
 
-    nga = NumberGizmo()
-    ngb = NumberGizmo()
+    nga = NumberGizmo(name='a')
+    ngb = NumberGizmo(name='b')
     addg = AddGizmo()
 
-    dag = Dag()
+    dag = Dag(doc='Example: add numbers')
     # dag.connect(nga, addg, ['n:a'])
     # dag.connect(ngb, addg, ['n:b'])
     dag.connect(nga, addg, Connection('n', 'a'))

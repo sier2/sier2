@@ -29,7 +29,12 @@ class Query(Gizmo):
 
         self.df_out = _make_df(max_height)
 
-class QueryWidget(Query):#, Viewer):
+class QueryWidget(Query):
+    """An example gizmo widget.
+
+    Moving the slider causes Query.query() to be called with the value of the slider.
+    """
+
     def __panel__(self):
         def query_value(max_height):
             """A function that returns self.df.
@@ -56,7 +61,7 @@ class QueryWidget(Query):#, Viewer):
             Two instances of a barchart widget display the counts (one normal, one inverted).
         '''
 
-        return pn.Card(pn.Row(pn.Column(height, text), df_pane), title=self.name)
+        return pn.Row(pn.Column(height, text), df_pane)
 
 class BarchartWidget(Gizmo):#, Viewer):
     """A barchart widget.

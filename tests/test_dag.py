@@ -21,9 +21,13 @@ def test_mismatched_types(dag):
     """Ensure that mismatched parameter values can't be assigned, and raise a GizmoError."""
 
     class OneOut(Gizmo):
+        """One output parameter."""
+
         o_out = param.String()
 
     class OneIn(Gizmo):
+        """One input parameter."""
+
         o_in = param.Integer()
 
     oo = OneOut()
@@ -37,9 +41,13 @@ def test_gizmo_exception(dag):
     """Ensure that exceptions in a gizmo raise a GizmoError."""
 
     class OneOut(Gizmo):
+        """One output parameter."""
+
         o_out = param.String()
 
     class OneIn(Gizmo):
+        """One input parameter."""
+
         o_in = param.String()
 
         def execute(self):

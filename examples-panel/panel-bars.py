@@ -20,7 +20,7 @@ def main():
     b = BarchartWidget(name='Results bars')
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 
-    dag = Dag()
+    dag = Dag(doc='Example: generate bar charts')
     dag.connect(q, b, Connection('df_out', 'df_in'))
     dag.connect(q, bi, Connection('df_out', 'df_in'))
 

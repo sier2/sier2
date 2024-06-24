@@ -31,6 +31,8 @@ class IfEvenElseOdd(Gizmo):
         self.param.trigger(tf)
 
 class Notify(Gizmo):
+    """Display a message."""
+
     b = param.Boolean()
     value = param.Integer()
 
@@ -45,7 +47,7 @@ if_else = IfEvenElseOdd()
 is_even = Notify(name='EvenGizmo', msg='even')
 is_odd = Notify(name='OddGizmo', msg='odd')
 
-dag = Dag()
+dag = Dag(doc='Example: run a branch depending on a value')
 dag.connect(if_else, is_even, Connection('true_out', 'b'), Connection('value'))
 dag.connect(if_else, is_odd, Connection('false_out', 'b'), Connection('value'))
 

@@ -21,6 +21,8 @@ pn.extension(inline=True)
 # hv.renderer('bokeh').theme = 'dark_minimal'
 
 def main():
+    print('Run panel-bars first.')
+
     # Load the dag.
     #
     p = Path(tempfile.gettempdir()) / 'dag.json'

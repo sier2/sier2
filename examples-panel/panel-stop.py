@@ -49,6 +49,8 @@ class QueryWidget(Gizmo):
         return pn.Row(int_input, button)
 
 class ProgressWidget(Gizmo):
+    """A progress widget."""
+
     timer_in = param.Integer()
     timer_out = param.Integer()
 
@@ -105,13 +107,9 @@ def main():
     b1 = ProgressWidget(name='Progress1')
     b2 = ProgressWidget(name='Progress2')
 
-    dag = Dag()
+    dag = Dag(doc='Example: stopping and unstopping a dag in panel')
     dag.connect(q, b1, Connection('timer_out', 'timer_in'))
     dag.connect(b1, b2, Connection('timer_out', 'timer_in'))
-
-    # import json
-    # with open('dag.json', 'w', encoding='utf-8') as f:
-    #     json.dump(dag.dump(), f, indent=2)
 
     switch = pn.widgets.Switch(name='Stop')
 

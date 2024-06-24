@@ -149,12 +149,8 @@ q = QueryGizmo()
 g = GroupByGizmo()
 b = BarChartGizmo()
 
-dag = Dag()
+dag = Dag(doc='Example: bar chart')
 dag.connect(q, g, Connection('df'), Connection('column'))
 dag.connect(g, b, Connection('group_df'), Connection('category'), Connection('count'))
 
-while input('Enter to run a query; q to quit:').strip().lower()[:1]!='q':
-    # Give the query gizmo something to do,
-    # and watch the result cascade through the grouping to the chart.
-    #
-    q.query('SELECT color,count FROM the_table')
+q.query('SELECT color,count FROM the_table')

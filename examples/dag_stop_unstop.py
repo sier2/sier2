@@ -58,7 +58,7 @@ def main():
     s2 = Sleeper(name='s2', event=event)
     s3 = Sleeper(name='s3')
 
-    dag = Dag()
+    dag = Dag(doc='Example: stopping and unstopping a dag')
     dag.connect(s0, s1, Connection('time_out', 'time_in'))
     dag.connect(s1, s2, Connection('time_out', 'time_in'))
     dag.connect(s2, s3, Connection('time_out', 'time_in'))

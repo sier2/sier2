@@ -100,7 +100,7 @@ class Dag:
             # watcher = src.param.watch(dst._gizmo_event, [conn.src_param_name], onlychanged=conn.onlychanged, queued=conn.queued, precedence=conn.precedence)
 
         for (onlychanged, queued, precedence), names in src_out_params.items():
-            src.param.watch(lambda events:dst._gizmo_event(self._stopper, events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
+            src.param.watch(lambda *events: dst._gizmo_event(self._stopper, *events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
         self._gizmo_pairs.append((src, dst))
 

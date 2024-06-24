@@ -57,6 +57,9 @@ class Gizmo(param.Parameterized):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        if not self.__doc__:
+            raise GizmoError(f'Class {self.__class__} must have a docstring')
+
         # Maintain a map of "gizmo+output parameter being watched" -> "input parameter".
         # This is used by _gizmo_event() to set the correct input parameter.
         #

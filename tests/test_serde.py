@@ -9,10 +9,14 @@ from gizmo import Gizmo, Dag, Connection, GizmoError, Library
 import param
 
 class P(Gizmo):
+    """In and out parameters."""
+
     pin = param.Number()
     pout = param.Number()
 
 class Increment(Gizmo):
+    """Increment the input."""
+
     iin = param.Integer()
     iout = param.Integer()
 
