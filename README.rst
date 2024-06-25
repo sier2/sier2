@@ -35,3 +35,12 @@ A typical Gizmo implementation looks like this.
             self.int_out = self.int_in + 1
 
 See the examples in ``examples`` (Python scripts) and ``examples-panel`` (scripts that use `Panel <https://panel.holoviz.org/>`_ as a UI).
+
+Documentation
+-------------
+
+To build the documentation from the repository root directory:
+
+.. code-block:: powershell
+
+    docs/make html

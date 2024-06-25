@@ -101,12 +101,14 @@ Examples
 See the ``examples`` directory in the source code for examples.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
 
-   gizmo
-   dag
-   library
+    tutorial-1
+    tutorial-2
+    gizmo
+    dag
+    library
 
 Indices and tables
 ==================

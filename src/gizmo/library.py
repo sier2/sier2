@@ -91,8 +91,7 @@ class Library:
 
     @staticmethod
     def load(dump: dict[str, Any]) -> Dag:
-        """Load a dag from a serialised structure produced by Gizmo.dump().
-        """
+        """Load a dag from a serialised structure produced by Gizmo.dump()."""
 
         # Create new instances of the specified gizmos.
         #
