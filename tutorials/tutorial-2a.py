@@ -52,11 +52,6 @@ class Display(Gizmo):
 
     text = param.String(label='Text', doc='Display text')
 
-    # def execute(self):
-    #     print('Output text:')
-    #     print(self.text)
-    #     print()
-
 def main():
     ui = UserInput()
     tr = Translate()

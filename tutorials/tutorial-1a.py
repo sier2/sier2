@@ -32,11 +32,15 @@ class Translate(Gizmo):
     def execute(self):
         print(f'{self.flag=} {self.text_in=}')
 
-ui = UserInput()
-tr = Translate()
+def main():
+    ui = UserInput()
+    tr = Translate()
 
-dag = Dag(doc='Translation')
-dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
+    dag = Dag(doc='Translation')
+    dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
 
-ui.text = 'Hello world.'
-ui.flag = True
+    ui.text = 'Hello world.'
+    ui.flag = True
+
+if __name__=='__main__':
+    main()
