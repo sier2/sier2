@@ -27,7 +27,7 @@ class UserInput(Gizmo):
             max_rows=24,
             resizable='both',
             sizing_mode='stretch_width',
-            value='The quick brown\nfox jumps over the lazy\ndog.\n'
+            value='The quick brown\nfox jumps over the lazy\ndog.\n\nThe end.'
         )
         flag_widget = pn.widgets.Checkbox(name='Capitalize', value=False, align='center')
 
@@ -70,14 +70,14 @@ class Translate(Gizmo):
     def execute(self):
         self.progress.active = True
         try:
-            paras = re.split(r'\n{2,}', self.text_in)
+            paras = re.split(r'\n', self.text_in)
             para_words = [para.split() for para in paras]
             para_words = [[''.join(random.sample(word, k=len(word))) for word in para] for para in para_words]
 
             if self.flag:
                 para_words = [[word.capitalize() for word in para] for para in para_words]
 
-            text = '\n\n'.join(' '.join(word for word in para) for para in para_words)
+            text = '\n'.join(' '.join(word for word in para) for para in para_words)
 
             # Emulate work being done.
             #
@@ -108,7 +108,7 @@ class Display(Gizmo):
             resizable='both',
             sizing_mode='stretch_width',
             disabled=True,
-            stylesheets=['.bk-input[disabled]{background-color:#fff;color:green;opacity:1.0;cursor:text}']
+            stylesheets=['.bk-input[disabled]{background-color:#fff;color:black;opacity:1.0;cursor:text}']
         )
 
     def execute(self):
