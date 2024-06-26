@@ -14,16 +14,6 @@ class UserInput(Gizmo):
     text = param.String(label='User input', doc='Text to be translated')
     flag = param.Boolean(label='Transform flag', doc='Changes how text is transformed')
 
-    def run(self, text: str, flag: bool):
-        print('Input text:\n')
-        print(text)
-        print()
-
-        self.param.update({
-            'text': text,
-            'flag': flag
-        })
-
 class Translate(Gizmo):
     """A gizmo that transforms text.
 

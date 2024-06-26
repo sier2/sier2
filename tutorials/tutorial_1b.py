@@ -40,8 +40,8 @@ def main():
     dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
 
     ui.param.update(
-        text = 'Hello world.',
-        flag = True
+        text='Hello world.',
+        flag=True
     )
 
 if __name__=='__main__':

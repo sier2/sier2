@@ -83,7 +83,7 @@ Now we can build our new dag, run it, and see the result.
 
 .. note::
 
-    To see this dag in action, run ``tutorials/tutorial-2a.py``.
+    To see this dag in action, run ``tutorials/tutorial_2a.py``.
 
 The output (which may vary because of the randomness) is:
 

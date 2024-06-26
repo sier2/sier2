@@ -107,7 +107,7 @@ be called.
 
 .. note::
 
-    To see this dag in action, run ``tutorials/tutorial-1a.py``.
+    To see this dag in action, run ``tutorials/tutorial_1a.py``.
 
 The output resulting from this dag is:
 
@@ -137,13 +137,13 @@ We can fix this by updating both parameters as a batch.
 .. code-block:: python
 
     ui.param.update(
-        text = 'Hello world.',
-        flag = True
+        text='Hello world.',
+        flag=True
     )
 
 .. note::
 
-    To see this dag in action, run ``tutorials/tutorial-1b.py``.
+    To see this dag in action, run ``tutorials/tutorial_1b.py``.
 
 Now we only get the single output we expected.
 
