@@ -4,9 +4,9 @@ from gizmo.panel import show_dag
 from tutorial_3b import UserInput, Translate, Display
 
 if __name__=='__main__':
-    ui = UserInput()
-    tr = Translate()
-    di = Display()
+    ui = UserInput(name='User input')
+    tr = Translate(name='Translation')
+    di = Display(name='Display output')
 
     dag = Dag(doc='Translation')
     dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
