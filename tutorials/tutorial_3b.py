@@ -19,14 +19,14 @@ class UserInput(Gizmo):
     flag = param.Boolean(label='Transform flag', doc='Changes how text is transformed')
 
     def __panel__(self):
+        print(f'UI {self.name=}')
         text_in_widget = pn.widgets.TextAreaInput(
             name='Input text',
             placeholder='Enter text here',
             auto_grow=True,
             rows=8,
-            max_rows=24,
             resizable='both',
-            sizing_mode='stretch_width',
+            sizing_mode='stretch_both',
             value='The quick brown\nfox jumps over the lazy\ndog.\n\nThe end.'
         )
         flag_widget = pn.widgets.Checkbox(name='Capitalize', value=False, align='center')
@@ -104,23 +104,22 @@ class Display(Gizmo):
             placeholder='Translated text goes here',
             auto_grow=True,
             rows=8,
-            max_rows=24,
             resizable='both',
-            sizing_mode='stretch_width',
+            sizing_mode='stretch_both',
             disabled=True,
-            stylesheets=['.bk-input[disabled]{background-color:#fff;color:black;opacity:1.0;cursor:text}']
+            stylesheets=['.bk-input[disabled]{background-color:var(--current-background-color);color:var(--panel-on-secondary-color);opacity:1.0;cursor:text}']
         )
 
     def execute(self):
         self.text_out.value = self.text
 
     def __panel__(self):
-        return  self.text_out
+        return self.text_out
 
 if __name__=='__main__':
-    ui = UserInput()
-    tr = Translate()
-    di = Display()
+    ui = UserInput(name='User input')
+    tr = Translate(name='Translate')
+    di = Display(name='Display output')
 
     dag = Dag(doc='Translation')
     dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))

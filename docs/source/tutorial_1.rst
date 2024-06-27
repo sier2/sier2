@@ -12,6 +12,8 @@ The dag will contain three gizmos.
 
 We suggest that you create a new Python script file and follow along,
 so you can see how gizmos work, and how changes affect the dag.
+If things go wrong, copies of the tutorial scripts are in the ``tutorials``
+directory.
 
 A gizmo is an instance of a class that subclasses Gizmo, and uses at least
 one ``param`` for input and/or output.

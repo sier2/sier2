@@ -107,6 +107,7 @@ See the ``examples`` directory in the source code for examples.
     tutorial_1
     tutorial_2
     tutorial_3
+    tutorial_4
     gizmo
     dag
     library

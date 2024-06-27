@@ -56,7 +56,6 @@ here, see the `panel web site <https://panel.holoviz.org>`_ for more information
                 placeholder='Enter text here',
                 auto_grow=True,
                 rows=8,
-                max_rows=24,
                 resizable='both',
                 sizing_mode='stretch_width',
                 value='The quick brown\nfox jumps over the lazy\ndog.\n'
