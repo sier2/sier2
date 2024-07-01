@@ -48,6 +48,7 @@ def test_serialise(dag):
     last_name = p2.name
 
     p1.pout = 1
+    dag.execute()
     assert p2.pin == 6
 
     # We have a working dag.
@@ -78,6 +79,7 @@ def test_serialise(dag):
     last_g = dag2.gizmo_by_name(last_name)
 
     first_g.pout = 1
+    dag2.execute()
     assert last_g.pin == 6
 
     # Dumping again should produce the same dump.

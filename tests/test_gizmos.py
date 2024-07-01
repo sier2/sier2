@@ -63,6 +63,7 @@ def test_simple(dag):
     dag.connect(a, o, Connection('a_out', 'o_in'))
 
     p.p_out = 1
+    dag.execute()
     assert p.p_out == 1
     assert a.a_in == 1
     assert a.a_out == 2
@@ -108,6 +109,8 @@ def test_disconnect(dag):
     # Ensure that the dag is working.
     #
     p.p_out = 1
+    dag.execute()
+
     assert a.a_in == 1 # p -> a
     assert a.a_out == 2 # p -> a
     assert t.t1_in == 2 # p -> a -> t
@@ -143,6 +146,8 @@ def test_disconnect(dag):
     # Gizmo t is still watching b.b_out.
     #
     p.p_out = 5
+    dag.execute()
+
     assert a.a_in == 1
     assert a.a_out == 2
     assert t.t2_in == 5

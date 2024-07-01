@@ -57,13 +57,11 @@ class AddGizmo(Gizmo):
 def main():
     """Pretend to be a gizmo manager."""
 
-    nga = NumberGizmo(name='a')
-    ngb = NumberGizmo(name='b')
+    nga = NumberGizmo(name='source-of-a')
+    ngb = NumberGizmo(name='source-of-b')
     addg = AddGizmo()
 
     dag = Dag(doc='Example: add numbers')
-    # dag.connect(nga, addg, ['n:a'])
-    # dag.connect(ngb, addg, ['n:b'])
     dag.connect(nga, addg, Connection('n', 'a'))
     dag.connect(ngb, addg, Connection('n', 'b'))
 
@@ -72,6 +70,8 @@ def main():
 
     print(f'\nSet gizmo {ngb}')
     ngb.go()
+
+    dag.execute()
 
 if __name__=='__main__':
     main()

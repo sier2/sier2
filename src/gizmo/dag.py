@@ -1,8 +1,7 @@
 from .gizmo import Gizmo, GizmoError, _Stopper
-from dataclasses import dataclass, KW_ONLY
-from collections import defaultdict
+from dataclasses import dataclass, KW_ONLY, field
+from collections import defaultdict, deque
 import holoviews as hv
-import threading
 from typing import Any
 
 # By default, loops in a dag aren't allowed.
@@ -24,6 +23,22 @@ class Connection:
         if not self.dst_param_name:
             self.dst_param_name = self.src_param_name
 
+@dataclass
+class _InputValues:
+    """Record a param value change.
+
+    When a gizmo updates an output param, the update is queued until
+    the gizmo finishes executing. This class is what is queued.
+    """
+
+    # The gizmo to be updated.
+    #
+    dst: Gizmo
+
+    # The values to be set before the gizmo executes.
+    #
+    values: dict[str, Any] = field(default_factory=dict)
+
 class Dag:
     """A directed acyclic graph of gizmos."""
 
@@ -31,6 +46,11 @@ class Dag:
         self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
         self._stopper = _Stopper()
         self.doc = doc
+
+        # We watch output params to be notified when they are set.
+        # Events are queued here.
+        #
+        self._gizmo_queue: deque[_InputValues] = deque()
 
     def _for_each_once(self):
         """Yield each connected gizmo once."""
@@ -100,9 +120,85 @@ class Dag:
             # watcher = src.param.watch(dst._gizmo_event, [conn.src_param_name], onlychanged=conn.onlychanged, queued=conn.queued, precedence=conn.precedence)
 
         for (onlychanged, queued, precedence), names in src_out_params.items():
-            src.param.watch(lambda *events: dst._gizmo_event(self._stopper, *events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
+            src.param.watch(lambda *events: self._param_event(dst, *events), names, precedence=precedence)
+
+            # src.param.watch(lambda *events: dst._gizmo_event(self._stopper, *events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
         self._gizmo_pairs.append((src, dst))
+
+    def _param_event(self, dst: Gizmo, *events):
+        """The callback for a watch event."""
+
+        # print(f'DAG EVENTS: {events} -> {dst.name}')
+        for event in events:
+            cls = event.cls.name
+            name = event.name
+            new = event.new
+
+            # The input param in the dst gizmo.
+            #
+            inp = dst._gizmo_name_map[cls, name]
+
+            # Look for the destination gizmo in the event queue.
+            # If found, update the param value dictionary,
+            # else append a new item.
+            # This ensures that all param updates for a destination
+            # gizmo are merged into a single queue item, even if the
+            # updates come from different source gizmos.
+            #
+            for item in self._gizmo_queue:
+                if dst is item.dst:
+                    item.values[inp] = new
+                    break
+            else:
+                item = _InputValues(dst)
+                item.values[inp] = new
+                self._gizmo_queue.append(item)
+
+    def execute(self):
+        """Execute the dag.
+
+        The dag is executed by iterating through the gizmo events queue.
+        For each event, update the destination gizmo's input parameters
+        and call that gizmo's execute() method.
+
+        If the current gizmo has user_flag True, execution will stop after
+        its execute() is called.
+
+        To start (or restart) the dag, there must be something in the event queue.
+        The first (or current) user_input gizmo must have updated at least one
+        output param before the dag's execute() is called.
+        """
+
+        if not self._gizmo_queue:
+            raise GizmoError('Nothing to execute')
+
+        while self._gizmo_queue:
+            if self._stopper.is_stopped:
+                break
+
+            item = self._gizmo_queue.popleft()
+            try:
+                item.dst.param.update(item.values)
+            except ValueError as e:
+                msg = f'While in {item.dst.name} setting a parameter: {e}'
+                # LOGGER.exception(msg)
+                self._stopper.event.set()
+                raise GizmoError(msg) from e
+
+            try:
+                item.dst.execute()
+            except Exception as e:
+                msg = f'While in {item.dst.name}.execute(): {e}'
+                # LOGGER.exception(msg)
+                self._stopper.event.set()
+                raise GizmoError(msg) from e
+            except KeyboardInterrupt:
+                self._stopper.event.set()
+                print(f'KEYBOARD INTERRUPT IN {self.name}')
+
+            if item.dst.user_input:
+                break
 
     def disconnect(self, g: Gizmo) -> None:
         """Disconnect gizmo g from other gizmos.

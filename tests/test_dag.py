@@ -36,6 +36,7 @@ def test_mismatched_types(dag):
 
     with pytest.raises(GizmoError):
         oo.o_out = 'plugh'
+        dag.execute()
 
 def test_gizmo_exception(dag):
     """Ensure that exceptions in a gizmo raise a GizmoError."""
@@ -59,3 +60,4 @@ def test_gizmo_exception(dag):
 
     with pytest.raises(GizmoError):
         oo.o_out = 'plugh'
+        dag.execute()
