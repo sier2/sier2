@@ -1,7 +1,8 @@
-from .gizmo import Gizmo, GizmoError, _Stopper
+from .gizmo import Gizmo, GizmoError, GizmoState
 from dataclasses import dataclass, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
+import threading
 from typing import Any
 
 # By default, loops in a dag aren't allowed.
@@ -38,6 +39,21 @@ class _InputValues:
     # The values to be set before the gizmo executes.
     #
     values: dict[str, Any] = field(default_factory=dict)
+
+class _Stopper:
+    def __init__(self):
+        self.event = threading.Event()
+
+    @property
+    def is_stopped(self):
+        return self.event
+
+    @is_stopped.getter
+    def is_stopped(self) -> bool:
+        return self.event.is_set()
+
+    def __repr__(self):
+        return f'stopped={self.is_stopped}'
 
 class Dag:
     """A directed acyclic graph of gizmos."""
@@ -158,12 +174,14 @@ class Dag:
     def execute(self):
         """Execute the dag.
 
-        The dag is executed by iterating through the gizmo events queue.
-        For each event, update the destination gizmo's input parameters
-        and call that gizmo's execute() method.
+        The dag is executed by iterating through the gizmo events queue
+        and popping events from the head of the queue. For each event,
+        update the destination gizmo's input parameters and call
+        that gizmo's execute() method.
 
-        If the current gizmo has user_flag True, execution will stop after
-        its execute() is called.
+        If the current destination gizmo has user_flag True,
+        the loop will continue to set param values until the queue is empty,
+        but no execute() method will be called.
 
         To start (or restart) the dag, there must be something in the event queue.
         The first (or current) user_input gizmo must have updated at least one
@@ -171,11 +189,17 @@ class Dag:
         """
 
         if not self._gizmo_queue:
+            # Attempting to execute a dag with no updates is probably a mistake.
+            #
             raise GizmoError('Nothing to execute')
 
+        can_execute = True
         while self._gizmo_queue:
+            # The user has set the "stop executing" flag.
+            # Continue to set params, but don't execute anything
+            #
             if self._stopper.is_stopped:
-                break
+                can_execute = False
 
             item = self._gizmo_queue.popleft()
             try:
@@ -186,19 +210,27 @@ class Dag:
                 self._stopper.event.set()
                 raise GizmoError(msg) from e
 
-            try:
-                item.dst.execute()
-            except Exception as e:
-                msg = f'While in {item.dst.name}.execute(): {e}'
-                # LOGGER.exception(msg)
-                self._stopper.event.set()
-                raise GizmoError(msg) from e
-            except KeyboardInterrupt:
-                self._stopper.event.set()
-                print(f'KEYBOARD INTERRUPT IN {self.name}')
+            if can_execute:
+                try:
+                    item.dst.gizmo_state = GizmoState.EXECUTING
+                    item.dst.execute()
+                    item.dst.gizmo_state = GizmoState.WAITING if item.dst.user_input else GizmoState.SUCCESSFUL
+                except Exception as e:
+                    item.dst.param.gizmo_state = GizmoState.ERROR
+                    msg = f'While in {item.dst.name}.execute(): {e}'
+                    # LOGGER.exception(msg)
+                    self._stopper.event.set()
+                    raise GizmoError(msg) from e
+                except KeyboardInterrupt:
+                    item.dst.param.gizmo_state = GizmoState.ERROR
+                    self._stopper.event.set()
+                    print(f'KEYBOARD INTERRUPT IN {self.name}')
 
             if item.dst.user_input:
-                break
+                # If the current destination gizmo requires user input,
+                # continue to set params, but don't execute anything.
+                #
+                can_execute = False
 
     def disconnect(self, g: Gizmo) -> None:
         """Disconnect gizmo g from other gizmos.
@@ -424,6 +456,7 @@ class Dag:
         src_names = [g.name for g in src]
         dst_names = [g.name for g in dst]
         g = hv.Graph(((src_names, dst_names),))
+
         return hv.element.graphs.layout_nodes(g, layout=layout)
 
 def topological_sort(pairs):

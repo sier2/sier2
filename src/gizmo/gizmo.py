@@ -1,25 +1,10 @@
+from enum import IntEnum, auto
 import param
 from typing import Any, Callable
 from collections import defaultdict
 import logging
-import threading
 
 LOGGER = logging.getLogger(__name__)
-
-class _Stopper:
-    def __init__(self):
-        self.event = threading.Event()
-
-    @property
-    def is_stopped(self):
-        return self.event
-
-    @is_stopped.getter
-    def is_stopped(self) -> bool:
-        return self.event.is_set()
-
-    def __repr__(self):
-        return f'stopped={self.is_stopped}'
 
 class _EmptyContext:
     def __enter__(self):
@@ -31,6 +16,15 @@ class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
 
     pass
+
+class GizmoState(IntEnum):
+    """The current state of this gizmo."""
+
+    READY = auto()
+    EXECUTING = auto()
+    WAITING = auto()
+    SUCCESSFUL = auto()
+    ERROR = auto()
 
 class Gizmo(param.Parameterized):
     """The base class for gizmos.
@@ -53,6 +47,8 @@ class Gizmo(param.Parameterized):
             def execute(self):
                 print(f'New value is {self.value_in}')
     """
+
+    gizmo_state = param.Integer(default=GizmoState.READY)
 
     def __init__(self, *args, user_input=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,68 +75,6 @@ class Gizmo(param.Parameterized):
 
         return f'{cls.__module__}.{cls.__name__}'
 
-    # def _gizmo_event(self, stopper: _Stopper, *events):
-    #     """The callback method for param.watch().
-
-    #     When watched parameters produce events, this callback is called
-    #     with the events. The events caused by another Gizmo's output params
-    #     are matched with self's input parameter name, and the param
-    #     values are set accordingly.
-
-    #     If Gizmo.execute() has a parameter, the events are passed as a tuple.
-    #     """
-
-    #     if stopper.is_stopped:
-    #         return
-
-    #     # print(f'WATCHER EVENT {self.__class__} {type(events)} {events}')
-
-    #     # If an input parameter is being watched and is specified more than once,
-    #     # use self.param.update() to only cause one event.
-    #     #
-    #     kwargs = {}
-    #     # print(f'EVENTS: {events}')
-    #     for event in events:
-    #         cls = event.cls.name
-    #         name = event.name
-    #         inp = self._gizmo_name_map[cls, name]
-    #         # print(f'EVENT {cls} {name} {inp} {event.new}')
-    #         kwargs[inp] = event.new
-
-    #     try:
-    #         self.param.update(**kwargs)
-    #     except ValueError as e:
-    #         msg = f'While in{self.name} setting a parameter: {e}'
-    #         LOGGER.exception(msg)
-    #         stopper.event.set()
-    #         raise GizmoError(msg) from e
-
-    #     # At least one parameter has changed.
-    #     # Execute this gizmo.
-    #     #
-    #     xparams = self.execute.__code__.co_varnames[1:self.execute.__code__.co_argcount] # type: ignore[misc]
-    #     xkwargs: dict[str, Any] = {}
-    #     for arg in xparams:
-    #         if arg=='stopper':
-    #             xkwargs[arg] = stopper
-    #         elif arg=='events':
-    #             xkwargs[arg] = events
-    #         else:
-    #             raise TypeError(f'Unrecognised argument {arg}')
-
-    #     LOGGER.debug('execute %s', self.name)
-    #     try:
-    #         with self._gizmo_context:
-    #             self.execute(**xkwargs)
-    #     except Exception as e:
-    #         msg = f'While in {self.name}.execute(): {e}'
-    #         LOGGER.exception(msg)
-    #         stopper.event.set()
-    #         raise GizmoError(msg) from e
-    #     except KeyboardInterrupt:
-    #         stopper.event.set()
-    #         print(f'KEYBOARD INTERRUPT IN {self.name}')
-
     def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.
 
@@ -158,5 +92,3 @@ class Gizmo(param.Parameterized):
 
         # print(f'** EXECUTE {self.__class__=}')
         pass
-
-# _gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
