@@ -22,7 +22,7 @@ class IfEvenElseOdd(Gizmo):
     true_out = param.Boolean(True, constant=True)
     false_out = param.Boolean(False, constant=True)
 
-    def user_input(self):
+    def ask_user(self):
         i = int(input('Enter an integer: '))
         with param.parameterized.discard_events(self):
             self.value = i
@@ -51,4 +51,5 @@ dag = Dag(doc='Example: run a branch depending on a value')
 dag.connect(if_else, is_even, Connection('true_out', 'b'), Connection('value'))
 dag.connect(if_else, is_odd, Connection('false_out', 'b'), Connection('value'))
 
-if_else.user_input()
+if_else.ask_user()
+dag.execute()

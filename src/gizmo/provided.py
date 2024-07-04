@@ -54,6 +54,7 @@ class AddGizmo(Gizmo):
 
     a = param.Number(label='First number', default=None)
     b = param.Number(label='Second number', default=None)
+    result = param.Number(label='Result', default=None)
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -64,7 +65,8 @@ class AddGizmo(Gizmo):
         if any(arg is None for arg in (self.a, self.b)):
             return
 
-        print(f'{self.a} + {self.b} = {self.a+self.b}')
+        self.result = self.a+self.b
+        print(f'{self.a} + {self.b} = {self.result}')
 
 def _name(cls):
     return f'{cls.__module__}.{cls.__name__}'

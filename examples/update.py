@@ -5,6 +5,10 @@
 # Assigning values to outputs separately triggers an event for each assignment.
 # Assigning values to outputs using ``update()`` triggers a single event.
 #
+# Actually, things have changed since this example was first written.
+# Rather than show the differences, it now demonstrates that there is
+# no difference. All updates are batched as far as the gizmos are concerned.
+#
 
 import param
 from gizmo import Gizmo, Dag, Connection
@@ -77,6 +81,8 @@ while (s:=input('Enter an alphanumeric string [Enter to quit]: ').strip()):
             g1.separate(s)
         else:
             g1.update(s)
+
+        dag.execute()
     except ValueError as e:
         print(e)
         raise

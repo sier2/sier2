@@ -22,7 +22,7 @@ class Q(Gizmo):
     qo = param.Integer(label='Int 3', doc='output Q')
 
     def execute(self, *args, **kwargs):
-        print(f'Q acting {self.qi=} {args=} {kwargs=}')
+        print(f'{self.name} acting {self.qi=} {args=} {kwargs=}')
         self.qo = self.qi + 1
 
 class R(Gizmo):
@@ -31,7 +31,7 @@ class R(Gizmo):
     ri = param.Integer(label='Int 4', doc='input R')
 
     def execute(self):
-        print(f'R acting {self.ri=}')
+        print(f'{self.name} acting {self.ri=}')
 
 p = P()
 q = Q()
@@ -41,9 +41,9 @@ dag = Dag(doc='Simple dag')
 dag.connect(p, q, Connection('po', 'qi'))
 dag.connect(q, r, Connection('qo', 'ri'))
 
-dag.execute()
 start_number = 1
 p.po = start_number
+dag.execute()
 
 print(f'''
     {p.po=} (expecting {start_number})
@@ -51,6 +51,3 @@ print(f'''
     {q.qo=} (expecting {start_number+1})
     {r.ri=} (expecting {start_number+1})
 ''')
-
-print('----')
-print(dag._gizmo_queue)

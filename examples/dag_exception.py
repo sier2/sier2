@@ -21,6 +21,7 @@ dag.connect(oo, oi, Connection('o_out', 'o_in'))
 
 try:
     oo.o_out = 'plugh'
+    dag.execute()
 except GizmoError as e:
     print(f'\nCaught expected Gizmo exception {e}')
     print(f'Actual cause: {type(e.__cause__)} {e.__cause__}')

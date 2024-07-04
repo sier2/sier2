@@ -154,3 +154,4 @@ dag.connect(q, g, Connection('df'), Connection('column'))
 dag.connect(g, b, Connection('group_df'), Connection('category'), Connection('count'))
 
 q.query('SELECT color,count FROM the_table')
+dag.execute()

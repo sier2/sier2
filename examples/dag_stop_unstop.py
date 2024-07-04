@@ -40,16 +40,17 @@ class Sleeper(Gizmo):
         return(f'<{s} {self.time_in=} {self.time_out=} {self.marker=}>')
 
 def runner(dag: Dag, sleep_time: int):
-    print('Started')
+    print('Starting ...')
     s0: Sleeper = dag.gizmo_by_name('s0')
     s0.time_out = sleep_time
+    dag.execute()
 
 def main():
     # Use an Event to determine when s2 is executed.
     #
     event = threading.Event()
 
-    # Each Slepper increments a marker that starts at zero.
+    # Each Sleeper increments a marker that starts at zero.
     # The first Sleeper is used to start the dag.
     # The second Sleeper sets the event.
     #
@@ -63,37 +64,31 @@ def main():
     dag.connect(s1, s2, Connection('time_out', 'time_in'))
     dag.connect(s2, s3, Connection('time_out', 'time_in'))
 
-    # Start the dag in its own thread.
-    #
+    print('Start the dag in its own thread.')
     t = threading.Thread(target=runner, args=(dag, 2))
     t.start()
 
-    # Wait for s2 to start executing, then stop the dag.
-    #
+    print('Wait for s2 to start executing, then stop the dag.')
     event.wait()
     dag.stop()
 
-    # Wait for the dag thread to finish.
-    #
+    print('Wait for the dag thread to finish.')
     t.join()
 
-    # Sleepers s1 and s2 have their markers incremented, s3 did not execute.
-    #
+    print('Sleepers s1 and s2 have their markers incremented, s3 did not execute.')
     print(s1)
     print(s2)
     print(s3)
 
-    # Run the dag again.
-    # Because the stopper is still set, nothing will happen.
-    #
+    print('Run the dag again.')
+    print('Because the stopper is still set, nothing will happen.')
     runner(dag, 2)
     print(s1)
     print(s2)
     print(s3)
 
-    # Unstop the dag, and run the dag again.
-    # All of the Sleepers will have their markers incrmented.
-    #
+    print('Unstop the dag, and run the dag again.')
+    print('All of the Sleepers will have their markers incrmented.')
     dag.unstop()
     runner(dag, 2)
     print(s1)
