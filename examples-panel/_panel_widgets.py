@@ -76,11 +76,13 @@ class BarchartWidget(Gizmo):#, Viewer):
         super().__init__(*args, **kwargs)
 
         self.inverted = inverted
+        self.hv_pane = pn.pane.HoloViews(sizing_mode='stretch_width')
 
     def execute(self):
         if self.df_in is not None:
             df = self.df_in
             if self.inverted:
+                df = df.copy()
                 df['Counts'] = MAX_HEIGHT - df['Counts']
 
             bars = hv.Bars(df, 'Colors', 'Counts').opts(
@@ -93,8 +95,8 @@ class BarchartWidget(Gizmo):#, Viewer):
         else:
             bars = hv.Bars([])
 
-        return pn.pane.HoloViews(bars, sizing_mode='stretch_width')
+        self.hv_pane.object = bars
 
     def __panel__(self):
-        return pn.Card(pn.panel(self.execute), title=self.name)#, sizing_mode='stretch_width'))
+        return self.hv_pane
 

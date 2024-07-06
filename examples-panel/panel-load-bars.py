@@ -12,6 +12,7 @@ from pathlib import Path
 import tempfile
 
 from gizmo import Gizmo, Dag, Connection, Library
+from gizmo.panel import show_dag
 import param
 
 from _panel_widgets import QueryWidget, BarchartWidget
@@ -33,19 +34,7 @@ def main():
     dag = Library.load(dump)
     title = dump['panel']['title']
 
-    # Build a panel app.
-    #
-    template = pn.template.MaterialTemplate(
-        title=title,
-        theme='dark',
-        site='PoC ',
-        sidebar=pn.Column('## Gizmos'),
-        collapsed_sidebar=True
-    )
-    gizmos = dag.get_sorted()
-    template.main.objects = [pn.Column(*gizmos)]
-    template.sidebar.objects = [pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))]
-    template.show(threaded=False)
+    show_dag(dag, site='Barchart dag', title='demonstrate passing a dataframe')
 
 if __name__=='__main__':
     # Gizmos that are loaded from a dumped dag must be in the dag library.

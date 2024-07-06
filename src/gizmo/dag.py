@@ -121,7 +121,7 @@ class Dag:
         src_out_params = defaultdict(list)
 
         for conn in connections:
-            dst_param = getattr(dst.param, conn.dst_param_name)
+            # dst_param = getattr(dst.param, conn.dst_param_name)
             # if dst_param.allow_refs:
             #     raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
 
@@ -137,6 +137,7 @@ class Dag:
 
         for (onlychanged, queued, precedence), names in src_out_params.items():
             src.param.watch(lambda *events: self._param_event(dst, *events), names, onlychanged=onlychanged, queued=queued,precedence=precedence)
+            src._gizmo_out_params.extend(names)
 
             # src.param.watch(lambda *events: dst._gizmo_event(self._stopper, *events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
@@ -342,9 +343,14 @@ class Dag:
             # The first parameter is always self - skip that.
             #
             vars = g.__init__.__code__.co_varnames[1:g.__init__.__code__.co_argcount] # type: ignore[misc]
+            print(f'{vars=} {hasattr(g, "user_input")=}')
             for var in vars:
                 if hasattr(g, var):
                     args[var] = getattr(g, var)
+
+            # TODO is there a better way of checking for user_input?
+            if hasattr(g, 'user_input'):
+                args['user_input'] = getattr(g, 'user_input')
 
             gizmo = {
                 'gizmo': g.gizmo_key(),

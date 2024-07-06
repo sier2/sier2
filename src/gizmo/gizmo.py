@@ -62,6 +62,14 @@ class Gizmo(param.Parameterized):
         # This is used by _gizmo_event() to set the correct input parameter.
         #
         self._gizmo_name_map: dict[tuple[str, str], str] = {}
+
+        # Record this gizmo's output parameters.
+        # If this is a user_input gizmo, we need to trigger
+        # the output values before executing the next gizmo,
+        # in case the user didn't change anything.
+        #
+        self._gizmo_out_params = []
+
         self._gizmo_context = _EmptyContext()
 
     @classmethod

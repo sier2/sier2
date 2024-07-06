@@ -4,7 +4,7 @@ from gizmo.panel import show_dag
 from tutorial_3b import UserInput, Translate, Display
 
 if __name__=='__main__':
-    ui = UserInput(name='User input')
+    ui = UserInput(name='User input', user_input=True)
     tr = Translate(name='Translation')
     di = Display(name='Display output')
 

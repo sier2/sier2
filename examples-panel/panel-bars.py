@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 
 from gizmo import Gizmo, Dag, Connection
+from gizmo.panel import show_dag
 import param
 
 from _panel_widgets import QueryWidget, BarchartWidget
@@ -16,7 +17,8 @@ pn.extension(inline=True)
 def main():
     # Build a dag.
     #
-    q = QueryWidget(name='Run a query')
+    q = QueryWidget(name='Run a query', user_input=True)
+    print(q, q.user_input)
     b = BarchartWidget(name='Results bars')
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 
@@ -40,18 +42,20 @@ def main():
     with open(p, 'w', encoding='utf-8') as f:
         json.dump(dump, f, indent=2)
 
-    # Build a panel app.
-    #
-    template = pn.template.MaterialTemplate(
-        title=title,
-        theme='dark',
-        site='PoC ',
-        sidebar=pn.Column('## Gizmos'),
-        collapsed_sidebar=True
-    )
-    template.main.objects = [pn.Column(q, b, bi)]
-    template.sidebar.objects = [pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))]
-    template.show(threaded=False)
+    show_dag(dag, site='Barchart dag', title='demonstrate passing a dataframe')
+
+    # # Build a panel app.
+    # #
+    # template = pn.template.MaterialTemplate(
+    #     title=title,
+    #     theme='dark',
+    #     site='PoC ',
+    #     sidebar=pn.Column('## Gizmos'),
+    #     collapsed_sidebar=True
+    # )
+    # template.main.objects = [pn.Column(q, b, bi)]
+    # template.sidebar.objects = [pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))]
+    # template.show(threaded=False)
 
 if __name__=='__main__':
     main()
