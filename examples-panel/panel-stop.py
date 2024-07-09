@@ -8,12 +8,13 @@ import time
 import ctypes
 
 from gizmo import Gizmo, Dag, Connection
+from gizmo.panel import show_dag
 import param
 
 NTHREADS = 2
 
 hv.extension('bokeh', inline=True)
-pn.extension(nthreads=NTHREADS, inline=True)
+pn.extension(nthreads=NTHREADS, loading_spinner='bar', inline=True)
 # hv.renderer('bokeh').theme = 'dark_minimal'
 
 def interrupt_thread(tid, exctype):
@@ -35,18 +36,21 @@ def interrupt_thread(tid, exctype):
 class QueryWidget(Gizmo):
     """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
-    timer_out = param.Integer(default=10)
+    timer_out = param.Integer(default=5, bounds=(1, 10))
 
     def __panel__(self):
-        int_input = pn.widgets.IntInput(name='Timer period', value=5, step=1, start=1, end=10)
-        button = pn.widgets.Button(name='OK', button_type='primary', align='end')
-
-        def on_button(event):
-            self.timer_out = int_input.value
-
-        pn.bind(on_button, button, watch=True)
-
-        return pn.Row(int_input, button)
+        return pn.Param(self, widgets={
+            'timer_out': {
+                'widget_type': pn.widgets.IntInput},
+                'name': 'Timer period',
+                # 'value': 5,
+                # 'step': 1,
+                # 'start': 1,
+                # 'end': 10
+            },
+            parameters=['timer_out'],
+            sizing_mode='stretch_width'
+        )
 
 class ProgressWidget(Gizmo):
     """A progress widget."""
@@ -58,7 +62,7 @@ class ProgressWidget(Gizmo):
         super().__init__(*args, **kwargs)
         self.progress = pn.indicators.Progress(name='Progress', value=0, max=self.timer_in)
 
-    def execute(self, stopper):
+    def execute(self): #, stopper):
         self.progress.value = 0
         self.progress.max = self.timer_in
         for t in range(1, self.timer_in+1):
@@ -72,8 +76,6 @@ class ProgressWidget(Gizmo):
         self.timer_out = self.timer_in
 
     def __panel__(self):
-        running_status = pn.indicators.BooleanStatus(value=True,color='primary', align=('end', 'center'))
-
         return self.progress
 
 class StatusContext:
@@ -103,7 +105,7 @@ def main():
         collapsed_sidebar=True
     )
 
-    q = QueryWidget(name='Specify timer interval')
+    q = QueryWidget(name='Specify timer interval', user_input=True)
     b1 = ProgressWidget(name='Progress1')
     b2 = ProgressWidget(name='Progress2')
 
@@ -111,58 +113,60 @@ def main():
     dag.connect(q, b1, Connection('timer_out', 'timer_in'))
     dag.connect(b1, b2, Connection('timer_out', 'timer_in'))
 
-    switch = pn.widgets.Switch(name='Stop')
+    show_dag(dag, site='Example stopper', title='demonstrate stopping a dag')
 
-    def on_switch(event):
-        if switch.value:
-            dag.stop()
-            reset()
+    # switch = pn.widgets.Switch(name='Stop')
 
-            # Which thread are we running on?
-            #
-            current_tid = threading.current_thread().ident
+    # def on_switch(event):
+    #     if switch.value:
+    #         dag.stop()
+    #         reset()
 
-            # What other threads are running?
-            # There are multiple threads running, including the main thread
-            # and the bokeh server thread. We need to find the panel threads.
-            # Unfortunately, there is nothing special about them.
-            #
-            all_threads = [t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')]
-            assert len(all_threads)==NTHREADS, f'{all_threads=}'
-            other_thread = [t for t in all_threads if t.ident!=current_tid][0]
-            interrupt_thread(other_thread.ident, KeyboardInterrupt)
-        else:
-            dag.unstop()
-            # TODO reset status for each card
+    #         # Which thread are we running on?
+    #         #
+    #         current_tid = threading.current_thread().ident
 
-    pn.bind(on_switch, switch, watch=True)
+    #         # What other threads are running?
+    #         # There are multiple threads running, including the main thread
+    #         # and the bokeh server thread. We need to find the panel threads.
+    #         # Unfortunately, there is nothing special about them.
+    #         #
+    #         all_threads = [t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')]
+    #         assert len(all_threads)==NTHREADS, f'{all_threads=}'
+    #         other_thread = [t for t in all_threads if t.ident!=current_tid][0]
+    #         interrupt_thread(other_thread.ident, KeyboardInterrupt)
+    #     else:
+    #         dag.unstop()
+    #         # TODO reset status for each card
 
-    def wrap(w: Gizmo):
-        running_status = pn.indicators.BooleanStatus(value=False, color='primary', align=('end', 'center'))
-        w._gizmo_context = StatusContext(running_status)
-        return pn.Card(
-            w,
-            header=pn.Row(
-                running_status,
-                pn.pane.HTML(f'<h3 class="card-title">{w.name}</h3>', css_classes=['card-title'], margin=(0, 0))
-            ),
-            sizing_mode='stretch_width'
-        )
+    # pn.bind(on_switch, switch, watch=True)
 
-    def reset():
-        """Experiment."""
-        col = template.main.objects[0]
-        for card in col:
-            status = card.header[0]
+    # def wrap(w: Gizmo):
+    #     running_status = pn.indicators.BooleanStatus(value=False, color='primary', align=('end', 'center'))
+    #     w._gizmo_context = StatusContext(running_status)
+    #     return pn.Card(
+    #         w,
+    #         header=pn.Row(
+    #             running_status,
+    #             pn.pane.HTML(f'<h3 class="card-title">{w.name}</h3>', css_classes=['card-title'], margin=(0, 0))
+    #         ),
+    #         sizing_mode='stretch_width'
+    #     )
 
-    template.main.objects = [pn.Column(*(wrap(gw) for gw in (q, b1, b2)))]
-    template.sidebar.objects = [
-        pn.Column(
-            switch,
-            pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
-        )
-    ]
-    template.show(threaded=False)
+    # def reset():
+    #     """Experiment."""
+    #     col = template.main.objects[0]
+    #     for card in col:
+    #         status = card.header[0]
+
+    # template.main.objects = [pn.Column(*(wrap(gw) for gw in (q, b1, b2)))]
+    # template.sidebar.objects = [
+    #     pn.Column(
+    #         switch,
+    #         pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
+    #     )
+    # ]
+    # template.show(threaded=False)
 
 if __name__=='__main__':
     main()

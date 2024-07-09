@@ -24,6 +24,7 @@ class GizmoState(IntEnum):
     EXECUTING = auto()
     WAITING = auto()
     SUCCESSFUL = auto()
+    INTERRUPTED = auto()
     ERROR = auto()
 
 class Gizmo(param.Parameterized):

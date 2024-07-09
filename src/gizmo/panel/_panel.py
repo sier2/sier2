@@ -81,7 +81,79 @@ def show_dag(dag: Dag, *, site: str, title: str):
 
     pn.bind(on_switch, switch, watch=True)
 
-    def wrap(w: Gizmo):
+    # def wrap(w: Gizmo):
+    #     name_text = pn.widgets.StaticText(
+    #         value=w.name,
+    #         css_classes=['card-title'],
+    #         styles={'font-size':'1.17em', 'font-weight':'bold'}
+    #     )
+    #     spacer = pn.HSpacer(
+    #         styles=dict(
+    #             min_width='1px', min_height='1px'
+    #         )
+    #     )
+    #     status_light = pn.Spacer(
+    #         margin=(8, 0, 0, 0),
+    #         styles={'width':'20px', 'height':'20px', 'background':'orange', 'border-radius': '10px'}
+    #     )
+
+    #     if w.user_input:
+    #         # This is a user_input gizmo, so add a 'Continue' button.
+    #         #
+    #         def on_continue(_event):
+    #             # The user may not have changed anything from the default values,
+    #             # so there won't be anything on the gizmo queue.
+    #             # Therefore, we trigger the output params to put their
+    #             # current values on the queue.
+    #             # If their values are already there, it doesn't matter.
+    #             #
+    #             w.param.trigger(*w._gizmo_out_params)
+    #             dag.execute()
+
+    #         c_button = pn.widgets.Button(name='Continue', button_type='primary')
+    #         pn.bind(on_continue, c_button, watch=True)
+
+    #         w_ = pn.Column(w, pn.Row(c_button, align='end'))
+    #     else:
+    #         w_ = w
+
+    #     return pn.Card(
+    #         w_,
+    #         header=pn.Row(
+    #             name_text,
+    #             pn.VSpacer(),
+    #             spacer,
+    #             status_light
+    #         ),
+    #         sizing_mode='stretch_width'
+    #     )
+
+    def reset():
+        """Experiment."""
+        col = template.main.objects[0]
+        for card in col:
+            status = card.header[0]
+
+    # template.main.append(pn.Column(*(wrap(gw) for gw in dag.get_sorted())))
+    # content = [GizmoCard(template, dag, gw) for gw in dag.get_sorted()]
+    # print(f'{content=}')
+    # template.main.append(content)
+    template.main.append(
+        pn.Column(
+            *(GizmoCard(template, dag, gw) for gw in dag.get_sorted())
+        )
+    )
+    template.sidebar.objects = [
+        pn.Column(
+            switch,
+            pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
+        )
+    ]
+    template.show(threaded=False)
+
+class GizmoCard(pn.Card):
+    def __init__(self, parent_template, dag: Dag, w: Gizmo, *args, **kwargs):
+
         name_text = pn.widgets.StaticText(
             value=w.name,
             css_classes=['card-title'],
@@ -94,7 +166,7 @@ def show_dag(dag: Dag, *, site: str, title: str):
         )
         status_light = pn.Spacer(
             margin=(8, 0, 0, 0),
-            styles={'width':'20px', 'height':'20px', 'background':'orange', 'border-radius': '4px'}
+            styles={'width':'20px', 'height':'20px', 'background':'orange', 'border-radius': '10px'}
         )
 
         if w.user_input:
@@ -117,28 +189,13 @@ def show_dag(dag: Dag, *, site: str, title: str):
         else:
             w_ = w
 
-        return pn.Card(
-            w_,
-            header=pn.Row(
-                name_text,
-                pn.VSpacer(),
-                spacer,
-                status_light
-            ),
-            sizing_mode='stretch_width'
+        super().__init__(w_, *args, sizing_mode='stretch_width', **kwargs)
+
+        self.header = pn.Row(
+            name_text,
+            pn.VSpacer(),
+            spacer,
+            status_light
         )
 
-    def reset():
-        """Experiment."""
-        col = template.main.objects[0]
-        for card in col:
-            status = card.header[0]
-
-    template.main.objects = [pn.Column(*(wrap(gw) for gw in dag.get_sorted()))]
-    template.sidebar.objects = [
-        pn.Column(
-            switch,
-            pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
-        )
-    ]
-    template.show(threaded=False)
+        self.loading = parent_template.busy_indicator

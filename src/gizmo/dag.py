@@ -218,15 +218,15 @@ class Dag:
                     item.dst.execute()
                     item.dst.gizmo_state = GizmoState.WAITING if item.dst.user_input else GizmoState.SUCCESSFUL
                 except Exception as e:
-                    item.dst.param.gizmo_state = GizmoState.ERROR
+                    item.dst.gizmo_state = GizmoState.ERROR
                     msg = f'While in {item.dst.name}.execute(): {e}'
                     # LOGGER.exception(msg)
                     self._stopper.event.set()
                     raise GizmoError(msg) from e
                 except KeyboardInterrupt:
-                    item.dst.param.gizmo_state = GizmoState.ERROR
+                    item.dst.gizmo_state = GizmoState.INTERRUPTED
                     self._stopper.event.set()
-                    print(f'KEYBOARD INTERRUPT IN {self.name}')
+                    print(f'KEYBOARD INTERRUPT IN GIZMO {item.dst.name}')
 
             if item.dst.user_input:
                 # If the current destination gizmo requires user input,

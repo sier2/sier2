@@ -10,8 +10,10 @@ import param
 
 from _panel_widgets import QueryWidget, BarchartWidget
 
+NTHREADS = 2
+
 hv.extension('bokeh', inline=True)
-pn.extension(inline=True)
+pn.extension(nthreads=NTHREADS, loading_spinner='bar', inline=True)
 # hv.renderer('bokeh').theme = 'dark_minimal'
 
 def main():
