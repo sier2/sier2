@@ -189,7 +189,12 @@ class GizmoCard(pn.Card):
             c_button = pn.widgets.Button(name='Continue', button_type='primary')
             pn.bind(on_continue, c_button, watch=True)
 
-            w_ = pn.Column(w, pn.Row(c_button, align='end'))
+            w_ = pn.Column(
+                w,
+                pn.Row(c_button, align='end'),
+                sizing_mode='scale_height',
+                scroll='y-auto'
+            )
         else:
             w_ = w
 

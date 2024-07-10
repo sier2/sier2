@@ -4,9 +4,8 @@ import json
 from pathlib import Path
 import tempfile
 
-from gizmo import Gizmo, Dag, Connection
+from gizmo import Dag, Connection
 from gizmo.panel import show_dag
-import param
 
 from _panel_widgets import QueryWidget, BarchartWidget
 

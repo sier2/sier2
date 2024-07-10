@@ -343,7 +343,6 @@ class Dag:
             # The first parameter is always self - skip that.
             #
             vars = g.__init__.__code__.co_varnames[1:g.__init__.__code__.co_argcount] # type: ignore[misc]
-            print(f'{vars=} {hasattr(g, "user_input")=}')
             for var in vars:
                 if hasattr(g, var):
                     args[var] = getattr(g, var)

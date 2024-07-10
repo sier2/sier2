@@ -30,12 +30,13 @@ class UserInput(Gizmo):
             auto_grow=True,
             rows=8,
             resizable='both',
-            sizing_mode='stretch_both'
+            sizing_mode='stretch_width'
         )
 
         return pn.Column(
             text_widget,
-            pn.Row(self.param.flag, align='end')
+            pn.Row(self.param.flag, align='end', sizing_mode='stretch_width'),
+            sizing_mode='stretch_width'
         )
 
 class Translate(Gizmo):
@@ -97,7 +98,7 @@ class Display(Gizmo):
             auto_grow=True,
             rows=8,
             resizable='both',
-            sizing_mode='stretch_both',
+            sizing_mode='stretch_width',
             disabled=True,
             stylesheets=['.bk-input[disabled]{background-color:var(--current-background-color);color:var(--panel-on-secondary-color);opacity:1.0;cursor:text}']
         )

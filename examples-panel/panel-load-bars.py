@@ -11,9 +11,8 @@ import json
 from pathlib import Path
 import tempfile
 
-from gizmo import Gizmo, Dag, Connection, Library
+from gizmo import Library
 from gizmo.panel import show_dag
-import param
 
 from _panel_widgets import QueryWidget, BarchartWidget
 
