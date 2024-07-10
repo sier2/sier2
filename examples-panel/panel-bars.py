@@ -20,7 +20,6 @@ def main():
     # Build a dag.
     #
     q = QueryWidget(name='Run a query', user_input=True)
-    print(q, q.user_input)
     b = BarchartWidget(name='Results bars')
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 

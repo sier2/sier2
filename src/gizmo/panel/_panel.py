@@ -8,21 +8,21 @@ NTHREADS = 2
 
 pn.extension(nthreads=NTHREADS, inline=True)
 
-class StatusContext:
-    def __init__(self, status):
-        self.status = status
+# class StatusContext:
+#     def __init__(self, status):
+#         self.status = status
 
-    def __enter__(self):
-        print('ENTER')
-        self.status.value = True
+#     def __enter__(self):
+#         print('ENTER')
+#         self.status.value = True
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        print('EXIT')
-        # self.status.value = False
-        if exc_type is None:
-            self.status.color = 'success'
-        else:
-            self.status.color = 'danger'
+#     def __exit__(self, exc_type, exc_val, exc_tb):
+#         print('EXIT')
+#         # self.status.value = False
+#         if exc_type is None:
+#             self.status.color = 'success'
+#         else:
+#             self.status.color = 'danger'
 
 def interrupt_thread(tid, exctype):
     """Raise exception exctype in thread tid."""
@@ -143,12 +143,12 @@ def show_dag(dag: Dag, *, site: str, title: str):
             *(GizmoCard(template, dag, gw) for gw in dag.get_sorted())
         )
     )
-    template.sidebar.objects = [
+    template.sidebar.append(
         pn.Column(
             switch,
             pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
         )
-    ]
+    )
     template.show(threaded=False)
 
 class GizmoCard(pn.Card):
@@ -180,7 +180,11 @@ class GizmoCard(pn.Card):
                 # If their values are already there, it doesn't matter.
                 #
                 w.param.trigger(*w._gizmo_out_params)
-                dag.execute()
+                parent_template.main[0].loading = True
+                try:
+                    dag.execute()
+                finally:
+                    parent_template.main[0].loading = False
 
             c_button = pn.widgets.Button(name='Continue', button_type='primary')
             pn.bind(on_continue, c_button, watch=True)
@@ -198,4 +202,4 @@ class GizmoCard(pn.Card):
             status_light
         )
 
-        self.loading = parent_template.busy_indicator
+        # self.loading = parent_template.busy_indicator
