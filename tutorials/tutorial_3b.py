@@ -35,7 +35,7 @@ class UserInput(Gizmo):
 
         return pn.Column(
             text_widget,
-            pn.Row(self.param.flag, align='end', sizing_mode='stretch_width'),
+            pn.Row(pn.HSpacer(), self.param.flag, sizing_mode='stretch_width'),
             sizing_mode='stretch_width'
         )
 

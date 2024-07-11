@@ -283,3 +283,21 @@ def test_sorted2(dag):
     tsorted = [g.name for g in dag.get_sorted()]
 
     assert tsorted == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']
+
+def test_onlychanged(dag):
+    """Ensure that params are triggered when set with the same value."""
+
+    p = PassThrough()
+    a = Add(1)
+
+    dag.connect(p, a, Connection('p_out', 'a_in'))
+
+    assert p.p_out == 0
+    assert a.a_in == 0
+    assert a.a_out == 0
+
+    p.p_out = 0
+    dag.execute()
+
+    assert a.a_in == 0
+    assert a.a_out == 1

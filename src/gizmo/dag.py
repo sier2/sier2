@@ -1,5 +1,5 @@
 from .gizmo import Gizmo, GizmoError, GizmoState
-from dataclasses import dataclass, KW_ONLY, field
+from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
 import threading
@@ -15,10 +15,10 @@ class Connection:
 
     src_param_name: str
     dst_param_name: str = ''
-    _: KW_ONLY
-    onlychanged: bool = False
-    queued: bool = False
-    precedence: int = 0
+    # _: KW_ONLY
+    # onlychanged: bool = False
+    # queued: bool = False
+    # precedence: int = 0
 
     def __post_init__(self):
         if not self.dst_param_name:
@@ -118,7 +118,8 @@ class Dag:
         # If we just add a watcher per param in the loop, then
         # param.update() won't batch the events.
         #
-        src_out_params = defaultdict(list)
+        # src_out_params = defaultdict(list)
+        src_out_params = []
 
         for conn in connections:
             # dst_param = getattr(dst.param, conn.dst_param_name)
@@ -130,14 +131,16 @@ class Dag:
                 raise GizmoError(f'Source parameter {src}.{conn.src_param_name} must not be "allow_refs=True"')
 
             dst._gizmo_name_map[src.name, conn.src_param_name] = conn.dst_param_name
-            src_out_params[conn.onlychanged, conn.queued, conn.precedence].append(conn.src_param_name)
+            # src_out_params[conn.onlychanged, conn.queued, conn.precedence].append(conn.src_param_name)
+            src_out_params.append(conn.src_param_name)
 
             # print(f'**** WATCH {src} {src_out_params} -> {dst} {src_out_params}')
             # watcher = src.param.watch(dst._gizmo_event, [conn.src_param_name], onlychanged=conn.onlychanged, queued=conn.queued, precedence=conn.precedence)
 
-        for (onlychanged, queued, precedence), names in src_out_params.items():
-            src.param.watch(lambda *events: self._param_event(dst, *events), names, onlychanged=onlychanged, queued=queued,precedence=precedence)
-            src._gizmo_out_params.extend(names)
+        # for (onlychanged, queued, precedence), names in src_out_params.items():
+        # for names in src_out_params:
+        src.param.watch(lambda *events: self._param_event(dst, *events), src_out_params, onlychanged=False)
+        src._gizmo_out_params.extend(src_out_params)
 
             # src.param.watch(lambda *events: dst._gizmo_event(self._stopper, *events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
@@ -376,12 +379,12 @@ class Dag:
                     'dst_param_name': dname
                 }
 
-                for pname, data in s.param.watchers.items():
-                    if pname==sname:
-                        for watcher in data['value']:
-                            args['onlychanged'] = watcher.onlychanged
-                            args['queued'] = watcher.queued
-                            args['precedence'] = watcher.precedence
+                # for pname, data in s.param.watchers.items():
+                #     if pname==sname:
+                #         for watcher in data['value']:
+                #             args['onlychanged'] = watcher.onlychanged
+                #             args['queued'] = watcher.queued
+                #             args['precedence'] = watcher.precedence
 
 
                 connection['conn_args'].append(args)
