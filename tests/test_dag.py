@@ -163,17 +163,17 @@ def test_gizmo_state(dag):
 
     assert inc2.po == 3
 
-    assert inc0.gizmo_state == GizmoState.READY
-    assert inc1.gizmo_state == GizmoState.SUCCESSFUL
-    assert inc2.gizmo_state == GizmoState.WAITING
-    assert inc3.gizmo_state == GizmoState.READY
-    assert inc4.gizmo_state == GizmoState.READY
+    assert inc0._gizmo_state == GizmoState.READY
+    assert inc1._gizmo_state == GizmoState.SUCCESSFUL
+    assert inc2._gizmo_state == GizmoState.WAITING
+    assert inc3._gizmo_state == GizmoState.READY
+    assert inc4._gizmo_state == GizmoState.READY
 
     inc2.po = 5
     dag.execute()
 
-    assert inc0.gizmo_state == GizmoState.READY
-    assert inc1.gizmo_state == GizmoState.SUCCESSFUL
-    assert inc2.gizmo_state == GizmoState.WAITING
-    assert inc3.gizmo_state == GizmoState.SUCCESSFUL
-    assert inc4.gizmo_state == GizmoState.SUCCESSFUL
+    assert inc0._gizmo_state == GizmoState.READY
+    assert inc1._gizmo_state == GizmoState.SUCCESSFUL
+    assert inc2._gizmo_state == GizmoState.WAITING
+    assert inc3._gizmo_state == GizmoState.SUCCESSFUL
+    assert inc4._gizmo_state == GizmoState.SUCCESSFUL

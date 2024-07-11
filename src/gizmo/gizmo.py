@@ -20,6 +20,7 @@ class GizmoError(Exception):
 class GizmoState(IntEnum):
     """The current state of this gizmo."""
 
+    INPUT = auto()
     READY = auto()
     EXECUTING = auto()
     WAITING = auto()
@@ -49,7 +50,7 @@ class Gizmo(param.Parameterized):
                 print(f'New value is {self.value_in}')
     """
 
-    gizmo_state = param.Integer(default=GizmoState.READY)
+    _gizmo_state = param.Integer(default=GizmoState.READY)
 
     def __init__(self, *args, user_input=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -58,6 +59,7 @@ class Gizmo(param.Parameterized):
             raise GizmoError(f'Class {self.__class__} must have a docstring')
 
         self.user_input = user_input
+        self._gizmo_state = GizmoState.INPUT if user_input else GizmoState.READY
 
         # Maintain a map of "gizmo+output parameter being watched" -> "input parameter".
         # This is used by _gizmo_event() to set the correct input parameter.

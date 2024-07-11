@@ -2,27 +2,11 @@ import ctypes
 import panel as pn
 import threading
 
-from gizmo import Gizmo, Dag
+from gizmo import Gizmo, GizmoState, Dag
 
 NTHREADS = 2
 
 pn.extension(nthreads=NTHREADS, inline=True)
-
-# class StatusContext:
-#     def __init__(self, status):
-#         self.status = status
-
-#     def __enter__(self):
-#         print('ENTER')
-#         self.status.value = True
-
-#     def __exit__(self, exc_type, exc_val, exc_tb):
-#         print('EXIT')
-#         # self.status.value = False
-#         if exc_type is None:
-#             self.status.color = 'success'
-#         else:
-#             self.status.color = 'danger'
 
 def interrupt_thread(tid, exctype):
     """Raise exception exctype in thread tid."""
@@ -81,63 +65,12 @@ def show_dag(dag: Dag, *, site: str, title: str):
 
     pn.bind(on_switch, switch, watch=True)
 
-    # def wrap(w: Gizmo):
-    #     name_text = pn.widgets.StaticText(
-    #         value=w.name,
-    #         css_classes=['card-title'],
-    #         styles={'font-size':'1.17em', 'font-weight':'bold'}
-    #     )
-    #     spacer = pn.HSpacer(
-    #         styles=dict(
-    #             min_width='1px', min_height='1px'
-    #         )
-    #     )
-    #     status_light = pn.Spacer(
-    #         margin=(8, 0, 0, 0),
-    #         styles={'width':'20px', 'height':'20px', 'background':'orange', 'border-radius': '10px'}
-    #     )
-
-    #     if w.user_input:
-    #         # This is a user_input gizmo, so add a 'Continue' button.
-    #         #
-    #         def on_continue(_event):
-    #             # The user may not have changed anything from the default values,
-    #             # so there won't be anything on the gizmo queue.
-    #             # Therefore, we trigger the output params to put their
-    #             # current values on the queue.
-    #             # If their values are already there, it doesn't matter.
-    #             #
-    #             w.param.trigger(*w._gizmo_out_params)
-    #             dag.execute()
-
-    #         c_button = pn.widgets.Button(name='Continue', button_type='primary')
-    #         pn.bind(on_continue, c_button, watch=True)
-
-    #         w_ = pn.Column(w, pn.Row(c_button, align='end'))
-    #     else:
-    #         w_ = w
-
-    #     return pn.Card(
-    #         w_,
-    #         header=pn.Row(
-    #             name_text,
-    #             pn.VSpacer(),
-    #             spacer,
-    #             status_light
-    #         ),
-    #         sizing_mode='stretch_width'
-    #     )
-
     def reset():
         """Experiment."""
         col = template.main.objects[0]
         for card in col:
             status = card.header[0]
 
-    # template.main.append(pn.Column(*(wrap(gw) for gw in dag.get_sorted())))
-    # content = [GizmoCard(template, dag, gw) for gw in dag.get_sorted()]
-    # print(f'{content=}')
-    # template.main.append(content)
     template.main.append(
         pn.Column(
             *(GizmoCard(template, dag, gw) for gw in dag.get_sorted())
@@ -152,8 +85,42 @@ def show_dag(dag: Dag, *, site: str, title: str):
     template.show(threaded=False)
 
 class GizmoCard(pn.Card):
-    def __init__(self, parent_template, dag: Dag, w: Gizmo, *args, **kwargs):
+    """A custom card to wrap around a gizmo.
 
+    This adds the gizmo title and a status light to the card header.
+    The light updates to match the gizmo state.
+    """
+
+    @staticmethod
+    def _get_status_light(color: str) -> pn.Spacer:
+        return pn.Spacer(
+            margin=(8, 0, 0, 0),
+            styles={'width':'20px', 'height':'20px', 'background':color, 'border-radius': '10px'}
+        )
+
+    @staticmethod
+    def _get_state_color(gs: GizmoState) -> str:
+        """Convert a gizmo state to a color."""
+
+        match gs:
+            case GizmoState.INPUT:
+                color='white'
+            case GizmoState.READY:
+                color='black'
+            case GizmoState.EXECUTING:
+                color='blue'
+            case GizmoState.WAITING:
+                color='yellow'
+            case GizmoState.SUCCESSFUL:
+                color = 'green'
+            case GizmoState.INTERRUPTED:
+                color= 'orange'
+            case GizmoState.ERROR:
+                color = 'orange'
+
+        return color
+
+    def __init__(self, parent_template, dag: Dag, w: Gizmo, *args, **kwargs):
         name_text = pn.widgets.StaticText(
             value=w.name,
             css_classes=['card-title'],
@@ -163,10 +130,6 @@ class GizmoCard(pn.Card):
             styles=dict(
                 min_width='1px', min_height='1px'
             )
-        )
-        status_light = pn.Spacer(
-            margin=(8, 0, 0, 0),
-            styles={'width':'20px', 'height':'20px', 'background':'orange', 'border-radius': '10px'}
         )
 
         if w.user_input:
@@ -204,7 +167,17 @@ class GizmoCard(pn.Card):
             name_text,
             pn.VSpacer(),
             spacer,
-            status_light
+            self._get_status_light(self._get_state_color(w._gizmo_state)),
         )
 
-        # self.loading = parent_template.busy_indicator
+        # Watch the gizmo state so we can update the staus light.
+        #
+        w.param.watch_values(self.state_change, '_gizmo_state')
+
+    def state_change(self, _gizmo_state: GizmoState):
+        """Watcher for the gizmo state.
+
+        Updates the status light.
+        """
+
+        self.header[-1] = self._get_status_light(self._get_state_color(_gizmo_state))
