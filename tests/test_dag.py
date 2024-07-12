@@ -21,16 +21,16 @@ def test_no_inputs(dag):
     class OneOut(Gizmo):
         """One output parameter."""
 
-        o_out = param.String()
+        out_o = param.String()
 
     class OneIn(Gizmo):
         """One input parameter."""
 
-        o_in = param.String()
+        in_p = param.String()
 
     oo = OneOut()
     oi = OneIn()
-    dag.connect(oo, oi, Connection('o_out', 'o_in'))
+    dag.connect(oo, oi, Connection('out_o', 'in_p'))
 
     with pytest.raises(GizmoError):
         dag.execute()
@@ -41,19 +41,19 @@ def test_mismatched_types(dag):
     class OneOut(Gizmo):
         """One output parameter."""
 
-        o_out = param.String()
+        out_o = param.String()
 
     class OneIn(Gizmo):
         """One input parameter."""
 
-        o_in = param.Integer()
+        in_o = param.Integer()
 
     oo = OneOut()
     oi = OneIn()
-    dag.connect(oo, oi, Connection('o_out', 'o_in'))
+    dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
     with pytest.raises(GizmoError):
-        oo.o_out = 'plugh'
+        oo.out_o = 'plugh'
         dag.execute()
 
 def test_gizmo_exception(dag):
@@ -62,22 +62,22 @@ def test_gizmo_exception(dag):
     class OneOut(Gizmo):
         """One output parameter."""
 
-        o_out = param.String()
+        out_o = param.String()
 
     class OneIn(Gizmo):
         """One input parameter."""
 
-        o_in = param.String()
+        in_o = param.String()
 
         def execute(self):
             raise ValueError('This is an exception')
 
     oo = OneOut()
     oi = OneIn()
-    dag.connect(oo, oi, Connection('o_out', 'o_in'))
+    dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
     with pytest.raises(GizmoError):
-        oo.o_out = 'plugh'
+        oo.out_o = 'plugh'
         dag.execute()
 
 def test_user_input(dag):
@@ -86,11 +86,11 @@ def test_user_input(dag):
     class PassThrough(Gizmo):
         """Pass a value through unchanged."""
 
-        pi = param.Integer(default=0)
-        po = param.Integer(default=0)
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
 
         def execute(self):
-            self.po = self.pi
+            self.out_p = self.in_p
 
     p0 = PassThrough()
     p1 = PassThrough()
@@ -98,18 +98,18 @@ def test_user_input(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p0, p1, Connection('po', 'pi'))
-    dag.connect(p1, p2, Connection('po', 'pi'))
-    dag.connect(p2, p3, Connection('po', 'pi'))
-    dag.connect(p3, p4, Connection('po', 'pi'))
+    dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    dag.connect(p1, p2, Connection('out_p', 'in_p'))
+    dag.connect(p2, p3, Connection('out_p', 'in_p'))
+    dag.connect(p3, p4, Connection('out_p', 'in_p'))
 
-    p0.po = 5
+    p0.out_p = 5
     dag.execute()
 
-    assert p1.pi == 5
-    assert p2.pi == 5
-    assert p3.pi == 5
-    assert p4.pi == 0
+    assert p1.in_p == 5
+    assert p2.in_p == 5
+    assert p3.in_p == 5
+    assert p4.in_p == 0
 
     assert len(dag._gizmo_queue) == 0
 
@@ -120,13 +120,13 @@ def test_user_input(dag):
 
     # Emulate user input.
     #
-    p2.po = 7
+    p2.out_p = 7
     dag.execute()
 
-    assert p1.pi == 5
-    assert p2.pi == 5
-    assert p3.pi == 7
-    assert p4.pi == 7
+    assert p1.in_p == 5
+    assert p2.in_p == 5
+    assert p3.in_p == 7
+    assert p4.in_p == 7
 
     assert len(dag._gizmo_queue) == 0
 
@@ -141,11 +141,11 @@ def test_gizmo_state(dag):
     class IncrementGizmo(Gizmo):
         """Increment the input."""
 
-        pi = param.Integer(default=0)
-        po = param.Integer(default=0)
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
 
         def execute(self):
-            self.po = self.pi + 1
+            self.out_p = self.in_p + 1
 
     inc0 = IncrementGizmo(name='inc0')
     inc1 = IncrementGizmo(name='inc1')
@@ -153,15 +153,15 @@ def test_gizmo_state(dag):
     inc3 = IncrementGizmo(name='inc3')
     inc4 = IncrementGizmo(name='inc4')
 
-    dag.connect(inc0, inc1, Connection('po', 'pi'))
-    dag.connect(inc1, inc2, Connection('po', 'pi'))
-    dag.connect(inc2, inc3, Connection('po', 'pi'))
-    dag.connect(inc3, inc4, Connection('po', 'pi'))
+    dag.connect(inc0, inc1, Connection('out_p', 'in_p'))
+    dag.connect(inc1, inc2, Connection('out_p', 'in_p'))
+    dag.connect(inc2, inc3, Connection('out_p', 'in_p'))
+    dag.connect(inc3, inc4, Connection('out_p', 'in_p'))
 
-    inc0.po = 1
+    inc0.out_p = 1
     dag.execute()
 
-    assert inc2.po == 3
+    assert inc2.out_p == 3
 
     assert inc0._gizmo_state == GizmoState.READY
     assert inc1._gizmo_state == GizmoState.SUCCESSFUL
@@ -169,7 +169,7 @@ def test_gizmo_state(dag):
     assert inc3._gizmo_state == GizmoState.READY
     assert inc4._gizmo_state == GizmoState.READY
 
-    inc2.po = 5
+    inc2.out_p = 5
     dag.execute()
 
     assert inc0._gizmo_state == GizmoState.READY

@@ -16,11 +16,11 @@ import param
 class QueryGizmo(Gizmo):
     """A gizmo that performs a query and outputs a dataframe."""
 
-    df = param.DataFrame(
+    out_df = param.DataFrame(
         label='Dataframe',
         doc='The result of querying a large database'
     )
-    column = param.String(
+    out_column = param.String(
         label='Column',
         doc='The key column'
     )
@@ -53,8 +53,8 @@ class QueryGizmo(Gizmo):
         })
 
         self.param.update({
-            'df': df,
-            'column': col
+            'out_df': df,
+            'out_column': col
         })
 
 class GroupByGizmo(Gizmo):
@@ -62,26 +62,26 @@ class GroupByGizmo(Gizmo):
 
     # Input params.
     #
-    df = param.DataFrame(
+    in_df = param.DataFrame(
         label='Input df',
         doc='A dataframe from another gizmo'
     )
-    column = param.String(
+    in_column = param.String(
         label='Group column',
         doc='Name of category to group by'
     )
 
     # Output params.
     #
-    group_df = param.DataFrame(
+    out_group_df = param.DataFrame(
         label='Grouped df',
         doc='A grouped dataframe'
     )
-    category = param.String(
+    out_category = param.String(
         label='Category',
         doc='The group category (column name)'
     )
-    count = param.String(
+    out_count = param.String(
         label='Count',
         doc='Count of category values (column name)'
     )
@@ -92,16 +92,16 @@ class GroupByGizmo(Gizmo):
     def execute(self):
         """Group the COLOR column; ignore other columns."""
 
-        print(f'Action in {self.__class__.__name__}: group by {self.column}')
+        print(f'Action in {self.__class__.__name__}: group by {self.in_column}')
 
-        group_df = self.df.groupby(self.column).size().reset_index().rename(columns={0:'COUNT'})
+        group_df = self.in_df.groupby(self.in_column).size().reset_index().rename(columns={0:'COUNT'})
 
         # Set the outputs.
         #
         self.param.update({
-            'group_df': group_df,
-            'category': self.column,
-            'count': 'COUNT'
+            'out_group_df': group_df,
+            'out_category': self.in_column,
+            'out_count': 'COUNT'
         })
 
 class BarChartGizmo(Gizmo):
@@ -109,15 +109,15 @@ class BarChartGizmo(Gizmo):
 
     # Input params.
     #
-    group_df = param.DataFrame(
+    in_group_df = param.DataFrame(
         label='Grouped dataframe',
         doc='A dataframe that has been grouped'
     )
-    category = param.String(
+    in_category = param.String(
         label='Category',
         doc='The column containing the category values'
     )
-    count = param.String(
+    in_count = param.String(
         label='Count',
         doc='The column containing the count of categories'
     )
@@ -128,20 +128,20 @@ class BarChartGizmo(Gizmo):
     def execute(self):
         """Draw a bar chart."""
 
-        print(f'Action in {self.__class__.__name__}: {self.category} vs {self.count}')
+        print(f'Action in {self.__class__.__name__}: {self.in_category} vs {self.in_count}')
 
-        if any(val is None for val in (self.group_df, self.category, self.count)):
+        if any(val is None for val in (self.in_group_df, self.in_category, self.in_count)):
             return
 
         # Find the maximum category name width for padding.
         #
-        max_width = max(self.group_df[self.category].str.len())
+        max_width = max(self.in_group_df[self.in_category].str.len())
 
-        print(f'Bar chart: {self.category} vs {self.count}')
-        for _, row in self.group_df.sort_values(by=self.category).reset_index().iterrows():
-            cat = row[self.category]
-            bar = '*' * row[self.count]
-            print(f'{cat.ljust(max_width)} ({row[self.count]:2}): {bar}')
+        print(f'Bar chart: {self.in_category} vs {self.in_count}')
+        for _, row in self.in_group_df.sort_values(by=self.in_category).reset_index().iterrows():
+            cat = row[self.in_category]
+            bar = '*' * row[self.in_count]
+            print(f'{cat.ljust(max_width)} ({row[self.in_count]:2}): {bar}')
 
         print()
 
@@ -150,8 +150,15 @@ g = GroupByGizmo()
 b = BarChartGizmo()
 
 dag = Dag(doc='Example: bar chart')
-dag.connect(q, g, Connection('df'), Connection('column'))
-dag.connect(g, b, Connection('group_df'), Connection('category'), Connection('count'))
+dag.connect(q, g,
+    Connection('out_df', 'in_df'),
+    Connection('out_column', 'in_column')
+)
+dag.connect(g, b,
+    Connection('out_group_df', 'in_group_df'),
+    Connection('out_category', 'in_category'),
+    Connection('out_count', 'in_count')
+)
 
 q.query('SELECT color,count FROM the_table')
 dag.execute()

@@ -14,12 +14,12 @@ import param
 class P(Gizmo):
     """A gizmo with a single output parameter."""
 
-    one = param.Integer(label='output P')
+    out_one = param.Integer(label='output P')
 
 class Q(Gizmo):
     """A gizmo with a single input and a single output."""
 
-    two = param.Integer(label='Int 2', doc='input Q')
+    in_two = param.Integer(label='Int 2', doc='input Q')
 
     def execute(self, events, stopper):
         print(f'{stopper=}')
@@ -29,6 +29,7 @@ p = P()
 q = Q()
 
 dag = Dag(doc='Example: execute() args')
-dag.connect(p, q, Connection('one', 'two'))
+dag.connect(p, q, Connection('out_one', 'in_two'))
 
-p.one = 1
+p.out_one = 1
+dag.execute()

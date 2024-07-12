@@ -11,21 +11,21 @@ import param
 class P(Gizmo):
     """In and out parameters."""
 
-    pin = param.Number()
-    pout = param.Number()
+    in_p = param.Number()
+    out_p = param.Number()
 
 class Increment(Gizmo):
     """Increment the input."""
 
-    iin = param.Integer()
-    iout = param.Integer()
+    in_i = param.Integer()
+    out_i = param.Integer()
 
     def __init__(self, incr, *args, **kwargs):
         super().__init__(name=f'Increment by {incr}')
         self.incr = incr
 
     def execute(self):
-        self.iout = self.iin + self.incr
+        self.out_i = self.in_i + self.incr
 
 @pytest.fixture
 def dag():
@@ -40,16 +40,16 @@ def test_serialise(dag):
     p2 = P()
     incr2 = Increment(2)
     incr3 = Increment(3)
-    dag.connect(p1, incr2, Connection('pout', 'iin'))
-    dag.connect(incr2, incr3, Connection('iout', 'iin'))
-    dag.connect(incr3, p2, Connection('iout', 'pin'))
+    dag.connect(p1, incr2, Connection('out_p', 'in_i'))
+    dag.connect(incr2, incr3, Connection('out_i', 'in_i'))
+    dag.connect(incr3, p2, Connection('out_i', 'in_p'))
 
     first_name = p1.name
     last_name = p2.name
 
-    p1.pout = 1
+    p1.out_p = 1
     dag.execute()
-    assert p2.pin == 6
+    assert p2.in_p == 6
 
     # We have a working dag.
     # Dump it out.
@@ -78,9 +78,9 @@ def test_serialise(dag):
     first_g = dag2.gizmo_by_name(first_name)
     last_g = dag2.gizmo_by_name(last_name)
 
-    first_g.pout = 1
+    first_g.out_p = 1
     dag2.execute()
-    assert last_g.pin == 6
+    assert last_g.in_p == 6
 
     # Dumping again should produce the same dump.
     #

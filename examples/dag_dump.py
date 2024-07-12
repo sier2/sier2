@@ -24,14 +24,14 @@ def main():
     agname = ag.name
 
     dag_a = Dag(doc='Example: dump dag')
-    dag_a.connect(r1, ag, Connection('constant', 'a'))
-    dag_a.connect(r2, ag, Connection('constant', 'b'))
+    dag_a.connect(r1, ag, Connection('out_constant', 'in_a'))
+    dag_a.connect(r2, ag, Connection('out_constant', 'in_b'))
 
     print('Run the dag')
     r1.go()
     r2.go()
     dag_a.execute()
-    result_a = ag.result
+    result_a = ag.out_result
 
     dump_a = dag_a.dump()
     print('\nThe dumped dag:')
@@ -61,7 +61,7 @@ def main():
     r1.go()
     r2.go()
     dag_b.execute()
-    result_b = ag.result
+    result_b = ag.out_result
 
     print(f'Results should be the same: {result_a=}, {result_b=}')
 

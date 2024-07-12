@@ -4,12 +4,12 @@ import param
 class OneOut(Gizmo):
     """One output parameter."""
 
-    o_out = param.String()
+    out_o = param.String()
 
 class OneIn(Gizmo):
     """One input parameter."""
 
-    o_in = param.String()
+    in_o = param.String()
 
     def execute(self):
         raise ValueError('This is an exception')
@@ -17,10 +17,10 @@ class OneIn(Gizmo):
 oo = OneOut()
 oi = OneIn()
 dag = Dag(doc='Example: raise an exception in execute()')
-dag.connect(oo, oi, Connection('o_out', 'o_in'))
+dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
 try:
-    oo.o_out = 'plugh'
+    oo.out_o = 'plugh'
     dag.execute()
 except GizmoError as e:
     print(f'\nCaught expected Gizmo exception {e}')

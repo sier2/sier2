@@ -14,15 +14,18 @@ class Connection:
     """Define a connection between an output parameter and an input parameter."""
 
     src_param_name: str
-    dst_param_name: str = ''
+    dst_param_name: str
     # _: KW_ONLY
     # onlychanged: bool = False
     # queued: bool = False
     # precedence: int = 0
 
     def __post_init__(self):
-        if not self.dst_param_name:
-            self.dst_param_name = self.src_param_name
+        if not self.src_param_name.startswith('out_'):
+            raise GizmoError('Output params must start with "out_"')
+
+        if not self.dst_param_name.startswith('in_'):
+            raise GizmoError('Input params must start with "in_"')
 
 @dataclass
 class _InputValues:

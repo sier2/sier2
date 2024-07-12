@@ -36,36 +36,32 @@ def interrupt_thread(tid, exctype):
 class QueryWidget(Gizmo):
     """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
-    timer_out = param.Integer(default=5, bounds=(1, 10))
+    out_timer = param.Integer(default=5, bounds=(1, 10))
 
     def __panel__(self):
         return pn.Param(self, widgets={
-            'timer_out': {
+            'out_timer': {
                 'widget_type': pn.widgets.IntInput},
-                'name': 'Timer period',
-                # 'value': 5,
-                # 'step': 1,
-                # 'start': 1,
-                # 'end': 10
+                'name': 'Timer period'
             },
-            parameters=['timer_out'],
+            parameters=['out_timer'],
             sizing_mode='stretch_width'
         )
 
 class ProgressWidget(Gizmo):
     """A progress widget."""
 
-    timer_in = param.Integer()
-    timer_out = param.Integer()
+    in_timer = param.Integer()
+    out_timer = param.Integer()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.progress = pn.indicators.Progress(name='Progress', value=0, max=self.timer_in)
+        self.progress = pn.indicators.Progress(name='Progress', value=0, max=self.in_timer)
 
     def execute(self): #, stopper):
         self.progress.value = 0
-        self.progress.max = self.timer_in
-        for t in range(1, self.timer_in+1):
+        self.progress.max = self.in_timer
+        for t in range(1, self.in_timer+1):
             time.sleep(1)
             self.progress.value = t
             print(f'Progress {self.name} {self.progress.value}')
@@ -73,26 +69,26 @@ class ProgressWidget(Gizmo):
             # if stopper.is_stopped:
             #     return
 
-        self.timer_out = self.timer_in
+        self.out_timer = self.in_timer
 
     def __panel__(self):
         return self.progress
 
-class StatusContext:
-    def __init__(self, status):
-        self.status = status
+# class StatusContext:
+#     def __init__(self, status):
+#         self.status = status
 
-    def __enter__(self):
-        print('ENTER')
-        self.status.value = True
+#     def __enter__(self):
+#         print('ENTER')
+#         self.status.value = True
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        print('EXIT')
-        # self.status.value = False
-        if exc_type is None:
-            self.status.color = 'success'
-        else:
-            self.status.color = 'danger'
+#     def __exit__(self, exc_type, exc_val, exc_tb):
+#         print('EXIT')
+#         # self.status.value = False
+#         if exc_type is None:
+#             self.status.color = 'success'
+#         else:
+#             self.status.color = 'danger'
 
 def main():
     title = 'Stop'
@@ -110,8 +106,8 @@ def main():
     b2 = ProgressWidget(name='Progress2')
 
     dag = Dag(doc='Example: stopping and unstopping a dag in panel')
-    dag.connect(q, b1, Connection('timer_out', 'timer_in'))
-    dag.connect(b1, b2, Connection('timer_out', 'timer_in'))
+    dag.connect(q, b1, Connection('out_timer', 'in_timer'))
+    dag.connect(b1, b2, Connection('out_timer', 'in_timer'))
 
     show_dag(dag, site='Example stopper', title='demonstrate stopping a dag')
 

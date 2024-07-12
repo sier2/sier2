@@ -13,41 +13,41 @@ import param
 class P(Gizmo):
     """A gizmo with a single output parameter."""
 
-    po = param.Integer(label='output P')
+    out_p = param.Integer(label='output P')
 
 class Q(Gizmo):
     """A gizmo with a single input and a single output."""
 
-    qi = param.Integer(label='Int 2', doc='input Q')
-    qo = param.Integer(label='Int 3', doc='output Q')
+    in_q = param.Integer(label='Int 2', doc='input Q')
+    out_q = param.Integer(label='Int 3', doc='output Q')
 
     def execute(self, *args, **kwargs):
-        print(f'{self.name} acting {self.qi=} {args=} {kwargs=}')
-        self.qo = self.qi + 1
+        print(f'{self.name} acting {self.in_q=} {args=} {kwargs=}')
+        self.out_q = self.in_q + 1
 
 class R(Gizmo):
     """A gizmo with a single input."""
 
-    ri = param.Integer(label='Int 4', doc='input R')
+    in_r = param.Integer(label='Int 4', doc='input R')
 
     def execute(self):
-        print(f'{self.name} acting {self.ri=}')
+        print(f'{self.name} acting {self.in_r=}')
 
 p = P()
 q = Q()
 r = R()
 
 dag = Dag(doc='Simple dag')
-dag.connect(p, q, Connection('po', 'qi'))
-dag.connect(q, r, Connection('qo', 'ri'))
+dag.connect(p, q, Connection('out_p', 'in_q'))
+dag.connect(q, r, Connection('out_q', 'in_r'))
 
 start_number = 1
-p.po = start_number
+p.out_p = start_number
 dag.execute()
 
 print(f'''
-    {p.po=} (expecting {start_number})
-    {q.qi=} (expecting {start_number})
-    {q.qo=} (expecting {start_number+1})
-    {r.ri=} (expecting {start_number+1})
+    {p.out_p=} (expecting {start_number})
+    {q.in_q=} (expecting {start_number})
+    {q.out_q=} (expecting {start_number+1})
+    {r.in_r=} (expecting {start_number+1})
 ''')

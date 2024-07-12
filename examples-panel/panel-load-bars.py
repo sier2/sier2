@@ -16,8 +16,10 @@ from gizmo.panel import show_dag
 
 from _panel_widgets import QueryWidget, BarchartWidget
 
+NTHREADS = 2
+
 hv.extension('bokeh', inline=True)
-pn.extension(inline=True)
+pn.extension(nthreads=NTHREADS, loading_spinner='bar', inline=True)
 # hv.renderer('bokeh').theme = 'dark_minimal'
 
 def main():
@@ -33,7 +35,7 @@ def main():
     dag = Library.load(dump)
     title = dump['panel']['title']
 
-    show_dag(dag, site='Barchart dag', title='demonstrate passing a dataframe')
+    show_dag(dag, site='Barchart dag', title=title)
 
 if __name__=='__main__':
     # Gizmos that are loaded from a dumped dag must be in the dag library.

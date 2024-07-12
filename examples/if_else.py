@@ -5,7 +5,7 @@ class IfEvenElseOdd(Gizmo):
     """Demonstrate an if-else branch.
 
     This gizmo has three outputs: an integer value, and two constant booleans.
-    The ``user_input()`` method takes an integer and determines if it is odd or even.
+    The ``ask_user()`` method takes an integer and determines if it is odd or even.
     The method sets the output parameter from the integer, and triggers either the
     ``true_out`` or ``false_out`` parameter.
 
@@ -18,38 +18,44 @@ class IfEvenElseOdd(Gizmo):
     ``True`` or ``False``, they can be constants, and ``trigger()` is used.
     """
 
-    value = param.Integer()
-    true_out = param.Boolean(True, constant=True)
-    false_out = param.Boolean(False, constant=True)
+    out_value = param.Integer()
+    out_true = param.Boolean(True, constant=True)
+    out_false = param.Boolean(False, constant=True)
 
     def ask_user(self):
         i = int(input('Enter an integer: '))
         with param.parameterized.discard_events(self):
-            self.value = i
+            self.out_value = i
 
-        tf = 'true_out' if i%2==0 else 'false_out'
+        tf = 'out_true' if i%2==0 else 'out_false'
         self.param.trigger(tf)
 
 class Notify(Gizmo):
     """Display a message."""
 
-    b = param.Boolean()
-    value = param.Integer()
+    in_b = param.Boolean()
+    in_value = param.Integer()
 
     def __init__(self, *, name, msg):
         super().__init__(name=name)
         self.msg = msg
 
     def execute(self):
-        print(f'In gizmo {self.name}, {self.b} branch: value is {self.msg}')
+        print(f'In gizmo {self.name}, {self.in_b} branch: value is {self.msg}')
 
 if_else = IfEvenElseOdd()
 is_even = Notify(name='EvenGizmo', msg='even')
 is_odd = Notify(name='OddGizmo', msg='odd')
 
 dag = Dag(doc='Example: run a branch depending on a value')
-dag.connect(if_else, is_even, Connection('true_out', 'b'), Connection('value'))
-dag.connect(if_else, is_odd, Connection('false_out', 'b'), Connection('value'))
+dag.connect(if_else, is_even,
+    Connection('out_true', 'in_b'),
+    Connection('out_value', 'in_value')
+)
+dag.connect(if_else, is_odd,
+    Connection('out_false', 'in_b'),
+    Connection('out_value', 'in_value')
+)
 
 if_else.ask_user()
 dag.execute()

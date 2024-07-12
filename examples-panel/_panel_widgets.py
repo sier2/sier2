@@ -22,12 +22,12 @@ def _make_df(max_height=MAX_HEIGHT) -> pd.DataFrame:
 class Query(Gizmo):
     """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
-    df_out = param.DataFrame(default=None)
+    out_df = param.DataFrame(default=None)
 
     def query(self, max_height):
         """Output a dataframe with a maximum counts value."""
 
-        self.df_out = _make_df(max_height)
+        self.out_df = _make_df(max_height)
 
 class QueryWidget(Query):
     """An example gizmo widget.
@@ -48,7 +48,7 @@ class QueryWidget(Query):
             """
 
             self.query(max_height)
-            return self.df_out
+            return self.out_df
 
         height = pn.widgets.FloatSlider(value=10, start=1, end=10, name='Maximum height')
         df2 = pn.bind(query_value, max_height=height)
@@ -70,7 +70,7 @@ class BarchartWidget(Gizmo):#, Viewer):
     but since the only thing this does is display a HoloViews Chart, why bother.
     """
 
-    df_in = param.DataFrame(default=None)
+    in_df = param.DataFrame(default=None)
 
     def __init__(self, inverted=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,8 +79,8 @@ class BarchartWidget(Gizmo):#, Viewer):
         self.hv_pane = pn.pane.HoloViews(sizing_mode='stretch_width')
 
     def execute(self):
-        if self.df_in is not None:
-            df = self.df_in
+        if self.in_df is not None:
+            df = self.in_df
             if self.inverted:
                 df = df.copy()
                 df['Counts'] = MAX_HEIGHT - df['Counts']

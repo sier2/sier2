@@ -23,8 +23,8 @@ def main():
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 
     dag = Dag(doc='Example: generate bar charts')
-    dag.connect(q, b, Connection('df_out', 'df_in'))
-    dag.connect(q, bi, Connection('df_out', 'df_in'))
+    dag.connect(q, b, Connection('out_df', 'in_df'))
+    dag.connect(q, bi, Connection('out_df', 'in_df'))
 
     title = 'Random weighted barcharts'
 
