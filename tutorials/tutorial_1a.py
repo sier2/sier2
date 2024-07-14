@@ -10,8 +10,8 @@ class UserInput(Gizmo):
 
     # Outputs.
     #
-    text = param.String(label='User input', doc='Text to be translated')
-    flag = param.Boolean(label='Transform flag', doc='Changes how text is translated')
+    out_text = param.String(label='User input', doc='Text to be translated')
+    out_flag = param.Boolean(label='Transform flag', doc='Changes how text is translated')
 
 class Translate(Gizmo):
     """A gizmo that transforms text.
@@ -22,25 +22,28 @@ class Translate(Gizmo):
 
     # Inputs.
     #
-    text_in = param.String(label='Input text', doc='Text to be transformed')
-    flag = param.Boolean(label='Transform flag', doc='Changes how text is transformed')
+    in_text = param.String(label='Input text', doc='Text to be transformed')
+    in_flag = param.Boolean(label='Transform flag', doc='Changes how text is transformed')
 
     # Outputs.
     #
-    text_out = param.String(label='Output text', doc='Transformed text')
+    out_text = param.String(label='Output text', doc='Transformed text')
 
     def execute(self):
-        print(f'{self.flag=} {self.text_in=}')
+        print(f'in execute: {self.in_flag=} {self.in_text=}')
+        self.out_text = self.in_text
 
 def main():
     ui = UserInput()
     tr = Translate()
 
     dag = Dag(doc='Translation')
-    dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
+    dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
 
-    ui.text = 'Hello world.'
-    ui.flag = True
+    ui.out_text = 'Hello world.'
+    ui.out_flag = True
+    dag.execute()
+    print(f'{tr.out_text=}')
 
 if __name__=='__main__':
     main()

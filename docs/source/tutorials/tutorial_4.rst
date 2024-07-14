@@ -22,20 +22,25 @@ gizmo (a gizmo with no inputs) and at least one "end" gizmo (a gizmo with
 no outputs). The gizmos are displayed in *topological* sort order: gizmos
 closer to the start are above gizmos further from the start.
 
+We also have to find a way to execute the dag. We do this by telling the dag
+the the ``UserInput`` gizmo requires user input: when input is complete, the dag
+can be executed. Specifically, we pass ``user_input=True`` when creating the gizmo.
+This adds a ``Continue`` button to this gizmo's card - pressing the button
+calls ``dag.execute()``.
+
 .. code-block:: python
 
-    from gizmo import Dag, Connection
-    from gizmo.panel import show_dag
+    ui = UserInput(name='User input', user_input=True)
+    tr = Translate(name='Translation')
+    di = Display(name='Display output')
 
-    from tutorial_3b import UserInput, Translate, Display
+    dag = Dag(doc='Translation')
+    dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
+    dag.connect(tr, di, Connection('out_text', 'in_text'))
 
-    if __name__=='__main__':
-        ui = UserInput(name='User input')
-        tr = Translate(name='Translation')
-        di = Display(name='Display output')
+    show_dag(dag, site='Translation dag', title='translate text')
 
-        dag = Dag(doc='Translation')
-        dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
-        dag.connect(tr, di, Connection('text_out', 'text'))
+.. note::
 
-        show_dag(dag, site='Translation dag', title='translate text')
+    The code here is not complete.
+    To see this dag in action, run ``tutorials/tutorial_4a.py``.

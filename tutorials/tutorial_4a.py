@@ -13,7 +13,7 @@ if __name__=='__main__':
     di = Display(name='Display output')
 
     dag = Dag(doc='Translation')
-    dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
-    dag.connect(tr, di, Connection('text_out', 'text'))
+    dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
+    dag.connect(tr, di, Connection('out_text', 'in_text'))
 
     show_dag(dag, site='Translation dag', title='translate text')

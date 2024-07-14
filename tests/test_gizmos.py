@@ -301,3 +301,11 @@ def test_onlychanged(dag):
 
     assert a.in_a == 0
     assert a.out_a == 1
+
+def test_call_gizmo():
+    """Ensure that we can call a gizmo directly."""
+
+    a = Add(1)
+    result = a(in_a=5)
+
+    assert result=={'out_a': 6}

@@ -15,16 +15,16 @@ pn.extension(inline=True)
 class UserInput(Gizmo):
     """A gizmo that provides user input."""
 
-    text = param.String(label='User input', doc='Text to be translated')
-    flag = param.Boolean(label='Capitalise', doc='Changes how text is transformed')
+    out_text = param.String(label='Input text', doc='Text to be translated')
+    out_flag = param.Boolean(label='Capitalise', doc='Changes how text is transformed')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.text = 'The quick brown\nfox jumps over the lazy\ndog.\n\nThe end.'
+        self.out_text = 'The quick brown\nfox jumps over the lazy\ndog.\n\nThe end.'
 
     def __panel__(self):
         text_widget = pn.widgets.TextAreaInput.from_param(
-            self.param.text,
+            self.param.out_text,
             name='Input text',
             placeholder='Enter text here',
             auto_grow=True,
@@ -35,7 +35,7 @@ class UserInput(Gizmo):
 
         return pn.Column(
             text_widget,
-            pn.Row(pn.HSpacer(), self.param.flag, sizing_mode='stretch_width'),
+            pn.Row(pn.HSpacer(), self.param.out_flag, sizing_mode='stretch_width'),
             sizing_mode='stretch_width'
         )
 
@@ -46,9 +46,9 @@ class Translate(Gizmo):
     If flag is set, capitlaize each word.
     """
 
-    text_in = param.String(label='Input text', doc='Text to be transformed')
-    flag = param.Boolean(label='Transform flag', doc='Changes how text is transformed')
-    text_out = param.String(label='Output text', doc='Transformed text')
+    in_text = param.String(label='Input text', doc='Text to be transformed')
+    in_flag = param.Boolean(label='Transform flag', doc='Changes how text is transformed')
+    out_text = param.String(label='Output text', doc='Transformed text')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,11 +63,11 @@ class Translate(Gizmo):
     def execute(self):
         self.progress.active = True
         try:
-            paras = re.split(r'\n', self.text_in)
+            paras = re.split(r'\n', self.in_text)
             para_words = [para.split() for para in paras]
             para_words = [[''.join(random.sample(word, k=len(word))) for word in para] for para in para_words]
 
-            if self.flag:
+            if self.in_flag:
                 para_words = [[word.capitalize() for word in para] for para in para_words]
 
             text = '\n'.join(' '.join(word for word in para) for para in para_words)
@@ -76,7 +76,7 @@ class Translate(Gizmo):
             #
             time.sleep(random.random() * 2.0)
 
-            self.text_out = text
+            self.out_text = text
 
         finally:
             self.progress.active = False
@@ -87,12 +87,12 @@ class Translate(Gizmo):
 class Display(Gizmo):
     """A gizmo that displays text."""
 
-    text = param.String(label='Text', doc='Display text')
+    in_text = param.String(label='Text', doc='Display text')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.text_out = pn.widgets.TextAreaInput(
+        self.text_widget = pn.widgets.TextAreaInput(
             name='Output text',
             placeholder='Translated text goes here',
             auto_grow=True,
@@ -104,10 +104,10 @@ class Display(Gizmo):
         )
 
     def execute(self):
-        self.text_out.value = self.text
+        self.text_widget.value = self.in_text
 
     def __panel__(self):
-        return self.text_out
+        return self.text_widget
 
 if __name__=='__main__':
     ui = UserInput(name='User input')
@@ -115,7 +115,7 @@ if __name__=='__main__':
     di = Display(name='Display output')
 
     dag = Dag(doc='Translation')
-    dag.connect(ui, tr, Connection('text', 'text_in'), Connection('flag'))
-    dag.connect(tr, di, Connection('text_out', 'text'))
+    dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
+    dag.connect(tr, di, Connection('out_text', 'in_text'))
 
     pn.Column(ui, tr, di).show()

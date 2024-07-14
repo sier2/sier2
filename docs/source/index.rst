@@ -104,10 +104,7 @@ See the ``examples`` directory in the source code for examples.
     :maxdepth: 2
     :caption: Contents:
 
-    tutorial_1
-    tutorial_2
-    tutorial_3
-    tutorial_4
+    tutorials/tutorials
     gizmo
     dag
     library

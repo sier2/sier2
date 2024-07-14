@@ -103,3 +103,21 @@ class Gizmo(param.Parameterized):
 
         # print(f'** EXECUTE {self.__class__=}')
         pass
+
+    def __call__(self, **kwargs) -> dict[str, Any]:
+        """Allow a gizmo to be called directly."""
+
+        in_names = [name for name in self.__class__.param if name.startswith('in_')]
+        if len(kwargs)!=len(in_names) or any(name not in in_names for name in kwargs):
+            names = ', '.join(in_names)
+            raise GizmoError(f'All input params must be specified: {names}')
+
+        for name, value in kwargs.items():
+            setattr(self, name, value)
+
+        self.execute()
+
+        out_names = [name for name in self.__class__.param if name.startswith('out_')]
+        result = {name: getattr(self, name) for name in out_names}
+
+        return result
