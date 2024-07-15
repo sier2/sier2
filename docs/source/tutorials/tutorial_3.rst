@@ -1,5 +1,5 @@
-Tutorial - Part 3
-=================
+Tutorial part 3 - GUI
+=====================
 
 In this tutorial, we'll build on the dag we build previously to provide
 a GUI interface. We'll be using ``panel``, an open-source Python library

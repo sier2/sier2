@@ -61,9 +61,11 @@ class _Stopper:
 class Dag:
     """A directed acyclic graph of gizmos."""
 
-    def __init__(self, *, doc: str):
+    def __init__(self, *, site: str, title: str, doc: str):
         self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
         self._stopper = _Stopper()
+        self.site = site
+        self.title = title
         self.doc = doc
 
         # We watch output params to be notified when they are set.

@@ -24,10 +24,10 @@ def interrupt_thread(tid, exctype):
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
-def show_dag(dag: Dag, *, site: str, title: str):
+def show_dag(dag: Dag):
     template = pn.template.BootstrapTemplate(
-        site=site,
-        title=title,
+        site=dag.site,
+        title=dag.title,
         theme='dark',
         sidebar=pn.Column('## Gizmos'),
         collapsed_sidebar=True

@@ -1,5 +1,5 @@
-Tutorial - Part 2
-=================
+Tutorial part 2 - an application
+================================
 
 In this tutorial, we'll continue building a simple application to translate text.
 

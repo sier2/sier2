@@ -1,5 +1,5 @@
-Tutorial - Part 0
-=================
+Tutorial part 0 - Gizmo
+=======================
 
 This is the first in a series of tutorials that explains gizmos and dags,
 and how to use them to build applications.

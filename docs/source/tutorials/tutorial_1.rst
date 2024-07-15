@@ -1,5 +1,5 @@
-Tutorial - Part 1
-=================
+Tutorial part 1 - Dag
+=====================
 
 In this tutorial, we'll start to build a simple application to translate text.
 (By "translate", we mean "transform the text" - we won't need any external help.)

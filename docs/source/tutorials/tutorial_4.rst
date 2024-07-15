@@ -1,5 +1,5 @@
-Tutorial - Part 4
-=================
+Tutorial part 4 - themed application
+====================================
 
 In this tutorial, we'll use the dag we built previously to create a themed
 gizmo application.
