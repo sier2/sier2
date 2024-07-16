@@ -40,7 +40,7 @@ class TwoIn(Gizmo):
 def dag():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-dag')
+    return Dag(doc='test-dag', site='site', title='title')
 
 def test_output_must_not_allow_refs(dag):
     class P(Gizmo):

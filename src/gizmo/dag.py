@@ -398,7 +398,9 @@ class Dag:
 
         return {
             'dag': {
-                'doc': self.doc
+                'doc': self.doc,
+                'site': self.site,
+                'title': self.title
             },
             'gizmos': gizmos,
             'connections': connections

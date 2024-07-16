@@ -72,6 +72,6 @@ def _name(cls):
     return f'{cls.__module__}.{cls.__name__}'
 
 def gizmos() -> dict[str, Type[Gizmo]]:
-    return {
-        _name(cls): cls for cls in [RandomNumberGizmo, ConstantNumberGizmo, AddGizmo]
-    }
+    return [
+        _name(cls) for cls in [RandomNumberGizmo, ConstantNumberGizmo, AddGizmo]
+    ]

@@ -7,7 +7,7 @@ import param
 def dag():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-dag')
+    return Dag(doc='test-dag', site='site', title='title')
 
 def test_load_doc(dag):
     """Ensure that a dag's doc is loaded."""

@@ -7,7 +7,7 @@ from pprint import pprint
 import random
 
 from gizmo import Library, Dag, Connection
-from gizmo.provided import AddGizmo, ConstantNumberGizmo
+from gizmo.xx.provided import AddGizmo, ConstantNumberGizmo
 
 def main():
     n1 = random.randint(1, 100)
@@ -28,8 +28,8 @@ def main():
     dag_a.connect(r2, ag, Connection('out_constant', 'in_b'))
 
     print('Run the dag')
-    r1.go()
-    r2.go()
+    r1.execute()
+    r2.execute()
     dag_a.execute()
     result_a = ag.out_result
 

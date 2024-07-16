@@ -1,12 +1,14 @@
-import sys
+import importlib
 from importlib.metadata import entry_points
-import traceback
-from typing import Any
+from typing import Any, Type
 import warnings
 
 from gizmo import Gizmo, Dag, Connection, GizmoError
 
-_gizmo_library = {}
+# Store a mapping from a unique key to a Gizmo class.
+# When plugins are initially scanned, the classes are not loaded.
+#
+_gizmo_library: dict[str, Type[Gizmo]|None] = {}
 
 class Library:
     @staticmethod
@@ -28,28 +30,25 @@ class Library:
 
         library = entry_points(group='gizmo.library')
 
-        for shelf in library:
+        for plugin in library:
             try:
-                gizmos_func = shelf.load()
-                gizmos_dict = gizmos_func()
-
-                # Check that they really are gizmos.
-                #
-                for key in list(gizmos_dict):
-                    g = gizmos_dict[key]
-                    if not issubclass(g, Gizmo):
-                        del gizmos_dict[key]
-                        warnings.warn(f'{key} is not a Gizmo: removed')
-
-                    if key in _gizmo_library:
-                        warnings.warn(f'Gizmo key {key} already in library: removing duplicate')
-                        del gizmos_dict[key]
-
-                _gizmo_library.update(gizmos_dict)
-
+                gizmos_func = plugin.load()
+                if not callable(gizmos_func):
+                    warnings.warn(f'In {plugin.module}, {gizmos_func} is not a function')
+                else:
+                    gizmos_list = gizmos_func()
+                    if not isinstance(gizmos_list, list) or any(not isinstance(s, str) for s in gizmos_list):
+                        warnings.warn(f'In {plugin.module}, {gizmos_func} does not return a list of strings')
+                    else:
+                        for g in gizmos_list:
+                            if g in _gizmo_library:
+                                warnings.warn(f'Gizmo key {g} already in library: removing duplicate')
+                            else:
+                                _gizmo_library[g] = None
             except Exception as e:
-                print(f'While loading {shelf}:', file=sys.stderr)
-                traceback.print_stack()
+                warnings.warn(f'While loading {plugin}:')
+                raise GizmoError(str(e)) from e
+                # traceback.print_stack()
 
         return _gizmo_library
 
@@ -60,7 +59,7 @@ class Library:
         The library initially loads gizmo classes using Python's entry_points() mechanism.
         This method allows local Gizmos to be added to the libray.
 
-        This is useful fo testing, for example.
+        This is useful for testing, for example.
 
         Parameters
         ----------
@@ -84,10 +83,18 @@ class Library:
 
     @staticmethod
     def get(key: str) -> type[Gizmo]:
-        if key in _gizmo_library:
-            return _gizmo_library[key]
+        if not _gizmo_library:
+            Library.collect()
 
-        raise GizmoError(f'Name {key} is not in the library')
+        if key not in _gizmo_library:
+            raise GizmoError(f'Name {key} is not in the library')
+
+        if _gizmo_library[key] is None:
+            ix = key.rfind('.')
+            m = importlib.import_module(key[:ix])
+            _gizmo_library[key] = getattr(m, key[ix+1:])
+
+        return _gizmo_library[key]
 
     @staticmethod
     def load(dump: dict[str, Any]) -> Dag:
@@ -107,11 +114,11 @@ class Library:
 
         # Connect the gizmos.
         #
-        dag = Dag(doc=dump['dag']['doc'])
+        dag = Dag(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
         for conn in dump['connections']:
             conns = [Connection(**kwargs) for kwargs in conn['conn_args']]
             dag.connect(instances[conn['src']], instances[conn['dst']], *conns)
 
         return dag
 
-Library.collect()
+# Library.collect()

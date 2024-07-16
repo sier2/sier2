@@ -31,7 +31,7 @@ class Increment(Gizmo):
 def dag():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-doc')
+    return Dag(doc='test-doc', site='site', title='title')
 
 def test_serialise(dag):
     """Ensure that a dag can be serialised and restored."""

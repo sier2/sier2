@@ -1,11 +1,17 @@
-from gizmo import Dag, Connection
-
-from tutorial_3b import UserInput, Translate, Display
+from gizmo import Dag, Connection, Library
 
 def make_dag():
-    ui = UserInput(name='User input', user_input=True)
-    tr = Translate(name='Translation')
-    di = Display(name='Display output')
+    print('Loading ui ...')
+    UiGizmo = Library.get('gizmo_tutorials.tutorial_3b.UserInput')
+    ui = UiGizmo(name='User input', user_input=True)
+
+    print('Loading translator ...')
+    TrGizmo = Library.get('gizmo_tutorials.tutorial_3b.Translate')
+    tr = TrGizmo(name='Translation')
+
+    print('Loading display ...')
+    DiGizmo = Library.get('gizmo_tutorials.tutorial_3b.Display')
+    di = DiGizmo(name='Display output')
 
     dag = Dag(doc='Translation', site='Translation dag', title='translate text')
     dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))

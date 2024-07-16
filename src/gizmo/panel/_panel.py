@@ -82,7 +82,7 @@ def show_dag(dag: Dag):
             pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
         )
     )
-    template.show(threaded=False)
+    template.show(threaded=False, unused_timeout=1000)
 
 class GizmoCard(pn.Card):
     """A custom card to wrap around a gizmo.

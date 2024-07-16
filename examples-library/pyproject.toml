@@ -1,0 +1,18 @@
+[project]
+name = "gizmo-examples"
+version = "0.0.1"
+description = "Example gizmo library"
+#authors = [
+#    {name="Example author", email="author@example.com"}
+#]
+requires-python = ">=3.12"
+dependencies = [
+    "gizmo>=0.8.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["src/"]
+include = ["gizmo_examples"]
+
+[project.entry-points."gizmo.library"]
+export = "gizmo_examples:library.gizmos"

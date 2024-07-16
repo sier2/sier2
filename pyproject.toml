@@ -18,9 +18,11 @@ classifiers = [
 python = "^3.11"
 
 holoviews = "^1.18.3"
+panel = ">=1.4.4"
+param = ">=2.1.0"
 
 [tool.poetry.plugins."gizmo.library"]
-export = "gizmo.provided:gizmos"
+export = "gizmo:provided.gizmos"
 
 [[tool.mypy.overrides]]
 module = [
