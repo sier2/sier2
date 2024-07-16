@@ -7,7 +7,6 @@
 from gizmo import Gizmo
 import param
 import random
-from typing import Type
 
 class RandomNumberGizmo(Gizmo):
     """Produce a random number."""
@@ -71,7 +70,7 @@ class AddGizmo(Gizmo):
 def _name(cls):
     return f'{cls.__module__}.{cls.__name__}'
 
-def gizmos() -> dict[str, Type[Gizmo]]:
+def gizmos() -> dict[str, type[Gizmo]]:
     return [
         _name(cls) for cls in [RandomNumberGizmo, ConstantNumberGizmo, AddGizmo]
     ]

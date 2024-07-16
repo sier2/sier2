@@ -2,9 +2,9 @@ import argparse
 from importlib.metadata import entry_points, version
 import sys
 
-def quit(session_context):
-    print(session_context)
-    sys.exit()
+# def quit(session_context):
+#     print(session_context)
+#     sys.exit()
 
 def plugins_cmd(args):
     discovered_plugins = entry_points(group='gizmo.library')
@@ -24,10 +24,10 @@ def panel_cmd(args):
     dag = m.make_dag()
 
     from gizmo.panel import show_dag
-    import panel as pn
-    NTHREADS = 2
-    pn.extension(nthreads=NTHREADS, loading_spinner='bar', inline=True)
-    pn.state.on_session_destroyed(quit)
+    # import panel as pn
+    # NTHREADS = 2
+    # pn.extension(nthreads=NTHREADS, loading_spinner='bar', inline=True)
+    # pn.state.on_session_destroyed(quit)
     show_dag(dag)
 
 def main():

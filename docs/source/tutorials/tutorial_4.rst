@@ -30,6 +30,11 @@ calls ``dag.execute()``.
 
 .. code-block:: python
 
+    from gizmo import Dag, Connection
+    from gizmo.panel import show_dag
+
+    from tutorial_3b import UserInput, Translate, Display
+
     ui = UserInput(name='User input', user_input=True)
     tr = Translate(name='Translation')
     di = Display(name='Display output')
@@ -42,5 +47,7 @@ calls ``dag.execute()``.
 
 .. note::
 
-    The code here is not complete.
-    To see this dag in action, run ``tutorials/tutorial_4a.py``.
+    To see this dag in action, cd into the ``tutorials`` directory and run ``tutorials/tutorial_4a.py``.
+
+An obvious disadvantage of importing gizmo classes from another module is
+that we have to be in the correct directory in order for the imports to work.

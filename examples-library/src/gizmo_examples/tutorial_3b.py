@@ -108,16 +108,3 @@ class Display(Gizmo):
 
     def __panel__(self):
         return self.text_widget
-
-print('**** TUTORIAL-3B ****')
-
-# if __name__=='__main__':
-#     ui = UserInput(name='User input')
-#     tr = Translate(name='Translate')
-#     di = Display(name='Display output')
-
-#     dag = Dag(doc='Translation')
-#     dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
-#     dag.connect(tr, di, Connection('out_text', 'in_text'))
-
-#     pn.Column(ui, tr, di).show()

@@ -1,6 +1,6 @@
 import importlib
 from importlib.metadata import entry_points
-from typing import Any, Type
+from typing import Any
 import warnings
 
 from gizmo import Gizmo, Dag, Connection, GizmoError
@@ -8,7 +8,7 @@ from gizmo import Gizmo, Dag, Connection, GizmoError
 # Store a mapping from a unique key to a Gizmo class.
 # When plugins are initially scanned, the classes are not loaded.
 #
-_gizmo_library: dict[str, Type[Gizmo]|None] = {}
+_gizmo_library: dict[str, type[Gizmo]|None] = {}
 
 class Library:
     @staticmethod
@@ -24,7 +24,7 @@ class Library:
 
         Returns
         -------
-        dict[str, Type[Gizmo]]
+        dict[str, type[Gizmo]]
             A dictionary of {names: Gizmo classes}.
         """
 

@@ -1,12 +1,17 @@
 import ctypes
 import panel as pn
+import sys
 import threading
 
 from gizmo import Gizmo, GizmoState, Dag
 
 NTHREADS = 2
 
-pn.extension(nthreads=NTHREADS, inline=True)
+pn.extension(inline=True, nthreads=NTHREADS, loading_spinner='bar')
+
+def _quit(session_context):
+    print(session_context)
+    sys.exit()
 
 def interrupt_thread(tid, exctype):
     """Raise exception exctype in thread tid."""
@@ -82,7 +87,10 @@ def show_dag(dag: Dag):
             pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
         )
     )
-    template.show(threaded=False, unused_timeout=1000)
+
+    pn.state.on_session_destroyed(_quit)
+
+    template.show(threaded=False)
 
 class GizmoCard(pn.Card):
     """A custom card to wrap around a gizmo.
