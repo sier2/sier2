@@ -1,21 +1,17 @@
 import argparse
-from importlib.metadata import entry_points, version
-import sys
+from importlib.metadata import version
+from .library import _find_gizmos
 
-# def quit(session_context):
-#     print(session_context)
-#     sys.exit()
+def gizmos_cmd(args):
+    """Display the gizmos found via plugin entry points."""
 
-def plugins_cmd(args):
-    discovered_plugins = entry_points(group='gizmo.library')
-    for plugin in discovered_plugins:
-        # print(plugin)
-        gizmos_func = plugin.load()
-        gizmos_list = gizmos_func()
+    curr_ep = None
+    for entry_point, gi in _find_gizmos():
+        if curr_ep is None or entry_point!=curr_ep:
+            print(f'In {entry_point.module} {version(entry_point.module)}:')
+            curr_ep = entry_point
 
-        print(f'In {plugin.module} {version(plugin.module)}:')
-        for gizmo in gizmos_list:
-            print(f'  {gizmo}')
+        print(f'  {gi.key}: {gi.doc}')
 
 def panel_cmd(args):
     import importlib
@@ -24,10 +20,6 @@ def panel_cmd(args):
     dag = m.make_dag()
 
     from gizmo.panel import show_dag
-    # import panel as pn
-    # NTHREADS = 2
-    # pn.extension(nthreads=NTHREADS, loading_spinner='bar', inline=True)
-    # pn.state.on_session_destroyed(quit)
     show_dag(dag)
 
 def main():
@@ -38,8 +30,8 @@ def main():
     runpanel.add_argument('module', type=str, help='A python module containing a make_dag() function')
     runpanel.set_defaults(func=panel_cmd)
 
-    plugins = subparsers.add_parser('plugins', help='List plugin gizmos')
-    plugins.set_defaults(func=plugins_cmd)
+    plugins = subparsers.add_parser('gizmos', help='Show available gizmos')
+    plugins.set_defaults(func=gizmos_cmd)
 
     args = parser.parse_args()
     args.func(args)

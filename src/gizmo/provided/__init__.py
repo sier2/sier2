@@ -4,7 +4,8 @@
 # These are here to demonstrate building a dag from a data structure.
 #
 
-from gizmo import Gizmo
+from gizmo import Gizmo, GizmoInfo
+from gizmo.library import docstring
 import param
 import random
 
@@ -70,7 +71,7 @@ class AddGizmo(Gizmo):
 def _name(cls):
     return f'{cls.__module__}.{cls.__name__}'
 
-def gizmos() -> dict[str, type[Gizmo]]:
+def gizmos() -> list[GizmoInfo]:
     return [
-        _name(cls) for cls in [RandomNumberGizmo, ConstantNumberGizmo, AddGizmo]
+        GizmoInfo(_name(cls),docstring(cls)) for cls in [RandomNumberGizmo, ConstantNumberGizmo, AddGizmo]
     ]
