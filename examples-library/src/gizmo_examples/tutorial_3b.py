@@ -10,7 +10,7 @@ import re
 import time
 
 import panel as pn
-pn.extension(inline=True)
+# pn.extension(inline=True)
 
 class UserInput(Gizmo):
     """A gizmo that provides user input."""

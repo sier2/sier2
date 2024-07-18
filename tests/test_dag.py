@@ -13,7 +13,7 @@ def test_load_doc(dag):
     """Ensure that a dag's doc is loaded."""
 
     dump = dag.dump()
-    dag2 = Library.load(dump)
+    dag2 = Library.load_dag(dump)
 
     assert dag2.doc == dag.doc
 

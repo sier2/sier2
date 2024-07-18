@@ -73,7 +73,7 @@ def test_serialise(dag):
 
     # Start again.
     #
-    dag2 = Library.load(dump)
+    dag2 = Library.load_dag(dump)
 
     first_g = dag2.gizmo_by_name(first_name)
     last_g = dag2.gizmo_by_name(last_name)

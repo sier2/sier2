@@ -37,7 +37,7 @@ def main():
     print('\nThe dumped dag:')
     pprint(dump_a)
 
-    dag_b = Library.load(dump_a)
+    dag_b = Library.load_dag(dump_a)
 
     # Dumping the new dag should give us the same dump as the original dag.
     #

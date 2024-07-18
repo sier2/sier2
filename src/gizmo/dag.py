@@ -321,15 +321,13 @@ class Dag:
             if the gizmo object has a matching instance name, the value of
             the name is saved.
 
-        TODO other connect() parameters.
-
         Returns
         -------
         dict
             A dictionary containing the serialised dag.
         """
 
-        gizmo_instances = {}
+        gizmo_instances: dict[Gizmo, int] = {}
 
         instance = 0
         for s, d in self._gizmo_pairs:

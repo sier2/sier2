@@ -1,4 +1,5 @@
 from enum import IntEnum, auto
+import inspect
 import param
 from typing import Any, Callable
 from collections import defaultdict
@@ -84,7 +85,9 @@ class Gizmo(param.Parameterized):
         in case of refactoring or name clashes.
         """
 
-        return f'{cls.__module__}.{cls.__name__}'
+        im = inspect.getmodule(cls)
+
+        return f'{im.__name__}.{cls.__qualname__}'
 
     def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.

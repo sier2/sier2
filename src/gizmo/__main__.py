@@ -1,5 +1,8 @@
 import argparse
 from importlib.metadata import version
+import json
+
+from gizmo import Library
 from .library import _find_gizmos
 
 def gizmos_cmd(args):
@@ -14,10 +17,9 @@ def gizmos_cmd(args):
         print(f'  {gi.key}: {gi.doc}')
 
 def panel_cmd(args):
-    import importlib
-    tmp_m = importlib.machinery.SourceFileLoader('tmp', args.module)
-    m = tmp_m.load_module()
-    dag = m.make_dag()
+    with open(args.dagfile) as f:
+        dag_json = json.load(f)
+        dag = Library.load_dag(dag_json)
 
     from gizmo.panel import show_dag
     show_dag(dag)
@@ -27,7 +29,7 @@ def main():
     subparsers = parser.add_subparsers(help='sub-command help')
 
     runpanel = subparsers.add_parser('panel', help='Run a dag using a panel UI')
-    runpanel.add_argument('module', type=str, help='A python module containing a make_dag() function')
+    runpanel.add_argument('dagfile', type=str, help='A file containing a dumped dag')
     runpanel.set_defaults(func=panel_cmd)
 
     plugins = subparsers.add_parser('gizmos', help='Show available gizmos')

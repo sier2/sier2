@@ -118,7 +118,7 @@ class Library:
         return cast(type[Gizmo], _gizmo_library[key])
 
     @staticmethod
-    def load(dump: dict[str, Any]) -> Dag:
+    def load_dag(dump: dict[str, Any]) -> Dag:
         """Load a dag from a serialised structure produced by Gizmo.dump()."""
 
         # Create new instances of the specified gizmos.

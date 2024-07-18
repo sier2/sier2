@@ -32,7 +32,7 @@ def main():
     with open(p, encoding='utf-8') as f:
         dump = json.load(f)
 
-    dag = Library.load(dump)
+    dag = Library.load_dag(dump)
     title = dump['panel']['title']
 
     show_dag(dag, site='Barchart dag', title=title)

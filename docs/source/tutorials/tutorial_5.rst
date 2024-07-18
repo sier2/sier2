@@ -79,8 +79,8 @@ The output should be similar to:
       gizmo_examples.tutorial_3b.Translate
       gizmo_examples.tutorial_3b.Display
 
-Now we can use the gizmos without importing them, and without having to be
-in any specific directory.
+Now we can use the gizmos in the ``gizmo_examples`` library without importing them,
+and without having to be in any specific directory.
 
 .. code:: python
 
