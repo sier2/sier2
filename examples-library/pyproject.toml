@@ -12,8 +12,8 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src/"]
+where = ["src"]
 include = ["gizmo_examples"]
 
 [project.entry-points."gizmo.library"]
-export = "gizmo_examples:library.gizmos"
+export = "gizmo_examples:library"

@@ -22,7 +22,7 @@ panel = ">=1.4.4"
 param = ">=2.1.0"
 
 [tool.poetry.plugins."gizmo.library"]
-export = "gizmo:provided.gizmos"
+export = "gizmo:provided"
 
 [[tool.mypy.overrides]]
 module = [

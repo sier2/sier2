@@ -13,7 +13,7 @@ from gizmo import Gizmo, Dag, Connection, GizmoError
 _gizmo_library: dict[str, type[Gizmo]|None] = {}
 
 @dataclass
-class GizmoInfo:
+class Info:
     key: str
     doc: str
 
@@ -22,11 +22,43 @@ def docstring(func) -> str:
 
     return doc.split('\n')[0].strip()
 
-def _find_gizmos() -> Iterable[tuple[EntryPoint, GizmoInfo]]:
+def _find_gizmos():
+    yield from _find('gizmos')
+
+def _find_dags():
+    yield from _find('dags')
+
+def run_dag(dag_name):
+    """Run the named dag."""
+
+    # TODO allow just providing the unqualified name (if there are no duplicates)
+
+    ix = dag_name.rfind('.')
+    if ix==-1:
+        found_dag = None
+        for _, d in _find_dags():
+            dparts = d.key.split('.')
+            if dparts[-1]==dag_name:
+                if found_dag:
+                    raise GizmoError(f'Found duplicate: {dag_name}, d')
+
+                found_dag = d
+
+        dag_name = found_dag.key
+        ix = dag_name.rfind('.')
+
+    m = importlib.import_module(dag_name[:ix])
+    func = getattr(m, dag_name[ix+1:])
+    # if not issubclass(cls, Gizmo):
+    #     raise GizmoError(f'{key} is not a gizmo')
+
+    func()
+
+def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
     """Use ``importlib.metadata.entry_points`` to look up entry points named ``gizmo.library``.
 
     For each entry point, call ``load()`` to get a module,
-    then call ``module.gizmos()`` to get a list of
+    then call ``getattr(module, func_name)()`` to get a list of
     ``GizmoInfo`` instances.
     """
 
@@ -34,18 +66,17 @@ def _find_gizmos() -> Iterable[tuple[EntryPoint, GizmoInfo]]:
 
     for entry_point in library:
         try:
-            gizmos_func = entry_point.load()
-            if not callable(gizmos_func):
-                warnings.warn(f'In {entry_point.module}, {gizmos_func} is not a function')
-            else:
-                gizmo_info_list: list[GizmoInfo] = gizmos_func()
-                if not isinstance(gizmo_info_list, list) or any(not isinstance(s, GizmoInfo) for s in gizmo_info_list):
-                    warnings.warn(f'In {entry_point.module}, {gizmos_func} does not return a list of {GizmoInfo.__name__} instances')
+            gizmos_lib = entry_point.load()
+            gizmos_func = getattr(gizmos_lib, func_name, None)
+            if gizmos_func is not None:
+                if not callable(gizmos_func):
+                    warnings.warn(f'In {entry_point.module}, {gizmos_func} is not a function')
                 else:
-                    for gi in gizmo_info_list:
-                        if gi.key in _gizmo_library:
-                            warnings.warn(f'Gizmo plugin {entry_point}: key {gi.key} already in library')
-                        else:
+                    gizmo_info_list: list[Info] = gizmos_func()
+                    if not isinstance(gizmo_info_list, list) or any(not isinstance(s, Info) for s in gizmo_info_list):
+                        warnings.warn(f'In {entry_point.module}, {gizmos_func} does not return a list of {Info.__name__} instances')
+                    else:
+                        for gi in gizmo_info_list:
                             yield entry_point, gi
         except Exception as e:
             warnings.warn(f'While loading {entry_point}:')
@@ -65,8 +96,11 @@ class Library:
         modules as required.
         """
 
-        for _, gi in _find_gizmos():
-            _gizmo_library[gi.key] = None
+        for entry_point, gi in _find_gizmos():
+            if gi.key in _gizmo_library:
+                warnings.warn(f'Gizmo plugin {entry_point}: key {gi.key} already in library')
+            else:
+                _gizmo_library[gi.key] = None
 
     @staticmethod
     def add(gizmo_class: type[Gizmo], key: str|None=None):

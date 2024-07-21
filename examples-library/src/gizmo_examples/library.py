@@ -1,13 +1,17 @@
-from gizmo import GizmoInfo
+from gizmo import Info
 
 def gizmos():
     info = [
-        ('tutorial_3b.UserInput', 'A text area and flag for input.'),
-        ('tutorial_3b.Translate', 'Translate text to English.'),
-        ('tutorial_3b.Display', 'Display translated text.')
+        Info(f'{__package__}.tutorial_3b.UserInput', 'A text area and flag for input.'),
+        Info(f'{__package__}.tutorial_3b.Translate', 'Translate text to English.'),
+        Info(f'{__package__}.tutorial_3b.Display', 'Display translated text.')
     ]
 
-    return [
-        GizmoInfo(f'{__package__}.{c}', doc)
-        for c, doc in info
+    return info
+
+def dags():
+    info = [
+        Info(f'{__package__}.dag_library.translate_dag', 'Translation app')
     ]
+
+    return info
