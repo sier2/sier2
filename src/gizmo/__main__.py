@@ -11,7 +11,7 @@ def gizmos_cmd(args):
     curr_ep = None
     for entry_point, gi in _find_gizmos():
         if curr_ep is None or entry_point!=curr_ep:
-            print(f'In {entry_point.module} {version(entry_point.module)}:')
+            print(f'In {entry_point.module} v{version(entry_point.module)}:')
             curr_ep = entry_point
 
         print(f'  {gi.key}: {gi.doc}')
@@ -22,7 +22,7 @@ def dags_cmd(args):
     curr_ep = None
     for entry_point, gi in _find_dags():
         if curr_ep is None or entry_point!=curr_ep:
-            print(f'In {entry_point.module} {version(entry_point.module)}:')
+            print(f'In {entry_point.module} v{version(entry_point.module)}:')
             curr_ep = entry_point
 
         print(f'  {gi.key}: {gi.doc}')

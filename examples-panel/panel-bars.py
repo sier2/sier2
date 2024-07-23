@@ -22,7 +22,7 @@ def main():
     b = BarchartWidget(name='Results bars')
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 
-    dag = Dag(doc='Example: generate bar charts')
+    dag = Dag(doc='Example: generate bar charts', site='Example', title='Bars')
     dag.connect(q, b, Connection('out_df', 'in_df'))
     dag.connect(q, bi, Connection('out_df', 'in_df'))
 
@@ -42,7 +42,7 @@ def main():
     with open(p, 'w', encoding='utf-8') as f:
         json.dump(dump, f, indent=2)
 
-    show_dag(dag, site='Barchart dag', title='demonstrate passing a dataframe')
+    show_dag(dag)#, site='Barchart dag', title='demonstrate passing a dataframe')
 
     # # Build a panel app.
     # #

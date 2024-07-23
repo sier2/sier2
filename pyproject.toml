@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gizmo"
-version = "0.10.0"
+version = "0.11.0"
 description = "Gizmo code dags"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
 readme = "README.rst"
@@ -22,7 +22,7 @@ panel = ">=1.4.4"
 param = ">=2.1.0"
 
 [tool.poetry.plugins."gizmo.library"]
-export = "gizmo:provided"
+export = "gizmo:provided.info"
 
 [[tool.mypy.overrides]]
 module = [

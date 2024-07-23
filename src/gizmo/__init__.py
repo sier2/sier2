@@ -3,4 +3,4 @@ from .dag import Connection, Dag, GizmoState
 from .library import Library, Info
 from ._version import __version__
 
-from . import provided
+from .provided import gizmos
