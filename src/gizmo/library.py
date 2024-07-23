@@ -31,8 +31,6 @@ def _find_dags():
 def run_dag(dag_name):
     """Run the named dag."""
 
-    # TODO allow just providing the unqualified name (if there are no duplicates)
-
     ix = dag_name.rfind('.')
     if ix==-1:
         found_dag = None

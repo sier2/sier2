@@ -4,13 +4,15 @@
 # These are here to demonstrate building a dag from a data structure.
 #
 
-from gizmo import Gizmo, Info
-from gizmo.library import docstring
+from gizmo import Gizmo
 import param
 import random
 
 class RandomNumberGizmo(Gizmo):
-    """Produce a random number."""
+    """Produce a random number.
+
+    Uses random.randint() to produce an integer in 1 .. 100 inclusive.
+    """
 
     out_n = param.Integer(
         label='An integer',
@@ -60,7 +62,7 @@ class AddGizmo(Gizmo):
     #     super().__init__(*args, **kwargs)
 
     def execute(self):
-        # If some args aren't set, don't do anything.
+        # If any args aren't set, don't do anything.
         #
         if any(arg is None for arg in (self.in_a, self.in_b)):
             return
