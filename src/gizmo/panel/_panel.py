@@ -124,11 +124,13 @@ class GizmoCard(pn.Card):
             case GizmoState.INTERRUPTED:
                 color= 'orange'
             case GizmoState.ERROR:
-                color = 'orange'
+                color = 'red'
 
         return color
 
     def __init__(self, parent_template, dag: Dag, w: Gizmo, *args, **kwargs):
+        # Make this look like <h3> (the default Card header text).
+        #
         name_text = pn.widgets.StaticText(
             value=w.name,
             css_classes=['card-title'],

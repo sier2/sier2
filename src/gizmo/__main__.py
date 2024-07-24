@@ -3,7 +3,7 @@ from importlib.metadata import version
 from param.ipython import ParamPager
 
 from gizmo import Library
-from .library import _find_gizmos, _find_dags, run_dag
+from ._library import _find_gizmos, _find_dags, run_dag
 
 def gizmos_cmd(args):
     """Display the gizmos found via plugin entry points."""

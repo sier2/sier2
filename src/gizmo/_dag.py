@@ -1,4 +1,4 @@
-from .gizmo import Gizmo, GizmoError, GizmoState
+from ._gizmo import Gizmo, GizmoError, GizmoState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
@@ -42,6 +42,46 @@ class _InputValues:
     # The values to be set before the gizmo executes.
     #
     values: dict[str, Any] = field(default_factory=dict)
+
+class _GizmoContext:
+    """A context manager to wrap the execution of a gizmo within a dag.
+
+    This default context manager handles the gizmo state, the stopper,
+    and converts gizmo execution errors to GimzoError exceptions.
+
+    This could be done inline, but using a context manager allows
+    the context manager to be replaced. For example, a panel-based
+    dag runner could use a context manager that incorporates logging
+    and displays information in a GUI.
+    """
+
+    def __init__(self, gizmo: Gizmo, dag: 'Dag'):
+        self.gizmo = gizmo
+        self.dag = dag
+
+    def __enter__(self):
+        self.gizmo._gizmo_state = GizmoState.EXECUTING
+
+        return self.gizmo
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.gizmo._gizmo_state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
+        elif isinstance(exc_type, KeyboardInterrupt):
+            self.gizmo_state._gizmo_state = GizmoState.INTERRUPTED
+            self.dag._stopper.event.set()
+            print(f'KEYBOARD INTERRUPT IN GIZMO {self.name}')
+        else:
+            self.gizmo._gizmo_state = GizmoState.ERROR
+            msg = f'While in {self.gizmo.name}.execute(): {exc_val}'
+            # LOGGER.exception(msg)
+            self.dag._stopper.event.set()
+
+            # Convert the error in the gizmo to a GizmoError.
+            #
+            raise GizmoError(f'Gizmo {self.gizmo.name}: {str(exc_val)}') from exc_val
+
+        return False
 
 class _Stopper:
     def __init__(self):
@@ -211,30 +251,30 @@ class Dag:
                 can_execute = False
 
             item = self._gizmo_queue.popleft()
-            # print(f'ITEM {item=}')
             try:
                 item.dst.param.update(item.values)
             except ValueError as e:
                 msg = f'While in {item.dst.name} setting a parameter: {e}'
-                # LOGGER.exception(msg)
                 self._stopper.event.set()
                 raise GizmoError(msg) from e
 
             if can_execute:
-                try:
-                    item.dst._gizmo_state = GizmoState.EXECUTING
-                    item.dst.execute()
-                    item.dst._gizmo_state = GizmoState.WAITING if item.dst.user_input else GizmoState.SUCCESSFUL
-                except Exception as e:
-                    item.dst._gizmo_state = GizmoState.ERROR
-                    msg = f'While in {item.dst.name}.execute(): {e}'
-                    # LOGGER.exception(msg)
-                    self._stopper.event.set()
-                    raise GizmoError(msg) from e
-                except KeyboardInterrupt:
-                    item.dst._gizmo_state = GizmoState.INTERRUPTED
-                    self._stopper.event.set()
-                    print(f'KEYBOARD INTERRUPT IN GIZMO {item.dst.name}')
+                with _GizmoContext(item.dst, self) as g:
+                    g.execute()
+                # try:
+                #     item.dst._gizmo_state = GizmoState.EXECUTING
+                #     item.dst.execute()
+                #     item.dst._gizmo_state = GizmoState.WAITING if item.dst.user_input else GizmoState.SUCCESSFUL
+                # except Exception as e:
+                #     item.dst._gizmo_state = GizmoState.ERROR
+                #     msg = f'While in {item.dst.name}.execute(): {e}'
+                #     # LOGGER.exception(msg)
+                #     self._stopper.event.set()
+                #     raise GizmoError(msg) from e
+                # except KeyboardInterrupt:
+                #     item.dst._gizmo_state = GizmoState.INTERRUPTED
+                #     self._stopper.event.set()
+                #     print(f'KEYBOARD INTERRUPT IN GIZMO {item.dst.name}')
 
             if item.dst.user_input:
                 # If the current destination gizmo requires user input,
