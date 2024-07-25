@@ -1,4 +1,4 @@
-from enum import IntEnum, auto
+from enum import StrEnum
 import inspect
 import param
 from typing import Any, Callable
@@ -7,27 +7,27 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
-class _EmptyContext:
-    def __enter__(self):
-        pass
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+# class _EmptyContext:
+#     def __enter__(self):
+#         pass
+#     def __exit__(self, exc_type, exc_val, exc_tb):
+#         pass
 
 class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
 
     pass
 
-class GizmoState(IntEnum):
+class GizmoState(StrEnum):
     """The current state of this gizmo."""
 
-    INPUT = auto()
-    READY = auto()
-    EXECUTING = auto()
-    WAITING = auto()
-    SUCCESSFUL = auto()
-    INTERRUPTED = auto()
-    ERROR = auto()
+    INPUT = 'INPUT'
+    READY = 'READY'
+    EXECUTING = 'EXECUTING'
+    WAITING = 'WAITING'
+    SUCCESSFUL = 'SUCCESSFUL'
+    INTERRUPTED = 'INTERRUPTED'
+    ERROR = 'ERROR'
 
 class Gizmo(param.Parameterized):
     """The base class for gizmos.
@@ -51,7 +51,7 @@ class Gizmo(param.Parameterized):
                 print(f'New value is {self.value_in}')
     """
 
-    _gizmo_state = param.Integer(default=GizmoState.READY)
+    _gizmo_state = param.String(default=GizmoState.READY)
 
     def __init__(self, *args, user_input=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -74,7 +74,7 @@ class Gizmo(param.Parameterized):
         #
         self._gizmo_out_params = []
 
-        self._gizmo_context = _EmptyContext()
+        # self._gizmo_context = _EmptyContext()
 
     @classmethod
     def gizmo_key(cls):

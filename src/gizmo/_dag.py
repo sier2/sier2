@@ -15,10 +15,6 @@ class Connection:
 
     src_param_name: str
     dst_param_name: str
-    # _: KW_ONLY
-    # onlychanged: bool = False
-    # queued: bool = False
-    # precedence: int = 0
 
     def __post_init__(self):
         if not self.src_param_name.startswith('out_'):
@@ -55,7 +51,7 @@ class _GizmoContext:
     and displays information in a GUI.
     """
 
-    def __init__(self, gizmo: Gizmo, dag: 'Dag'):
+    def __init__(self, gizmo: Gizmo, dag: 'Dag', callback=None):
         self.gizmo = gizmo
         self.dag = dag
 
@@ -112,6 +108,10 @@ class Dag:
         # Events are queued here.
         #
         self._gizmo_queue: deque[_InputValues] = deque()
+
+        # The context manager class to use to run gizmos.
+        #
+        self._gizmo_context = _GizmoContext
 
     def _for_each_once(self):
         """Yield each connected gizmo once."""
@@ -176,18 +176,10 @@ class Dag:
                 raise GizmoError(f'Source parameter {src}.{conn.src_param_name} must not be "allow_refs=True"')
 
             dst._gizmo_name_map[src.name, conn.src_param_name] = conn.dst_param_name
-            # src_out_params[conn.onlychanged, conn.queued, conn.precedence].append(conn.src_param_name)
             src_out_params.append(conn.src_param_name)
 
-            # print(f'**** WATCH {src} {src_out_params} -> {dst} {src_out_params}')
-            # watcher = src.param.watch(dst._gizmo_event, [conn.src_param_name], onlychanged=conn.onlychanged, queued=conn.queued, precedence=conn.precedence)
-
-        # for (onlychanged, queued, precedence), names in src_out_params.items():
-        # for names in src_out_params:
         src.param.watch(lambda *events: self._param_event(dst, *events), src_out_params, onlychanged=False)
         src._gizmo_out_params.extend(src_out_params)
-
-            # src.param.watch(lambda *events: dst._gizmo_event(self._stopper, *events), names, onlychanged=onlychanged, queued=queued, precedence=precedence)
 
         self._gizmo_pairs.append((src, dst))
 
@@ -220,7 +212,7 @@ class Dag:
                 item.values[inp] = new
                 self._gizmo_queue.append(item)
 
-    def execute(self):
+    def execute(self, callback=None):
         """Execute the dag.
 
         The dag is executed by iterating through the gizmo events queue
@@ -259,7 +251,7 @@ class Dag:
                 raise GizmoError(msg) from e
 
             if can_execute:
-                with _GizmoContext(item.dst, self) as g:
+                with self._gizmo_context(item.dst, self, callback=callback) as g:
                     g.execute()
                 # try:
                 #     item.dst._gizmo_state = GizmoState.EXECUTING

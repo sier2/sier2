@@ -1,13 +1,64 @@
 import ctypes
+from datetime import datetime
 import panel as pn
 import sys
 import threading
 
-from gizmo import Gizmo, GizmoState, Dag
+from gizmo import Gizmo, GizmoState, Dag, GizmoError
 
 NTHREADS = 2
 
 pn.extension(inline=True, nthreads=NTHREADS, loading_spinner='bar')
+
+def _hms(sec):
+    h, sec = divmod(int(sec), 3600)
+    m, sec = divmod(sec, 60)
+
+    return f'{h:02}:{m:02}:{sec:02}'
+
+class _PanelContext:
+    """A context manager to wrap the execution of a gizmo within a dag.
+
+    This default context manager handles the gizmo state, the stopper,
+    and converts gizmo execution errors to GimzoError exceptions.
+
+    It also uses the panel UI to provide extra information to the user.
+    """
+
+    def __init__(self, gizmo: Gizmo, dag: Dag, callback):
+        self.gizmo = gizmo
+        self.dag = dag
+        self.callback = callback
+
+    def __enter__(self):
+        self.gizmo._gizmo_state = GizmoState.EXECUTING
+        self.t0 = datetime.now()
+        print(f'{self.gizmo.name} at {self.t0.strftime("%H:%M:%S")}')
+
+        return self.gizmo
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        delta = (datetime.now() - self.t0).total_seconds()
+        if exc_type is None:
+            self.gizmo._gizmo_state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
+            self.callback(f'  {self.gizmo._gizmo_state.value} after {_hms(delta)}')
+        elif isinstance(exc_type, KeyboardInterrupt):
+            self.gizmo_state._gizmo_state = GizmoState.INTERRUPTED
+            self.dag._stopper.event.set()
+            print(f'KEYBOARD INTERRUPT IN GIZMO {self.name}')
+            self.callback(f'  {self.gizmo._gizmo_state} after {_hms(delta)}')
+        else:
+            self.gizmo._gizmo_state = GizmoState.ERROR
+            self.callback(f'  {self.gizmo._gizmo_state} after {_hms(delta)}')
+            msg = f'While in {self.gizmo.name}.execute(): {exc_val}'
+            # LOGGER.exception(msg)
+            self.dag._stopper.event.set()
+
+            # Convert the error in the gizmo to a GizmoError.
+            #
+            raise GizmoError(f'Gizmo {self.gizmo.name}: {str(exc_val)}') from exc_val
+
+        return False
 
 def _quit(session_context):
     print(session_context)
@@ -30,6 +81,8 @@ def interrupt_thread(tid, exctype):
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
 def show_dag(dag: Dag):
+    dag._gizmo_context = _PanelContext
+
     template = pn.template.BootstrapTemplate(
         site=dag.site,
         title=dag.title,
@@ -128,6 +181,10 @@ class GizmoCard(pn.Card):
 
         return color
 
+    def ui(self, message):
+        """TODO connect this to the template"""
+        print(message)
+
     def __init__(self, parent_template, dag: Dag, w: Gizmo, *args, **kwargs):
         # Make this look like <h3> (the default Card header text).
         #
@@ -155,7 +212,8 @@ class GizmoCard(pn.Card):
                 w.param.trigger(*w._gizmo_out_params)
                 parent_template.main[0].loading = True
                 try:
-                    dag.execute()
+                    self.ui('\nExecute dag:')
+                    dag.execute(callback=self.ui)
                 finally:
                     parent_template.main[0].loading = False
 
