@@ -51,14 +51,17 @@ def main():
 
     gizmos = subparsers.add_parser('gizmos', help='Show available gizmos')
     gizmos.add_argument('-v', '--verbose', action='store_true', help='Show help')
-    gizmos.add_argument('-g', '--gizmo', help='Show all gizmos ending with this string')
+    gizmos.add_argument('gizmo', help='Show all gizmos ending with this string')
     gizmos.set_defaults(func=gizmos_cmd)
 
     dags = subparsers.add_parser('dags', help='Show available dags')
     dags.set_defaults(func=dags_cmd)
 
     args = parser.parse_args()
-    args.func(args)
+    if 'func' in args:
+        args.func(args)
+    else:
+        parser.print_help()
 
 if __name__=='__main__':
     main()

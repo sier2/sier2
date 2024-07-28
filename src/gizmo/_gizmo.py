@@ -7,12 +7,6 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
-# class _EmptyContext:
-#     def __enter__(self):
-#         pass
-#     def __exit__(self, exc_type, exc_val, exc_tb):
-#         pass
-
 class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
 
@@ -21,6 +15,7 @@ class GizmoError(Exception):
 class GizmoState(StrEnum):
     """The current state of this gizmo."""
 
+    LOG = 'LOG'
     INPUT = 'INPUT'
     READY = 'READY'
     EXECUTING = 'EXECUTING'

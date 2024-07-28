@@ -16,6 +16,31 @@ def _hms(sec):
 
     return f'{h:02}:{m:02}:{sec:02}'
 
+def _get_state_color(gs: GizmoState) -> str:
+    """Convert a gizmo state to a color."""
+
+    match gs:
+        case GizmoState.LOG:
+            color = 'grey'
+        case GizmoState.INPUT:
+            color = '#f0c820'
+        case GizmoState.READY:
+            color='white'
+        case GizmoState.EXECUTING:
+            color='steelblue'
+        case GizmoState.WAITING:
+            color='yellow'
+        case GizmoState.SUCCESSFUL:
+            color = 'green'
+        case GizmoState.INTERRUPTED:
+            color= 'orange'
+        case GizmoState.ERROR:
+            color = 'red'
+        case _:
+            color = 'magenta'
+
+    return color
+
 class _PanelContext:
     """A context manager to wrap the execution of a gizmo within a dag.
 
@@ -31,27 +56,30 @@ class _PanelContext:
         self.callback = callback
 
     def __enter__(self):
-        self.gizmo._gizmo_state = GizmoState.EXECUTING
+        state = GizmoState.EXECUTING
+        self.gizmo._gizmo_state = state
         self.t0 = datetime.now()
-        print(f'{self.gizmo.name} at {self.t0.strftime("%H:%M:%S")}')
+        self.callback(state, f'Execute {self.gizmo.name}')
 
         return self.gizmo
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         delta = (datetime.now() - self.t0).total_seconds()
         if exc_type is None:
-            self.gizmo._gizmo_state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
-            self.callback(f'  {self.gizmo._gizmo_state.value} after {_hms(delta)}')
+            state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
+            self.gizmo._gizmo_state = state
+            self.callback(state, f'{state.value} after {_hms(delta)}')
         elif isinstance(exc_type, KeyboardInterrupt):
-            self.gizmo_state._gizmo_state = GizmoState.INTERRUPTED
+            state = GizmoState.INTERRUPTED
+            self.gizmo_state._gizmo_state = state
             self.dag._stopper.event.set()
-            print(f'KEYBOARD INTERRUPT IN GIZMO {self.name}')
-            self.callback(f'  {self.gizmo._gizmo_state} after {_hms(delta)}')
+            self.callback(state, f'KEYBOARD INTERRUPT IN GIZMO {self.name}')
+            self.callback(state, f'{state} after {_hms(delta)}')
         else:
-            self.gizmo._gizmo_state = GizmoState.ERROR
-            self.callback(f'  {self.gizmo._gizmo_state} after {_hms(delta)}')
+            state = GizmoState.ERROR
+            self.gizmo._gizmo_state = state
+            self.callback(state, f'  {state} after {_hms(delta)}')
             msg = f'While in {self.gizmo.name}.execute(): {exc_val}'
-            # LOGGER.exception(msg)
             self.dag._stopper.event.set()
 
             # Convert the error in the gizmo to a GizmoError.
@@ -129,15 +157,32 @@ def show_dag(dag: Dag):
         for card in col:
             status = card.header[0]
 
+    log_feed = pn.Feed(
+        view_latest=True,
+        scroll_button_threshold=20,
+        auto_scroll_limit=1,
+        sizing_mode='stretch_width'
+    )
+
+    def log_feed_callback(state: GizmoState|None, text: str):
+        if state is None:
+            log_feed.clear()
+        else:
+            now = datetime.now()
+            hms = now.strftime('%H:%M:%S')
+            color = _get_state_color(state)
+            log_feed.append(pn.pane.HTML(f'{hms} <span style="color:{color}">{text}</span>'))
+
     template.main.append(
         pn.Column(
-            *(GizmoCard(template, dag, gw) for gw in dag.get_sorted())
+            *(GizmoCard(template, dag, log_feed_callback, gw) for gw in dag.get_sorted())
         )
     )
     template.sidebar.append(
         pn.Column(
             switch,
-            pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None))
+            pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
+            log_feed
         )
     )
 
@@ -159,33 +204,11 @@ class GizmoCard(pn.Card):
             styles={'width':'20px', 'height':'20px', 'background':color, 'border-radius': '10px'}
         )
 
-    @staticmethod
-    def _get_state_color(gs: GizmoState) -> str:
-        """Convert a gizmo state to a color."""
+    # def ui(self, message):
+    #     """TODO connect this to the template"""
+    #     print(message)
 
-        match gs:
-            case GizmoState.INPUT:
-                color='white'
-            case GizmoState.READY:
-                color='black'
-            case GizmoState.EXECUTING:
-                color='blue'
-            case GizmoState.WAITING:
-                color='yellow'
-            case GizmoState.SUCCESSFUL:
-                color = 'green'
-            case GizmoState.INTERRUPTED:
-                color= 'orange'
-            case GizmoState.ERROR:
-                color = 'red'
-
-        return color
-
-    def ui(self, message):
-        """TODO connect this to the template"""
-        print(message)
-
-    def __init__(self, parent_template, dag: Dag, w: Gizmo, *args, **kwargs):
+    def __init__(self, parent_template, dag: Dag, callback, w: Gizmo, *args, **kwargs):
         # Make this look like <h3> (the default Card header text).
         #
         name_text = pn.widgets.StaticText(
@@ -212,8 +235,9 @@ class GizmoCard(pn.Card):
                 w.param.trigger(*w._gizmo_out_params)
                 parent_template.main[0].loading = True
                 try:
-                    self.ui('\nExecute dag:')
-                    dag.execute(callback=self.ui)
+                    callback(None, '')
+                    callback(GizmoState.LOG, '\nExecute dag:')
+                    dag.execute(callback=callback)
                 finally:
                     parent_template.main[0].loading = False
 
@@ -235,7 +259,7 @@ class GizmoCard(pn.Card):
             name_text,
             pn.VSpacer(),
             spacer,
-            self._get_status_light(self._get_state_color(w._gizmo_state)),
+            self._get_status_light(_get_state_color(w._gizmo_state)),
         )
 
         # Watch the gizmo state so we can update the staus light.
@@ -248,4 +272,4 @@ class GizmoCard(pn.Card):
         Updates the status light.
         """
 
-        self.header[-1] = self._get_status_light(self._get_state_color(_gizmo_state))
+        self.header[-1] = self._get_status_light(_get_state_color(_gizmo_state))
