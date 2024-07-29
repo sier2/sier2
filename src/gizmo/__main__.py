@@ -15,7 +15,7 @@ def gizmos_cmd(args):
             if show:
                 s = f'In {entry_point.module} v{version(entry_point.module)}'
                 u = '#' * len(s)
-                print(f'\x1b[1;37m{s}\n{u}\x1b[0m')
+                print(f'\n\x1b[1;37m{s}\n{u}\x1b[0m')
                 # print(f'\x1b[1mIn {entry_point.module} v{version(entry_point.module)}:\x1b[0m')
                 curr_ep = entry_point
 
@@ -32,11 +32,16 @@ def dags_cmd(args):
 
     curr_ep = None
     for entry_point, gi in _find_dags():
+        show = not args.dag or gi.key.endswith(args.dag)
         if curr_ep is None or entry_point!=curr_ep:
-            print(f'In {entry_point.module} v{version(entry_point.module)}:')
-            curr_ep = entry_point
+            if show:
+                s = f'In {entry_point.module} v{version(entry_point.module)}'
+                u = '#' * len(s)
+                print(f'\n\x1b[1;37m{s}\n{u}\x1b[0m')
+                curr_ep = entry_point
 
-        print(f'  {gi.key}: {gi.doc}')
+        if show:
+            print(f'\x1b[1;37m{gi.key}: {gi.doc}\x1b[0m')
 
 def run_cmd(args):
     run_dag(args.dag)
@@ -51,10 +56,11 @@ def main():
 
     gizmos = subparsers.add_parser('gizmos', help='Show available gizmos')
     gizmos.add_argument('-v', '--verbose', action='store_true', help='Show help')
-    gizmos.add_argument('gizmo', help='Show all gizmos ending with this string')
+    gizmos.add_argument('gizmo', nargs='?', help='Show all gizmos ending with this string')
     gizmos.set_defaults(func=gizmos_cmd)
 
     dags = subparsers.add_parser('dags', help='Show available dags')
+    dags.add_argument('dag', nargs='?', help='Show all dags ending with this string')
     dags.set_defaults(func=dags_cmd)
 
     args = parser.parse_args()
