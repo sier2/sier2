@@ -63,6 +63,9 @@ class Translate(Gizmo):
     def execute(self):
         self.progress.active = True
         try:
+            if not self.in_text:
+                raise ValueError('Empty text not valid')
+
             paras = re.split(r'\n', self.in_text)
             para_words = [para.split() for para in paras]
             para_words = [[''.join(random.sample(word, k=len(word))) for word in para] for para in para_words]

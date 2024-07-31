@@ -51,9 +51,10 @@ class _GizmoContext:
     and displays information in a GUI.
     """
 
-    def __init__(self, gizmo: Gizmo, dag: 'Dag', callback=None):
+    def __init__(self, *, gizmo: Gizmo, dag: 'Dag', logger=None):
         self.gizmo = gizmo
         self.dag = dag
+        self.logger = logger
 
     def __enter__(self):
         self.gizmo._gizmo_state = GizmoState.EXECUTING
@@ -212,7 +213,7 @@ class Dag:
                 item.values[inp] = new
                 self._gizmo_queue.append(item)
 
-    def execute(self, callback=None):
+    def execute(self, *, logger=None):
         """Execute the dag.
 
         The dag is executed by iterating through the gizmo events queue
@@ -251,22 +252,8 @@ class Dag:
                 raise GizmoError(msg) from e
 
             if can_execute:
-                with self._gizmo_context(item.dst, self, callback=callback) as g:
+                with self._gizmo_context(gizmo=item.dst, dag=self, logger=logger) as g:
                     g.execute()
-                # try:
-                #     item.dst._gizmo_state = GizmoState.EXECUTING
-                #     item.dst.execute()
-                #     item.dst._gizmo_state = GizmoState.WAITING if item.dst.user_input else GizmoState.SUCCESSFUL
-                # except Exception as e:
-                #     item.dst._gizmo_state = GizmoState.ERROR
-                #     msg = f'While in {item.dst.name}.execute(): {e}'
-                #     # LOGGER.exception(msg)
-                #     self._stopper.event.set()
-                #     raise GizmoError(msg) from e
-                # except KeyboardInterrupt:
-                #     item.dst._gizmo_state = GizmoState.INTERRUPTED
-                #     self._stopper.event.set()
-                #     print(f'KEYBOARD INTERRUPT IN GIZMO {item.dst.name}')
 
             if item.dst.user_input:
                 # If the current destination gizmo requires user input,

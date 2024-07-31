@@ -5,6 +5,8 @@ import sys
 import threading
 
 from gizmo import Gizmo, GizmoState, Dag, GizmoError
+from ._logger import getPanelLogger
+from ._util import _get_state_color
 
 NTHREADS = 2
 
@@ -16,30 +18,30 @@ def _hms(sec):
 
     return f'{h:02}:{m:02}:{sec:02}'
 
-def _get_state_color(gs: GizmoState) -> str:
-    """Convert a gizmo state to a color."""
+# def _get_state_color(gs: GizmoState) -> str:
+#     """Convert a gizmo state to a color."""
 
-    match gs:
-        case GizmoState.LOG:
-            color = 'grey'
-        case GizmoState.INPUT:
-            color = '#f0c820'
-        case GizmoState.READY:
-            color='white'
-        case GizmoState.EXECUTING:
-            color='steelblue'
-        case GizmoState.WAITING:
-            color='yellow'
-        case GizmoState.SUCCESSFUL:
-            color = 'green'
-        case GizmoState.INTERRUPTED:
-            color= 'orange'
-        case GizmoState.ERROR:
-            color = 'red'
-        case _:
-            color = 'magenta'
+#     match gs:
+#         case GizmoState.LOG:
+#             color = 'grey'
+#         case GizmoState.INPUT:
+#             color = '#f0c820'
+#         case GizmoState.READY:
+#             color='white'
+#         case GizmoState.EXECUTING:
+#             color='steelblue'
+#         case GizmoState.WAITING:
+#             color='yellow'
+#         case GizmoState.SUCCESSFUL:
+#             color = 'green'
+#         case GizmoState.INTERRUPTED:
+#             color= 'orange'
+#         case GizmoState.ERROR:
+#             color = 'red'
+#         case _:
+#             color = 'magenta'
 
-    return color
+#     return color
 
 class _PanelContext:
     """A context manager to wrap the execution of a gizmo within a dag.
@@ -50,16 +52,17 @@ class _PanelContext:
     It also uses the panel UI to provide extra information to the user.
     """
 
-    def __init__(self, gizmo: Gizmo, dag: Dag, callback):
+    def __init__(self, *, gizmo: Gizmo, dag: Dag, logger=None):
         self.gizmo = gizmo
         self.dag = dag
-        self.callback = callback
+        self.logger = logger
 
     def __enter__(self):
         state = GizmoState.EXECUTING
         self.gizmo._gizmo_state = state
         self.t0 = datetime.now()
-        self.callback(state, f'Execute {self.gizmo.name}')
+        if self.logger:
+            self.logger.info('Execute', gizmo_name=self.gizmo.name, gizmo_state=state)
 
         return self.gizmo
 
@@ -68,17 +71,19 @@ class _PanelContext:
         if exc_type is None:
             state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
             self.gizmo._gizmo_state = state
-            self.callback(state, f'{state.value} after {_hms(delta)}')
+            if self.logger:
+                self.logger.info(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state.value)
         elif isinstance(exc_type, KeyboardInterrupt):
             state = GizmoState.INTERRUPTED
             self.gizmo_state._gizmo_state = state
             self.dag._stopper.event.set()
-            self.callback(state, f'KEYBOARD INTERRUPT IN GIZMO {self.name}')
-            self.callback(state, f'{state} after {_hms(delta)}')
+            if self.logger:
+                self.logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
         else:
             state = GizmoState.ERROR
             self.gizmo._gizmo_state = state
-            self.callback(state, f'  {state} after {_hms(delta)}')
+            if self.logger:
+                self.logger.exception(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
             msg = f'While in {self.gizmo.name}.execute(): {exc_val}'
             self.dag._stopper.event.set()
 
@@ -164,18 +169,19 @@ def show_dag(dag: Dag):
         sizing_mode='stretch_width'
     )
 
-    def log_feed_callback(state: GizmoState|None, text: str):
-        if state is None:
-            log_feed.clear()
-        else:
-            now = datetime.now()
-            hms = now.strftime('%H:%M:%S')
-            color = _get_state_color(state)
-            log_feed.append(pn.pane.HTML(f'{hms} <span style="color:{color}">{text}</span>'))
+    # def log_feed_callback(state: GizmoState|None, text: str):
+    #     if state is None:
+    #         log_feed.clear()
+    #     else:
+    #         now = datetime.now()
+    #         hms = now.strftime('%H:%M:%S')
+    #         color = _get_state_color(state)
+    #         log_feed.append(pn.pane.HTML(f'{hms} <span style="color:{color}">{text}</span>'))
 
+    logger = getPanelLogger(log_feed)
     template.main.append(
         pn.Column(
-            *(GizmoCard(template, dag, log_feed_callback, gw) for gw in dag.get_sorted())
+            *(GizmoCard(parent_template=template, dag=dag, w=gw, logger=logger) for gw in dag.get_sorted())
         )
     )
     template.sidebar.append(
@@ -208,7 +214,7 @@ class GizmoCard(pn.Card):
     #     """TODO connect this to the template"""
     #     print(message)
 
-    def __init__(self, parent_template, dag: Dag, callback, w: Gizmo, *args, **kwargs):
+    def __init__(self, *args, parent_template, dag: Dag, w: Gizmo, logger=None, **kwargs):
         # Make this look like <h3> (the default Card header text).
         #
         name_text = pn.widgets.StaticText(
@@ -235,9 +241,10 @@ class GizmoCard(pn.Card):
                 w.param.trigger(*w._gizmo_out_params)
                 parent_template.main[0].loading = True
                 try:
-                    callback(None, '')
-                    callback(GizmoState.LOG, '\nExecute dag:')
-                    dag.execute(callback=callback)
+                    if logger:
+                        logger.info('', gizmo_name=None, gizmo_state=None)
+                        logger.info('Execute dag', gizmo_name='', gizmo_state=GizmoState.LOG)
+                    dag.execute(logger=logger)
                 finally:
                     parent_template.main[0].loading = False
 
