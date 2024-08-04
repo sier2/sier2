@@ -16,6 +16,8 @@ formatter = logging.Formatter('%(asctime)s %(gizmo_state)s %(gizmo_name)s - %(le
 #         )
 
 class PanelHandler(logging.Handler):
+    """A handler that emits log strings to a panel template sidebar Feed pane."""
+
     def __init__(self, log_feed):
         super().__init__()
         self.log_feed = log_feed
@@ -51,7 +53,12 @@ class PanelHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
-class PanelAdapter(logging.LoggerAdapter):
+class DagPanelAdapter(logging.LoggerAdapter):
+    """An adapter that logs messages from a dag.
+
+    Each message also specifies a gizmo name and state.
+    """
+
     def info(self, msg, *args, gizmo_name, gizmo_state):
         super().info(msg, *args, extra={'gizmo_name': gizmo_name, 'gizmo_state': gizmo_state})
 
@@ -77,6 +84,6 @@ def getPanelLogger(log_feed):
 
     logger.addHandler(ph)
 
-    adapter = PanelAdapter(logger, {})
+    adapter = DagPanelAdapter(logger)
 
     return adapter

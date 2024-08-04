@@ -25,6 +25,9 @@ class AddGizmo(Gizmo):
     #     super().__init__(*args, **kwargs)
 
     def execute(self):
+        self.logger.warning('Execute %s', self.name)
+        self.logger.info('Inputs: a=%s b=%s', self.in_a, self.in_b)
+
         # If any args aren't set, don't do anything.
         #
         if any(arg is None for arg in (self.in_a, self.in_b)):
@@ -50,7 +53,7 @@ if __name__=='__main__':
     n3 = NumberGizmo(name='num3', user_input=True)
     aa = AddGizmo(name='First add')
     ab = AddGizmo(name='Second add')
-    display = Display(user_input=True)
+    display = Display()
 
     dag = Dag(site='examples', title='Logging', doc='Demonstrate logging')
     dag.connect(n1, aa, Connection('out_number', 'in_a'))

@@ -5,7 +5,7 @@ import sys
 import threading
 
 from gizmo import Gizmo, GizmoState, Dag, GizmoError
-from ._logger import getPanelLogger
+from ._feedlogger import getPanelLogger
 from ._util import _get_state_color
 
 NTHREADS = 2
@@ -254,8 +254,7 @@ class GizmoCard(pn.Card):
             w_ = pn.Column(
                 w,
                 pn.Row(c_button, align='end'),
-                sizing_mode='scale_height',
-                scroll='y-auto'
+               sizing_mode='scale_width'
             )
         else:
             w_ = w
@@ -266,7 +265,7 @@ class GizmoCard(pn.Card):
             name_text,
             pn.VSpacer(),
             spacer,
-            self._get_status_light(_get_state_color(w._gizmo_state)),
+            self._get_status_light(_get_state_color(w._gizmo_state))
         )
 
         # Watch the gizmo state so we can update the staus light.

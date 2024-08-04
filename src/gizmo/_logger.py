@@ -11,6 +11,11 @@ _GIZMO_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s [%(gizmo_name)s]
 #         return fmt.format(record)
 
 class GizmoAdapter(logging.LoggerAdapter):
+    """An adapter that log messages from gizmos.
+
+    Each gizmo has its own adapter, so the log automatically includes the gizmo name.
+    """
+
     def __init__(self, logger, gizmo_name: str, gizmo_state):
         super().__init__(logger)
         self.gizmo_name = gizmo_name
