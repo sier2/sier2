@@ -3,9 +3,8 @@ import inspect
 import param
 from typing import Any, Callable
 from collections import defaultdict
-import logging
 
-LOGGER = logging.getLogger(__name__)
+from . import _logger
 
 class GizmoError(Exception):
     """Raised if a Gizmo configuration is invalid."""
@@ -56,6 +55,7 @@ class Gizmo(param.Parameterized):
 
         self.user_input = user_input
         self._gizmo_state = GizmoState.INPUT if user_input else GizmoState.READY
+        self.logger = _logger.get_logger(self.name)
 
         # Maintain a map of "gizmo+output parameter being watched" -> "input parameter".
         # This is used by _gizmo_event() to set the correct input parameter.

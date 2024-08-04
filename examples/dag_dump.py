@@ -7,7 +7,7 @@ from pprint import pprint
 import random
 
 from gizmo import Library, Dag, Connection
-from gizmo.xx.provided import AddGizmo, ConstantNumberGizmo
+from gizmo.provided import AddGizmo, ConstantNumberGizmo
 
 def main():
     n1 = random.randint(1, 100)
