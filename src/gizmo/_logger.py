@@ -43,7 +43,7 @@ class GizmoAdapter(logging.LoggerAdapter):
 
         return msg, kwargs
 
-_logger = logging.getLogger('gizmo')
+_logger = logging.getLogger('gizmo.stream')
 _logger.setLevel(logging.INFO)
 
 # _ph = GizmoHandler()
