@@ -5,7 +5,7 @@ import sys
 import threading
 
 from gizmo import Gizmo, GizmoState, Dag, GizmoError
-from ._feedlogger import getPanelLogger
+from ._feedlogger import getDagPanelLogger
 from ._util import _get_state_color
 
 NTHREADS = 2
@@ -121,7 +121,8 @@ def show_dag(dag: Dag):
         title=dag.title,
         theme='dark',
         sidebar=pn.Column('## Gizmos'),
-        collapsed_sidebar=True
+        collapsed_sidebar=True,
+        sidebar_width=440
     )
 
     switch = pn.widgets.Switch(name='Stop')
@@ -178,7 +179,7 @@ def show_dag(dag: Dag):
     #         color = _get_state_color(state)
     #         log_feed.append(pn.pane.HTML(f'{hms} <span style="color:{color}">{text}</span>'))
 
-    logger = getPanelLogger(log_feed)
+    logger = getDagPanelLogger(log_feed)
     template.main.append(
         pn.Column(
             *(GizmoCard(parent_template=template, dag=dag, w=gw, logger=logger) for gw in dag.get_sorted())

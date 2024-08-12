@@ -47,7 +47,7 @@ if_else = IfEvenElseOdd()
 is_even = Notify(name='EvenGizmo', msg='even')
 is_odd = Notify(name='OddGizmo', msg='odd')
 
-dag = Dag(doc='Example: run a branch depending on a value')
+dag = Dag(doc='Example: run a branch depending on a value', title='run a branch depending on a value')
 dag.connect(if_else, is_even,
     Connection('out_true', 'in_b'),
     Connection('out_value', 'in_value')

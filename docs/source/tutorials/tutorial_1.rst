@@ -97,7 +97,7 @@ Now we can create two gizmo instances and connect them.
     ui = UserInput()
     tr = Translate()
 
-    dag = Dag(doc='Translation')
+    dag = Dag(doc='Translation', title='tutorial_1a')
     dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
 
 After creating each gizmo, we create a dag, then use the dag to connect

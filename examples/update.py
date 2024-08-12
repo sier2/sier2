@@ -64,7 +64,7 @@ class Gizmo2(Gizmo):
 g1 = Gizmo1(name='Input')
 g2 = Gizmo2(name='Output')
 
-dag = Dag(doc='Example: assign vs update')
+dag = Dag(doc='Example: assign vs update', title='assign vs update')
 dag.connect(g1, g2,
     Connection('out_a_string', 'in_a_string'),
     Connection('out_length', 'in_length')

@@ -63,7 +63,7 @@ Now we can build our new dag, run it, and see the result.
     tr = Translate()
     di = Display()
 
-    dag = Dag(doc='Translation')
+    dag = Dag(doc='Translation', title='tutorial_2a')
     dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
     dag.connect(tr, di, Connection('out_text', 'in_text'))
 

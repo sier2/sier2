@@ -16,7 +16,7 @@ class OneIn(Gizmo):
 
 oo = OneOut()
 oi = OneIn()
-dag = Dag(doc='Example: raise an exception in execute()')
+dag = Dag(doc='Example: raise an exception in execute()', title='raise an exception')
 dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
 try:

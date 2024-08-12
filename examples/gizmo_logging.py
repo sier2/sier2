@@ -56,7 +56,7 @@ if __name__=='__main__':
     display = Display()
     # display.logger.setLevel(logging.INFO)
 
-    dag = Dag(site='examples', title='Logging', doc='Demonstrate logging')
+    dag = Dag(title='Logging', doc='Demonstrate logging')
     dag.connect(n1, aa, Connection('out_number', 'in_a'))
     dag.connect(n2, aa, Connection('out_number', 'in_b'))
     dag.connect(aa, ab, Connection('out_result', 'in_a'))

@@ -28,7 +28,7 @@ class Q(Gizmo):
 p = P()
 q = Q()
 
-dag = Dag(doc='Example: execute() args')
+dag = Dag(doc='Example: execute() args', title='execute() args')
 dag.connect(p, q, Connection('out_one', 'in_two'))
 
 p.out_one = 1

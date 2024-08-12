@@ -149,7 +149,7 @@ q = QueryGizmo()
 g = GroupByGizmo()
 b = BarChartGizmo()
 
-dag = Dag(doc='Example: bar chart')
+dag = Dag(doc='Example: bar chart', title='bar chart')
 dag.connect(q, g,
     Connection('out_df', 'in_df'),
     Connection('out_column', 'in_column')

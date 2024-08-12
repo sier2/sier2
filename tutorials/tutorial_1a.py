@@ -37,7 +37,7 @@ def main():
     ui = UserInput()
     tr = Translate()
 
-    dag = Dag(doc='Translation')
+    dag = Dag(doc='Translation', title='tutorial_1a')
     dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
 
     ui.out_text = 'Hello world.'

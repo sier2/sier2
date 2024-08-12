@@ -61,7 +61,7 @@ def main():
     ngb = NumberGizmo(name='source-of-b')
     addg = AddGizmo()
 
-    dag = Dag(doc='Example: add numbers')
+    dag = Dag(doc='Example: add numbers', title='add numbers')
     dag.connect(nga, addg, Connection('out_n', 'in_a'))
     dag.connect(ngb, addg, Connection('out_n', 'in_b'))
 

@@ -32,7 +32,7 @@ class PanelHandler(logging.Handler):
 
         # record.gizmo_state = f'<span style="width:20px;height:20px;background:{color};border-radius:10px">●</span>' █
         record.gizmo_name = f'[{html.escape(record.gizmo_name)}]' if record.gizmo_name else ''
-        record.gizmo_state = f'<span style="color:{color};">●</span>'
+        record.gizmo_state = f'<span style="color:{color};">■</span>'
         record.msg = html.escape(record.msg)
         fmt = info_formatter if record.levelno==logging.INFO else formatter
 
@@ -74,7 +74,7 @@ class DagPanelAdapter(logging.LoggerAdapter):
 
         return msg, kwargs
 
-def getPanelLogger(log_feed):
+def getDagPanelLogger(log_feed):
     logger = logging.getLogger('gizmo.panel')
     logger.setLevel(logging.INFO)
 

@@ -13,7 +13,7 @@ print('Loading display ...')
 DiGizmo = Library.get('gizmo_examples.tutorial_3b.Display')
 di = DiGizmo(name='Display output')
 
-dag = Dag(doc='Translation', site='Translation dag', title='translate text')
+dag = Dag(doc='Translation', title='translate text')
 dag.connect(ui, tr, Connection('out_text', 'in_text'), Connection('out_flag', 'in_flag'))
 dag.connect(tr, di, Connection('out_text', 'in_text'))
 
