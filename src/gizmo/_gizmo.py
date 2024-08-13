@@ -12,10 +12,10 @@ class GizmoError(Exception):
     pass
 
 class GizmoState(StrEnum):
-    """The current state of this gizmo; also used for logging."""
+    """The current state of a gizmo; also used for logging."""
 
     DAG = 'DAG'                 # Dag logging.
-    GIZMO = 'LOG'                 # Gizmo logging.
+    GIZMO = 'GIZMO'             # Gizmo logging.
     INPUT = 'INPUT'
     READY = 'READY'
     EXECUTING = 'EXECUTING'
