@@ -5,7 +5,7 @@ import sys
 import threading
 
 from gizmo import Gizmo, GizmoState, Dag, GizmoError
-from ._feedlogger import getDagPanelLogger
+from ._feedlogger import getDagPanelLogger, getGizmoPanelLogger
 from ._util import _get_state_color
 
 NTHREADS = 2
@@ -52,17 +52,20 @@ class _PanelContext:
     It also uses the panel UI to provide extra information to the user.
     """
 
-    def __init__(self, *, gizmo: Gizmo, dag: Dag, logger=None):
+    def __init__(self, *, gizmo: Gizmo, dag: Dag, dag_logger=None):
         self.gizmo = gizmo
         self.dag = dag
-        self.logger = logger
+        self.dag_logger = dag_logger
 
     def __enter__(self):
         state = GizmoState.EXECUTING
         self.gizmo._gizmo_state = state
         self.t0 = datetime.now()
-        if self.logger:
-            self.logger.info('Execute', gizmo_name=self.gizmo.name, gizmo_state=state)
+        if self.dag_logger:
+            self.dag_logger.info('Execute', gizmo_name=self.gizmo.name, gizmo_state=state)
+
+        gizmo_logger = getGizmoPanelLogger(self.gizmo.name)
+        self.gizmo.logger = gizmo_logger
 
         return self.gizmo
 
@@ -71,19 +74,19 @@ class _PanelContext:
         if exc_type is None:
             state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
             self.gizmo._gizmo_state = state
-            if self.logger:
-                self.logger.info(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state.value)
+            if self.dag_logger:
+                self.dag_logger.info(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state.value)
         elif isinstance(exc_type, KeyboardInterrupt):
             state = GizmoState.INTERRUPTED
             self.gizmo_state._gizmo_state = state
             self.dag._stopper.event.set()
-            if self.logger:
-                self.logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
+            if self.dag_logger:
+                self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
         else:
             state = GizmoState.ERROR
             self.gizmo._gizmo_state = state
-            if self.logger:
-                self.logger.exception(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
+            if self.dag_logger:
+                self.dag_logger.exception(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
             msg = f'While in {self.gizmo.name}.execute(): {exc_val}'
             self.dag._stopper.event.set()
 
@@ -114,6 +117,8 @@ def interrupt_thread(tid, exctype):
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
 def show_dag(dag: Dag):
+    # Replace the default context with the panel-based context.
+    #
     dag._gizmo_context = _PanelContext
 
     template = pn.template.BootstrapTemplate(
@@ -163,6 +168,8 @@ def show_dag(dag: Dag):
         for card in col:
             status = card.header[0]
 
+    # We use a Panel Feed widget to display log messages.
+    #
     log_feed = pn.Feed(
         view_latest=True,
         scroll_button_threshold=20,
@@ -170,19 +177,10 @@ def show_dag(dag: Dag):
         sizing_mode='stretch_width'
     )
 
-    # def log_feed_callback(state: GizmoState|None, text: str):
-    #     if state is None:
-    #         log_feed.clear()
-    #     else:
-    #         now = datetime.now()
-    #         hms = now.strftime('%H:%M:%S')
-    #         color = _get_state_color(state)
-    #         log_feed.append(pn.pane.HTML(f'{hms} <span style="color:{color}">{text}</span>'))
-
-    logger = getDagPanelLogger(log_feed)
+    dag_logger = getDagPanelLogger(log_feed)
     template.main.append(
         pn.Column(
-            *(GizmoCard(parent_template=template, dag=dag, w=gw, logger=logger) for gw in dag.get_sorted())
+            *(GizmoCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted())
         )
     )
     template.sidebar.append(
@@ -205,7 +203,7 @@ class GizmoCard(pn.Card):
     """
 
     @staticmethod
-    def _get_status_light(color: str) -> pn.Spacer:
+    def _get_state_light(color: str) -> pn.Spacer:
         return pn.Spacer(
             margin=(8, 0, 0, 0),
             styles={'width':'20px', 'height':'20px', 'background':color, 'border-radius': '10px'}
@@ -215,7 +213,7 @@ class GizmoCard(pn.Card):
     #     """TODO connect this to the template"""
     #     print(message)
 
-    def __init__(self, *args, parent_template, dag: Dag, w: Gizmo, logger=None, **kwargs):
+    def __init__(self, *args, parent_template, dag: Dag, w: Gizmo, dag_logger=None, **kwargs):
         # Make this look like <h3> (the default Card header text).
         #
         name_text = pn.widgets.StaticText(
@@ -242,10 +240,10 @@ class GizmoCard(pn.Card):
                 w.param.trigger(*w._gizmo_out_params)
                 parent_template.main[0].loading = True
                 try:
-                    if logger:
-                        logger.info('', gizmo_name=None, gizmo_state=None)
-                        logger.info('Execute dag', gizmo_name='', gizmo_state=GizmoState.LOG)
-                    dag.execute(logger=logger)
+                    if dag_logger:
+                        dag_logger.info('', gizmo_name=None, gizmo_state=None)
+                        dag_logger.info('Execute dag', gizmo_name='', gizmo_state=GizmoState.DAG)
+                    dag.execute(dag_logger=dag_logger)
                 finally:
                     parent_template.main[0].loading = False
 
@@ -266,7 +264,7 @@ class GizmoCard(pn.Card):
             name_text,
             pn.VSpacer(),
             spacer,
-            self._get_status_light(_get_state_color(w._gizmo_state))
+            self._get_state_light(_get_state_color(w._gizmo_state))
         )
 
         # Watch the gizmo state so we can update the staus light.
@@ -276,7 +274,7 @@ class GizmoCard(pn.Card):
     def state_change(self, _gizmo_state: GizmoState):
         """Watcher for the gizmo state.
 
-        Updates the status light.
+        Updates the state light.
         """
 
-        self.header[-1] = self._get_status_light(_get_state_color(_gizmo_state))
+        self.header[-1] = self._get_state_light(_get_state_color(_gizmo_state))

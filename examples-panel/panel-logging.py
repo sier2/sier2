@@ -8,6 +8,10 @@ class NumberGizmo(Gizmo):
 
     out_number = param.Number(label='Output number', default=None, doc='Output number')
 
+    def __init__(self, number, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.out_number = number
+
     def __panel__(self):
         return pn.widgets.FloatInput.from_param(self.param.out_number)
 
@@ -25,12 +29,19 @@ class AddGizmo(Gizmo):
     #     super().__init__(*args, **kwargs)
 
     def execute(self):
+        self.logger.debug('Execute gizmo (debug)')
+        self.logger.info('Execute gizmo (info)')
+        self.logger.warning('Execute gizmo (warning)')
+        self.logger.error('Execute gizmo (error)')
+        self.logger.critical('Execute gizmo (critical)')
+
         self.logger.warning('Execute %s', self.name)
         self.logger.info('Inputs: a=%s b=%s', self.in_a, self.in_b)
 
         # If any args aren't set, don't do anything.
         #
         if any(arg is None for arg in (self.in_a, self.in_b)):
+            self.logger.warning('None value in a=%s b=%s', self.in_a, self.in_b)
             return
 
         self.out_result = self.in_a+self.in_b
@@ -48,9 +59,9 @@ class Display(Gizmo):
         return pn.widgets.FloatInput.from_param(self.param.in_result)
 
 if __name__=='__main__':
-    n1 = NumberGizmo(name='num1', user_input=True)
-    n2 = NumberGizmo(name='num2', user_input=True)
-    n3 = NumberGizmo(name='num3', user_input=True)
+    n1 = NumberGizmo(3, name='num1', user_input=True)
+    n2 = NumberGizmo(5, name='num2', user_input=True)
+    n3 = NumberGizmo(7,name='num3', user_input=True)
     aa = AddGizmo(name='First add')
     ab = AddGizmo(name='Second add')
     display = Display()

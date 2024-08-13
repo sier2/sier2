@@ -41,8 +41,8 @@ class GizmoAdapter(logging.LoggerAdapter):
 
     def process(self, msg, kwargs):
         # print(f'GIZMOADAPTER {msg=} {kwargs=} {self.extra=}')
-        if 'gizmo_status' not in kwargs['extra']:
-            kwargs['extra']['gizmo_status'] = '?'
+        if 'gizmo_state' not in kwargs['extra']:
+            kwargs['extra']['gizmo_state'] = '?'
         if 'gizmo_name' not in kwargs['extra']:
             kwargs['extra']['gizmo_name'] = 'g'
 

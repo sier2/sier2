@@ -31,8 +31,14 @@ class AddGizmo(Gizmo):
     out_result = param.Number(label='Result', default=None, doc='Result of addding in_a and in_b')
 
     def execute(self):
-        self.logger.warning('Execute %s', self.name)
+        self.logger.debug('Execute gizmo (debug)')
+        self.logger.info('Execute gizmo (info)')
+        self.logger.warning('Execute gizmo (warning)')
+        self.logger.error('Execute gizmo (error)')
+        self.logger.critical('Execute gizmo (critical)')
+
         self.logger.info('Inputs: a=%s b=%s', self.in_a, self.in_b)
+
         # If any args aren't set, don't do anything.
         #
         if any(arg is None for arg in (self.in_a, self.in_b)):
@@ -63,6 +69,8 @@ if __name__=='__main__':
     dag.connect(n3, ab, Connection('out_number', 'in_b'))
     dag.connect(ab, display, Connection('out_result', 'in_result'))
 
+    print('level debug')
+    aa.logger.setLevel(logging.DEBUG)
     n1.out_number = 2
     n2.out_number = 3
     n3.out_number = 5
@@ -71,7 +79,8 @@ if __name__=='__main__':
     assert display.in_result == 10
 
     print()
-    aa.logger.setLevel(logging.DEBUG)
+    print('level warning')
+    aa.logger.setLevel(logging.WARNING)
     n1.out_number = 7
     n2.out_number = 11
     n3.out_number = 13

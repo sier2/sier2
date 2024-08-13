@@ -213,7 +213,7 @@ class Dag:
                 item.values[inp] = new
                 self._gizmo_queue.append(item)
 
-    def execute(self, *, logger=None):
+    def execute(self, *, dag_logger=None):
         """Execute the dag.
 
         The dag is executed by iterating through the gizmo events queue
@@ -237,6 +237,7 @@ class Dag:
 
         can_execute = True
         while self._gizmo_queue:
+            # print(len(self._gizmo_queue), self._gizmo_queue)
             # The user has set the "stop executing" flag.
             # Continue to set params, but don't execute anything
             #
@@ -252,7 +253,7 @@ class Dag:
                 raise GizmoError(msg) from e
 
             if can_execute:
-                with self._gizmo_context(gizmo=item.dst, dag=self, logger=logger) as g:
+                with self._gizmo_context(gizmo=item.dst, dag=self, dag_logger=dag_logger) as g:
                     g.execute()
 
             if item.dst.user_input:
