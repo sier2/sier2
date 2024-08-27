@@ -51,10 +51,10 @@ class _GizmoContext:
     and displays information in a GUI.
     """
 
-    def __init__(self, *, gizmo: Gizmo, dag: 'Dag', logger=None):
+    def __init__(self, *, gizmo: Gizmo, dag: 'Dag', dag_logger=None):
         self.gizmo = gizmo
         self.dag = dag
-        self.logger = logger
+        self.dag_logger = dag_logger
 
     def __enter__(self):
         self.gizmo._gizmo_state = GizmoState.EXECUTING
