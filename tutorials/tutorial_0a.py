@@ -1,7 +1,7 @@
-from gizmo import Gizmo
+from gizmo import Block
 import param
 
-class AddOne(Gizmo):
+class AddOne(Block):
     """A gizmo that adds one to its input."""
 
     in_a = param.Integer()

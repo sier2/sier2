@@ -1,16 +1,16 @@
-from gizmo import Gizmo, Dag, Connection
+from sier2 import Block, Dag, Connection
 import param
 
-class IfEvenElseOdd(Gizmo):
+class IfEvenElseOdd(Block):
     """Demonstrate an if-else branch.
 
-    This gizmo has three outputs: an integer value, and two constant booleans.
+    This block has three outputs: an integer value, and two constant booleans.
     The ``ask_user()`` method takes an integer and determines if it is odd or even.
     The method sets the output parameter from the integer, and triggers either the
     ``true_out`` or ``false_out`` parameter.
 
-    Two downstream gizmos are connected by either ``true_out`` or ``false_out``,
-    so only the relevant gizmo executes.
+    Two downstream blocks are connected by either ``true_out`` or ``false_out``,
+    so only the relevant block executes.
 
     There is more than output parameter, so setting them individually would trigger
     two events, which we don't want. Therefore, the value is set inside a
@@ -30,7 +30,7 @@ class IfEvenElseOdd(Gizmo):
         tf = 'out_true' if i%2==0 else 'out_false'
         self.param.trigger(tf)
 
-class Notify(Gizmo):
+class Notify(Block):
     """Display a message."""
 
     in_b = param.Boolean()
@@ -41,7 +41,7 @@ class Notify(Gizmo):
         self.msg = msg
 
     def execute(self):
-        print(f'In gizmo {self.name}, {self.in_b} branch: value is {self.msg}')
+        print(f'In block {self.name}, {self.in_b} branch: value is {self.msg}')
 
 if_else = IfEvenElseOdd()
 is_even = Notify(name='EvenGizmo', msg='even')

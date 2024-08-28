@@ -2,13 +2,13 @@
 
 # Tutorial: UserInput gizmo with a panel widget.
 #
-from gizmo import Gizmo, Dag, Connection
+from gizmo import Block, Dag, Connection
 import param
 
 import panel as pn
 pn.extension(inline=True)
 
-class UserInput(Gizmo):
+class UserInput(Block):
     """A gizmo that provides user input."""
 
     out_text = param.String(label='Input text', doc='Text to be translated')

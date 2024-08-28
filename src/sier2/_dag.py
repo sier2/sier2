@@ -1,4 +1,4 @@
-from ._gizmo import Gizmo, GizmoError, GizmoState
+from ._block import Block, BlockError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
@@ -18,32 +18,32 @@ class Connection:
 
     def __post_init__(self):
         if not self.src_param_name.startswith('out_'):
-            raise GizmoError('Output params must start with "out_"')
+            raise BlockError('Output params must start with "out_"')
 
         if not self.dst_param_name.startswith('in_'):
-            raise GizmoError('Input params must start with "in_"')
+            raise BlockError('Input params must start with "in_"')
 
 @dataclass
 class _InputValues:
     """Record a param value change.
 
-    When a gizmo updates an output param, the update is queued until
-    the gizmo finishes executing. This class is what is queued.
+    When a block updates an output param, the update is queued until
+    the block finishes executing. This class is what is queued.
     """
 
-    # The gizmo to be updated.
+    # The block to be updated.
     #
-    dst: Gizmo
+    dst: Block
 
-    # The values to be set before the gizmo executes.
+    # The values to be set before the block executes.
     #
     values: dict[str, Any] = field(default_factory=dict)
 
-class _GizmoContext:
-    """A context manager to wrap the execution of a gizmo within a dag.
+class _BlockContext:
+    """A context manager to wrap the execution of a block within a dag.
 
-    This default context manager handles the gizmo state, the stopper,
-    and converts gizmo execution errors to GimzoError exceptions.
+    This default context manager handles the block state, the stopper,
+    and converts block execution errors to GimzoError exceptions.
 
     This could be done inline, but using a context manager allows
     the context manager to be replaced. For example, a panel-based
@@ -51,32 +51,32 @@ class _GizmoContext:
     and displays information in a GUI.
     """
 
-    def __init__(self, *, gizmo: Gizmo, dag: 'Dag', dag_logger=None):
-        self.gizmo = gizmo
+    def __init__(self, *, block: Block, dag: 'Dag', dag_logger=None):
+        self.block = block
         self.dag = dag
         self.dag_logger = dag_logger
 
     def __enter__(self):
-        self.gizmo._gizmo_state = GizmoState.EXECUTING
+        self.block._block_state = BlockState.EXECUTING
 
-        return self.gizmo
+        return self.block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.gizmo._gizmo_state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
+            self.block._block_state = BlockState.WAITING if self.block.user_input else BlockState.SUCCESSFUL
         elif isinstance(exc_type, KeyboardInterrupt):
-            self.gizmo_state._gizmo_state = GizmoState.INTERRUPTED
+            self.block_state._block_state = BlockState.INTERRUPTED
             self.dag._stopper.event.set()
             print(f'KEYBOARD INTERRUPT IN GIZMO {self.name}')
         else:
-            self.gizmo._gizmo_state = GizmoState.ERROR
-            msg = f'While in {self.gizmo.name}.execute(): {exc_val}'
+            self.block._block_state = BlockState.ERROR
+            msg = f'While in {self.block.name}.execute(): {exc_val}'
             # LOGGER.exception(msg)
             self.dag._stopper.event.set()
 
-            # Convert the error in the gizmo to a GizmoError.
+            # Convert the error in the block to a GizmoError.
             #
-            raise GizmoError(f'Gizmo {self.gizmo.name}: {str(exc_val)}') from exc_val
+            raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
         return False
 
@@ -96,10 +96,10 @@ class _Stopper:
         return f'stopped={self.is_stopped}'
 
 class Dag:
-    """A directed acyclic graph of gizmos."""
+    """A directed acyclic graph of blocks."""
 
-    def __init__(self, *, site: str='Gizmo', title: str, doc: str):
-        self._gizmo_pairs: list[tuple[Gizmo, Gizmo]] = []
+    def __init__(self, *, site: str='Block', title: str, doc: str):
+        self._block_pairs: list[tuple[Block, Block]] = []
         self._stopper = _Stopper()
         self.site = site
         self.title = title
@@ -108,17 +108,17 @@ class Dag:
         # We watch output params to be notified when they are set.
         # Events are queued here.
         #
-        self._gizmo_queue: deque[_InputValues] = deque()
+        self._block_queue: deque[_InputValues] = deque()
 
-        # The context manager class to use to run gizmos.
+        # The context manager class to use to run blocks.
         #
-        self._gizmo_context = _GizmoContext
+        self._block_context = _BlockContext
 
     def _for_each_once(self):
-        """Yield each connected gizmo once."""
+        """Yield each connected block once."""
 
         seen = set()
-        for s, d in self._gizmo_pairs:
+        for s, d in self._block_pairs:
             for g in s, d:
                 if g not in seen:
                     seen.add(g)
@@ -134,29 +134,29 @@ class Dag:
 
         self._stopper.event.clear()
 
-    def connect(self, src: Gizmo, dst: Gizmo, *connections: Connection):
+    def connect(self, src: Block, dst: Block, *connections: Connection):
         if any(not isinstance(c, Connection) for c in connections):
-            raise GizmoError('All arguments must be Connection instances')
+            raise BlockError('All arguments must be Connection instances')
 
         if _DISALLOW_CYCLES:
-            if _has_cycle(self._gizmo_pairs + [(src, dst)]):
-                raise GizmoError('This connection would create a cycle')
+            if _has_cycle(self._block_pairs + [(src, dst)]):
+                raise BlockError('This connection would create a cycle')
 
         if src.name==dst.name:
-            raise GizmoError('Cannot add two gizmos with the same name')
+            raise BlockError('Cannot add two blocks with the same name')
 
         for g in self._for_each_once():
             if (g is not src and g.name==src.name) or (g is not dst and g.name==dst.name):
-                raise GizmoError('A gizmo with this name already exists')
+                raise BlockError('A block with this name already exists')
 
-        for s, d in self._gizmo_pairs:
+        for s, d in self._block_pairs:
             if src is s and dst is d:
-                raise GizmoError('These gizmos are already connected')
+                raise BlockError('These blocks are already connected')
 
-        if self._gizmo_pairs:
-            connected = any(src is s or src is d or dst is s or dst is d for s, d in self._gizmo_pairs)
+        if self._block_pairs:
+            connected = any(src is s or src is d or dst is s or dst is d for s, d in self._block_pairs)
             if not connected:
-                raise GizmoError('New gizmos must connect to existing gizmos')
+                raise BlockError('A new block must connect to existing block')
 
         # Group watchers by their attributes.
         # This optimises the number of watchers.
@@ -174,17 +174,17 @@ class Dag:
 
             src_param = getattr(src.param, conn.src_param_name)
             if src_param.allow_refs:
-                raise GizmoError(f'Source parameter {src}.{conn.src_param_name} must not be "allow_refs=True"')
+                raise BlockError(f'Source parameter {src}.{conn.src_param_name} must not be "allow_refs=True"')
 
-            dst._gizmo_name_map[src.name, conn.src_param_name] = conn.dst_param_name
+            dst._block_name_map[src.name, conn.src_param_name] = conn.dst_param_name
             src_out_params.append(conn.src_param_name)
 
         src.param.watch(lambda *events: self._param_event(dst, *events), src_out_params, onlychanged=False)
-        src._gizmo_out_params.extend(src_out_params)
+        src._block_out_params.extend(src_out_params)
 
-        self._gizmo_pairs.append((src, dst))
+        self._block_pairs.append((src, dst))
 
-    def _param_event(self, dst: Gizmo, *events):
+    def _param_event(self, dst: Block, *events):
         """The callback for a watch event."""
 
         # print(f'DAG EVENTS: {events} -> {dst.name}')
@@ -193,84 +193,84 @@ class Dag:
             name = event.name
             new = event.new
 
-            # The input param in the dst gizmo.
+            # The input param in the dst block.
             #
-            inp = dst._gizmo_name_map[cls, name]
+            inp = dst._block_name_map[cls, name]
 
-            # Look for the destination gizmo in the event queue.
+            # Look for the destination block in the event queue.
             # If found, update the param value dictionary,
             # else append a new item.
             # This ensures that all param updates for a destination
-            # gizmo are merged into a single queue item, even if the
-            # updates come from different source gizmos.
+            # block are merged into a single queue item, even if the
+            # updates come from different source blocks.
             #
-            for item in self._gizmo_queue:
+            for item in self._block_queue:
                 if dst is item.dst:
                     item.values[inp] = new
                     break
             else:
                 item = _InputValues(dst)
                 item.values[inp] = new
-                self._gizmo_queue.append(item)
+                self._block_queue.append(item)
 
     def execute(self, *, dag_logger=None):
         """Execute the dag.
 
-        The dag is executed by iterating through the gizmo events queue
+        The dag is executed by iterating through the block events queue
         and popping events from the head of the queue. For each event,
-        update the destination gizmo's input parameters and call
-        that gizmo's execute() method.
+        update the destination block's input parameters and call
+        that block's execute() method.
 
-        If the current destination gizmo has user_flag True,
+        If the current destination block has user_flag True,
         the loop will continue to set param values until the queue is empty,
         but no execute() method will be called.
 
         To start (or restart) the dag, there must be something in the event queue.
-        The first (or current) user_input gizmo must have updated at least one
+        The first (or current) user_input block must have updated at least one
         output param before the dag's execute() is called.
         """
 
-        if not self._gizmo_queue:
+        if not self._block_queue:
             # Attempting to execute a dag with no updates is probably a mistake.
             #
-            raise GizmoError('Nothing to execute')
+            raise BlockError('Nothing to execute')
 
         can_execute = True
-        while self._gizmo_queue:
-            # print(len(self._gizmo_queue), self._gizmo_queue)
+        while self._block_queue:
+            # print(len(self._block_queue), self._block_queue)
             # The user has set the "stop executing" flag.
             # Continue to set params, but don't execute anything
             #
             if self._stopper.is_stopped:
                 can_execute = False
 
-            item = self._gizmo_queue.popleft()
+            item = self._block_queue.popleft()
             try:
                 item.dst.param.update(item.values)
             except ValueError as e:
                 msg = f'While in {item.dst.name} setting a parameter: {e}'
                 self._stopper.event.set()
-                raise GizmoError(msg) from e
+                raise BlockError(msg) from e
 
             if can_execute:
-                with self._gizmo_context(gizmo=item.dst, dag=self, dag_logger=dag_logger) as g:
+                with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
                     g.execute()
 
             if item.dst.user_input:
-                # If the current destination gizmo requires user input,
+                # If the current destination block requires user input,
                 # continue to set params, but don't execute anything.
                 #
                 can_execute = False
 
-    def disconnect(self, g: Gizmo) -> None:
-        """Disconnect gizmo g from other gizmos.
+    def disconnect(self, g: Block) -> None:
+        """Disconnect block g from other blocks.
 
         All parameters (input and output) will be disconnected.
 
         Parameters
         ----------
         g: Gizmo
-            The gizmo to be disconnected.
+            The block to be disconnected.
         """
 
         for p, watchers in g.param.watchers.items():
@@ -278,26 +278,26 @@ class Dag:
                 # print(f'disconnect watcher {g.name}.{watcher}')
                 g.param.unwatch(watcher)
 
-        for src, dst in self._gizmo_pairs:
+        for src, dst in self._block_pairs:
             if dst is g:
                 for p, watchers in src.param.watchers.items():
                     for watcher in watchers['value']:
                         # print(f'disconnect watcher {src.name}.{watcher}')
                         src.param.unwatch(watcher)
 
-        # Remove this gizmo from the dag.
+        # Remove this block from the dag.
         # Check for sources and destinations.
         #
-        self._gizmo_pairs[:] = [(src, dst) for src, dst in self._gizmo_pairs if src is not g and dst is not g]
+        self._block_pairs[:] = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
 
-        # Because this gizmo is no longer watching anything, the name map can be cleared.
+        # Because this block is no longer watching anything, the name map can be cleared.
         #
-        g._gizmo_name_map.clear()
+        g._block_name_map.clear()
 
-    def gizmo_by_name(self, name) -> Gizmo | None:
-        """Get a specific gizmo by name."""
+    def block_by_name(self, name) -> Block | None:
+        """Get a specific block by name."""
 
-        for s, d in self._gizmo_pairs:
+        for s, d in self._block_pairs:
             if s.name==name:
                 return s
 
@@ -307,38 +307,38 @@ class Dag:
         return None
 
     def get_sorted(self):
-        """Return the gizmos in this dag in topological order.
+        """Return the blocks in this dag in topological order.
 
-        This is useful for arranging the gizmos in a GUI, for example.
+        This is useful for arranging the blocks in a GUI, for example.
 
         The returned dictionary is in no particular order:
-        the rank values determine the order of the gizmos.
+        the rank values determine the order of the blocks.
 
         Returns
         -------
         dict[Gizmo, int]
-            A mapping of gizmo to rank
+            A mapping of block to rank
         """
 
-        return _get_sorted(self._gizmo_pairs)
+        return _get_sorted(self._block_pairs)
 
     def has_cycle(self):
-        return _has_cycle(self._gizmo_pairs)
+        return _has_cycle(self._block_pairs)
 
     def dump(self):
         """Dump the dag to a serialisable (eg to JSON) dictionary.
 
-        The gizmos and connections are reduced to simple representations.
-        There is no need to serialize code: the gizmos themselves are assumed
-        to be available when loaded - it is just the attributes of the gizmos
+        The blocks and connections are reduced to simple representations.
+        There is no need to serialize code: the blocks themselves are assumed
+        to be available when loaded - it is just the attributes of the blocks
         that need to be saved.
 
         Two sets of attributes in particular are saved.
 
-        * The name of the gizmo class. Each gizmo has a name by virtue of it
+        * The name of the block class. Each block has a name by virtue of it
             being a Parameterized subclass.
         * The ``__init__`` parameters, where possible. For each parameter,
-            if the gizmo object has a matching instance name, the value of
+            if the block object has a matching instance name, the value of
             the name is saved.
 
         Returns
@@ -347,20 +347,20 @@ class Dag:
             A dictionary containing the serialised dag.
         """
 
-        gizmo_instances: dict[Gizmo, int] = {}
+        block_instances: dict[Block, int] = {}
 
         instance = 0
-        for s, d in self._gizmo_pairs:
-            if s not in gizmo_instances:
-                gizmo_instances[s] = instance
+        for s, d in self._block_pairs:
+            if s not in block_instances:
+                block_instances[s] = instance
                 instance += 1
-            if d not in gizmo_instances:
-                gizmo_instances[d] = instance
+            if d not in block_instances:
+                block_instances[d] = instance
                 instance += 1
 
-        gizmos = []
-        for g, i in gizmo_instances.items():
-            # We have to pass some arguments to the gizmo when it is reconstituted.
+        blocks = []
+        for g, i in block_instances.items():
+            # We have to pass some arguments to the block when it is reconstituted.
             # `name` is mandatory - what else?
             #
             args = {'name': g.name}
@@ -377,24 +377,24 @@ class Dag:
             if hasattr(g, 'user_input'):
                 args['user_input'] = getattr(g, 'user_input')
 
-            gizmo = {
-                'gizmo': g.gizmo_key(),
+            block = {
+                'block': g.block_key(),
                 'instance': i,
                 'args': args
             }
-            gizmos.append(gizmo)
+            blocks.append(block)
 
         connections = []
-        for s, d in self._gizmo_pairs:
+        for s, d in self._block_pairs:
             connection: dict[str, Any] = {
-                'src': gizmo_instances[s],
-                'dst': gizmo_instances[d],
+                'src': block_instances[s],
+                'dst': block_instances[d],
                 'conn_args': []
             }
 
             # Get src params that have been connected to dst params.
             #
-            nmap = {(gname, sname): dname for (gname, sname), dname in d._gizmo_name_map.items() if gname==s.name}
+            nmap = {(gname, sname): dname for (gname, sname), dname in d._block_name_map.items() if gname==s.name}
 
             for (gname, sname), dname in nmap.items():
                 args = {
@@ -420,24 +420,24 @@ class Dag:
                 'site': self.site,
                 'title': self.title
             },
-            'gizmos': gizmos,
+            'blocks': blocks,
             'connections': connections
         }
 
     def hv_graph(self):
-        """Build a HoloViews Graph to visualise the gizmo connections."""
+        """Build a HoloViews Graph to visualise the block connections."""
 
-        src: list[Gizmo] = []
-        dst: list[Gizmo] = []
+        src: list[Block] = []
+        dst: list[Block] = []
 
         def build_layers():
-            """Traverse the gizmo pairs and organise them into layers.
+            """Traverse the block pairs and organise them into layers.
 
             The first layer contains the root (no input) nodes.
             """
 
             ranks = {}
-            remaining = self._gizmo_pairs[:]
+            remaining = self._block_pairs[:]
 
             # Find the root nodes and assign them a layer.
             #
@@ -543,16 +543,16 @@ def topological_sort(pairs):
 
     return L, remaining
 
-def _has_cycle(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
-    _, remaining = topological_sort(gizmo_pairs)
+def _has_cycle(block_pairs: list[tuple[Block, Block]]):
+    _, remaining = topological_sort(block_pairs)
 
     return len(remaining)>0
 
-def _get_sorted(gizmo_pairs: list[tuple[Gizmo, Gizmo]]):
-    ordered, remaining = topological_sort(gizmo_pairs)
+def _get_sorted(block_pairs: list[tuple[Block, Block]]):
+    ordered, remaining = topological_sort(block_pairs)
 
     if remaining:
-        raise GizmoError('Dag contains a cycle')
+        raise BlockError('Dag contains a cycle')
 
     return ordered
 

@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "gizmo"
-version = "0.12.1"
+name = "sier2"
+version = "0.13.2"
 description = "Gizmo code dags"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
 readme = "README.rst"
-packages = [{include = "gizmo", from = "src"}]
+packages = [{include = "sier2", from = "src"}]
 classifiers = [
     "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
@@ -21,8 +21,8 @@ holoviews = "^1.18.3"
 panel = ">=1.4.4"
 param = ">=2.1.0"
 
-[tool.poetry.plugins."gizmo.library"]
-export = "gizmo:provided.info"
+[tool.poetry.plugins."block.library"]
+export = "sier2:provided.info"
 
 [[tool.mypy.overrides]]
 module = [

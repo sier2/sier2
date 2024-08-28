@@ -5,12 +5,12 @@ from importlib.metadata import entry_points, EntryPoint
 from typing import Any, cast
 import warnings
 
-from gizmo import Gizmo, Dag, Connection, GizmoError
+from sier2 import Block, Dag, Connection, BlockError
 
 # Store a mapping from a unique key to a Gizmo class.
 # When plugins are initially scanned, the classes are not loaded.
 #
-_gizmo_library: dict[str, type[Gizmo]|None] = {}
+_block_library: dict[str, type[Block]|None] = {}
 
 @dataclass
 class Info:
@@ -22,8 +22,8 @@ def docstring(func) -> str:
 
     return doc.split('\n')[0].strip()
 
-def _find_gizmos():
-    yield from _find('gizmos')
+def _find_blocks():
+    yield from _find('blocks')
 
 def _find_dags():
     yield from _find('dags')
@@ -38,7 +38,7 @@ def run_dag(dag_name):
             dparts = d.key.split('.')
             if dparts[-1]==dag_name:
                 if found_dag:
-                    raise GizmoError(f'Found duplicate: {dag_name}, d')
+                    raise BlockError(f'Found duplicate: {dag_name}, d')
 
                 found_dag = d
 
@@ -48,124 +48,124 @@ def run_dag(dag_name):
     m = importlib.import_module(dag_name[:ix])
     func = getattr(m, dag_name[ix+1:])
     # if not issubclass(cls, Gizmo):
-    #     raise GizmoError(f'{key} is not a gizmo')
+    #     raise GizmoError(f'{key} is not a block')
 
     func()
 
 def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
-    """Use ``importlib.metadata.entry_points`` to look up entry points named ``gizmo.library``.
+    """Use ``importlib.metadata.entry_points`` to look up entry points named ``block.library``.
 
     For each entry point, call ``load()`` to get a module,
     then call ``getattr(module, func_name)()`` to get a list of
     ``GizmoInfo`` instances.
     """
 
-    library = entry_points(group='gizmo.library')
+    library = entry_points(group='block.library')
 
     for entry_point in library:
         try:
-            gizmos_lib = entry_point.load()
-            gizmos_func = getattr(gizmos_lib, func_name, None)
-            if gizmos_func is not None:
-                if not callable(gizmos_func):
-                    warnings.warn(f'In {entry_point.module}, {gizmos_func} is not a function')
+            blocks_lib = entry_point.load()
+            blocks_func = getattr(blocks_lib, func_name, None)
+            if blocks_func is not None:
+                if not callable(blocks_func):
+                    warnings.warn(f'In {entry_point.module}, {blocks_func} is not a function')
                 else:
-                    gizmo_info_list: list[Info] = gizmos_func()
-                    if not isinstance(gizmo_info_list, list) or any(not isinstance(s, Info) for s in gizmo_info_list):
-                        warnings.warn(f'In {entry_point.module}, {gizmos_func} does not return a list of {Info.__name__} instances')
+                    block_info_list: list[Info] = blocks_func()
+                    if not isinstance(block_info_list, list) or any(not isinstance(s, Info) for s in block_info_list):
+                        warnings.warn(f'In {entry_point.module}, {blocks_func} does not return a list of {Info.__name__} instances')
                     else:
-                        for gi in gizmo_info_list:
+                        for gi in block_info_list:
                             yield entry_point, gi
         except Exception as e:
             warnings.warn(f'While loading {entry_point}:')
-            raise GizmoError(str(e)) from e
+            raise BlockError(str(e)) from e
 
 class Library:
     @staticmethod
     def collect():
-        """Collect gizmo information.
+        """Collect block information.
 
-        Use ``_find_gizmos()`` to yield ``GizmoInfo`` instances.
+        Use ``_find_blocks()`` to yield ``GizmoInfo`` instances.
 
-        Note that we don't load the gizmos here. We don't want to import
-        any modules: this would cause every gizmo module to be imported,
+        Note that we don't load the blocks here. We don't want to import
+        any modules: this would cause every block module to be imported,
         which would cause a lot of imports to happen. Therefore, we just
-        create the keys in the dictionary, and let ``get()`` import gizmo
+        create the keys in the dictionary, and let ``get()`` import block
         modules as required.
         """
 
-        for entry_point, gi in _find_gizmos():
-            if gi.key in _gizmo_library:
+        for entry_point, gi in _find_blocks():
+            if gi.key in _block_library:
                 warnings.warn(f'Gizmo plugin {entry_point}: key {gi.key} already in library')
             else:
-                _gizmo_library[gi.key] = None
+                _block_library[gi.key] = None
 
     @staticmethod
-    def add(gizmo_class: type[Gizmo], key: str|None=None):
-        """Add a local gizmo class to the library.
+    def add(block_class: type[Block], key: str|None=None):
+        """Add a local block class to the library.
 
-        The library initially loads gizmo classes using Python's entry_points() mechanism.
+        The library initially loads block classes using Python's entry_points() mechanism.
         This method allows local Gizmos to be added to the libray.
 
         This is useful for testing, for example.
 
         Parameters
         ----------
-        gizmo_class: type[Gizmo]
+        block_class: type[Gizmo]
             The Gizmo's class.
         key: str
-            The Gizmo's unique key string. By default, the gizmo's gizmo_key()
+            The Gizmo's unique key string. By default, the block's block_key()
             class method will be used to obtain the key.
         """
 
-        if not issubclass(gizmo_class, Gizmo):
+        if not issubclass(block_class, Block):
             print(f'{key} is not a Gizmo')
 
         # if not key:
-        #     key = gizmo_class.gizmo_key()
-        key_ = key if key else gizmo_class.gizmo_key()
+        #     key = block_class.block_key()
+        key_ = key if key else block_class.block_key()
 
-        if key_ in _gizmo_library:
-            raise GizmoError(f'Gizmo {key_} is already in the library')
+        if key_ in _block_library:
+            raise BlockError(f'Gizmo {key_} is already in the library')
 
-        _gizmo_library[key_] = gizmo_class
+        _block_library[key_] = block_class
 
     @staticmethod
-    def get(key: str) -> type[Gizmo]:
-        if not _gizmo_library:
+    def get(key: str) -> type[Block]:
+        if not _block_library:
             Library.collect()
 
-        if key not in _gizmo_library:
-            raise GizmoError(f'Name {key} is not in the library')
+        if key not in _block_library:
+            raise BlockError(f'Name {key} is not in the library')
 
-        if _gizmo_library[key] is None:
+        if _block_library[key] is None:
             ix = key.rfind('.')
             m = importlib.import_module(key[:ix])
             cls = getattr(m, key[ix+1:])
-            if not issubclass(cls, Gizmo):
-                raise GizmoError(f'{key} is not a gizmo')
+            if not issubclass(cls, Block):
+                raise BlockError(f'{key} is not a block')
 
-            _gizmo_library[key] = cls
+            _block_library[key] = cls
 
-        return cast(type[Gizmo], _gizmo_library[key])
+        return cast(type[Block], _block_library[key])
 
     @staticmethod
     def load_dag(dump: dict[str, Any]) -> Dag:
         """Load a dag from a serialised structure produced by Gizmo.dump()."""
 
-        # Create new instances of the specified gizmos.
+        # Create new instances of the specified blocks.
         #
         instances = {}
-        for g in dump['gizmos']:
-            class_name = g['gizmo']
+        for g in dump['blocks']:
+            class_name = g['block']
             instance = g['instance']
             if instance not in instances:
                 gclass = Library.get(class_name)
                 instances[instance] = gclass(**g['args'])
             else:
-                raise GizmoError(f'Instance {instance} ({class_name}) already exists')
+                raise BlockError(f'Instance {instance} ({class_name}) already exists')
 
-        # Connect the gizmos.
+        # Connect the blocks.
         #
         dag = Dag(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
         for conn in dump['connections']:

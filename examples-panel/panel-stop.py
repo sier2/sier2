@@ -7,7 +7,7 @@ import threading
 import time
 import ctypes
 
-from gizmo import Gizmo, Dag, Connection
+from gizmo import Block, Dag, Connection
 from gizmo.panel import show_dag
 import param
 
@@ -33,7 +33,7 @@ def interrupt_thread(tid, exctype):
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
-class QueryWidget(Gizmo):
+class QueryWidget(Block):
     """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
     out_timer = param.Integer(default=5, bounds=(1, 10))
@@ -48,7 +48,7 @@ class QueryWidget(Gizmo):
             sizing_mode='stretch_width'
         )
 
-class ProgressWidget(Gizmo):
+class ProgressWidget(Block):
     """A progress widget."""
 
     in_timer = param.Integer()

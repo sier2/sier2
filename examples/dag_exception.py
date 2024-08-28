@@ -1,12 +1,12 @@
-from gizmo import Gizmo, GizmoError, Dag, Connection
+from sier2 import Block, BlockError, Dag, Connection
 import param
 
-class OneOut(Gizmo):
+class OneOut(Block):
     """One output parameter."""
 
     out_o = param.String()
 
-class OneIn(Gizmo):
+class OneIn(Block):
     """One input parameter."""
 
     in_o = param.String()
@@ -22,8 +22,8 @@ dag.connect(oo, oi, Connection('out_o', 'in_o'))
 try:
     oo.out_o = 'plugh'
     dag.execute()
-except GizmoError as e:
-    print(f'\nCaught expected Gizmo exception {e}')
+except BlockError as e:
+    print(f'\nCaught expected Block exception {e}')
     print(f'Actual cause: {type(e.__cause__)} {e.__cause__}')
 else:
     print('SHOULD HAVE CAUGHT AN EXCEPTION HERE!')

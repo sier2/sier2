@@ -1,6 +1,6 @@
 import pytest
 
-from gizmo import Gizmo, GizmoState, Dag, Connection, GizmoError, Library
+from sier2 import Block, BlockState, Dag, Connection, BlockError, Library
 import param
 
 @pytest.fixture
@@ -18,12 +18,12 @@ def test_load_doc(dag):
     assert dag2.doc == dag.doc
 
 def test_no_inputs(dag):
-    class OneOut(Gizmo):
+    class OneOut(Block):
         """One output parameter."""
 
         out_o = param.String()
 
-    class OneIn(Gizmo):
+    class OneIn(Block):
         """One input parameter."""
 
         in_p = param.String()
@@ -32,18 +32,18 @@ def test_no_inputs(dag):
     oi = OneIn()
     dag.connect(oo, oi, Connection('out_o', 'in_p'))
 
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.execute()
 
 def test_mismatched_types(dag):
     """Ensure that mismatched parameter values can't be assigned, and raise a GizmoError."""
 
-    class OneOut(Gizmo):
+    class OneOut(Block):
         """One output parameter."""
 
         out_o = param.String()
 
-    class OneIn(Gizmo):
+    class OneIn(Block):
         """One input parameter."""
 
         in_o = param.Integer()
@@ -52,19 +52,19 @@ def test_mismatched_types(dag):
     oi = OneIn()
     dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         oo.out_o = 'plugh'
         dag.execute()
 
-def test_gizmo_exception(dag):
-    """Ensure that exceptions in a gizmo raise a GizmoError."""
+def test_block_exception(dag):
+    """Ensure that exceptions in a block raise a GizmoError."""
 
-    class OneOut(Gizmo):
+    class OneOut(Block):
         """One output parameter."""
 
         out_o = param.String()
 
-    class OneIn(Gizmo):
+    class OneIn(Block):
         """One input parameter."""
 
         in_o = param.String()
@@ -76,14 +76,14 @@ def test_gizmo_exception(dag):
     oi = OneIn()
     dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         oo.out_o = 'plugh'
         dag.execute()
 
 def test_user_input(dag):
-    """Ensure that dag execution stops at a user-input gizmo."""
+    """Ensure that dag execution stops at a user-input block."""
 
-    class PassThrough(Gizmo):
+    class PassThrough(Block):
         """Pass a value through unchanged."""
 
         in_p = param.Integer(default=0)
@@ -111,11 +111,11 @@ def test_user_input(dag):
     assert p3.in_p == 5
     assert p4.in_p == 0
 
-    assert len(dag._gizmo_queue) == 0
+    assert len(dag._block_queue) == 0
 
     # Executing without any pending events should raise.
     #
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.execute()
 
     # Emulate user input.
@@ -128,17 +128,17 @@ def test_user_input(dag):
     assert p3.in_p == 7
     assert p4.in_p == 7
 
-    assert len(dag._gizmo_queue) == 0
+    assert len(dag._block_queue) == 0
 
     # Executing without any pending events should raise.
     #
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.execute()
 
-def test_gizmo_state(dag):
-    """Ensure that gizmo states are set correctly."""
+def test_block_state(dag):
+    """Ensure that block states are set correctly."""
 
-    class IncrementGizmo(Gizmo):
+    class IncrementGizmo(Block):
         """Increment the input."""
 
         in_p = param.Integer(default=0)
@@ -163,17 +163,17 @@ def test_gizmo_state(dag):
 
     assert inc2.out_p == 3
 
-    assert inc0._gizmo_state == GizmoState.READY
-    assert inc1._gizmo_state == GizmoState.SUCCESSFUL
-    assert inc2._gizmo_state == GizmoState.WAITING
-    assert inc3._gizmo_state == GizmoState.READY
-    assert inc4._gizmo_state == GizmoState.READY
+    assert inc0._block_state == BlockState.READY
+    assert inc1._block_state == BlockState.SUCCESSFUL
+    assert inc2._block_state == BlockState.WAITING
+    assert inc3._block_state == BlockState.READY
+    assert inc4._block_state == BlockState.READY
 
     inc2.out_p = 5
     dag.execute()
 
-    assert inc0._gizmo_state == GizmoState.READY
-    assert inc1._gizmo_state == GizmoState.SUCCESSFUL
-    assert inc2._gizmo_state == GizmoState.WAITING
-    assert inc3._gizmo_state == GizmoState.SUCCESSFUL
-    assert inc4._gizmo_state == GizmoState.SUCCESSFUL
+    assert inc0._block_state == BlockState.READY
+    assert inc1._block_state == BlockState.SUCCESSFUL
+    assert inc2._block_state == BlockState.WAITING
+    assert inc3._block_state == BlockState.SUCCESSFUL
+    assert inc4._block_state == BlockState.SUCCESSFUL

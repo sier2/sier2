@@ -1,10 +1,10 @@
 import pytest
 
-from gizmo import Gizmo, Dag, Connection, GizmoError
+from sier2 import Block, Dag, Connection, BlockError
 import param
 
-class PassThrough(Gizmo):
-    """A gizmo with one input and one output."""
+class PassThrough(Block):
+    """A block with one input and one output."""
 
     in_p = param.Integer()
     out_p = param.Integer()
@@ -12,8 +12,8 @@ class PassThrough(Gizmo):
     def execute(self):
         self.out_p = self.in_p
 
-class Add(Gizmo):
-    """A gizmo that adds an addend to its input."""
+class Add(Block):
+    """A block that adds an addend to its input."""
 
     in_a = param.Integer()
     out_a = param.Integer()
@@ -25,13 +25,13 @@ class Add(Gizmo):
     def execute(self):
         self.out_a = self.in_a + self.addend
 
-class OneIn(Gizmo):
-    """A gizmo with one input."""
+class OneIn(Block):
+    """A block with one input."""
 
     in_o = param.Integer()
 
-class TwoIn(Gizmo):
-    """A gizmo with two inputs."""
+class TwoIn(Block):
+    """A block with two inputs."""
 
     in_t1 = param.Integer()
     in_t2 = param.Integer()
@@ -43,13 +43,13 @@ def dag():
     return Dag(doc='test-dag', title='tests')
 
 def test_output_must_not_allow_refs(dag):
-    class P(Gizmo):
+    class P(Block):
         s = param.String()
 
-    class Q(Gizmo):
+    class Q(Block):
         s = param.String(allow_refs=True)
 
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(P(), Q(), ['s'])
 
 def test_simple(dag):
@@ -70,12 +70,12 @@ def test_simple(dag):
     assert o.in_o == 2
 
 def test_disconnect(dag):
-    """Ensure that when gizmos are disconnected, they are no longer watching or being watched.
+    """Ensure that when blocks are disconnected, they are no longer watching or being watched.
 
     We also ensure that other refs still work.
     """
 
-    def n_watchers(g: Gizmo, param_name: str):
+    def n_watchers(g: Block, param_name: str):
         """The number of watchers on this param.
 
         Before watchers are added:
@@ -123,7 +123,7 @@ def test_disconnect(dag):
     # assert n_watchers(t, 't1_in') == 0
     # assert n_watchers(t, 't2_in') == 0
 
-    assert len(a._gizmo_name_map) == 1
+    assert len(a._block_name_map) == 1
 
     dag.disconnect(a)
 
@@ -140,7 +140,7 @@ def test_disconnect(dag):
     #
     assert len(t.param.watchers) == 0
 
-    assert len(a._gizmo_name_map) == 0
+    assert len(a._block_name_map) == 0
 
     # Gizmo a is no longer watching b.b_out.
     # Gizmo t is still watching b.b_out.
@@ -153,20 +153,20 @@ def test_disconnect(dag):
     assert t.in_t2 == 5
 
 def test_cannot_connect_twice(dag):
-    """Ensure that two gizmos cannot be connected more than once."""
+    """Ensure that two blocks cannot be connected more than once."""
 
     p0 = PassThrough()
     p1 = PassThrough()
 
     dag.connect(p0, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(p0, p1, Connection('p_out' ,'p_in'))
 
 def test_not_same_names(dag):
     p0 = PassThrough(name='This')
     p1 = PassThrough(name='This')
 
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(p0, p1, Connection('out_p', 'in_p'))
 
 def test_not_existing_name(dag):
@@ -175,25 +175,25 @@ def test_not_existing_name(dag):
     p2 = PassThrough(name='This')
 
     dag.connect(p0, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(p1, p2, Connection('out_p', 'in_p'))
 
 def test_self_loop(dag):
-    """Ensure that gizmos can't connect to themselves."""
+    """Ensure that blocks can't connect to themselves."""
 
     p = PassThrough()
 
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(p, p, Connection('out_p', 'in_p'))
 
 def test_loop1(dag):
-    """Ensure that connecting a gizmo doesn't create a loop in the dag."""
+    """Ensure that connecting a block doesn't create a loop in the dag."""
 
     p = PassThrough()
     a = Add(1)
 
     dag.connect(p, a, Connection('out_p', 'in_p'))
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(a, p, Connection('out_a', 'in_p'))
 
 def test_loop2(dag):
@@ -205,7 +205,7 @@ def test_loop2(dag):
 
     dag.connect(p, a1, Connection('out_p', 'in_a'))
     dag.connect(a1, a2, Connection('out_a', 'in_a'))
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(a2, p, Connection('out_a', 'in_p'))
 
 def test_loop3(dag):
@@ -219,7 +219,7 @@ def test_loop3(dag):
     dag.connect(p1, p2, Connection('out_p', 'in_p'))
     dag.connect(p2, p3, Connection('out_p', 'in_p'))
     dag.connect(p4, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(p3, p1, Connection('out_p', 'in_p'))
 
 def test_loop4(dag):
@@ -233,7 +233,7 @@ def test_loop4(dag):
     dag.connect(p2, p3, Connection('out_p', 'in_p'))
     dag.connect(p1, p2, Connection('out_p', 'in_p'))
     dag.connect(p4, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(p3, p1, Connection('out_p', 'in_p'))
 
 def test_nonloop1(dag):
@@ -245,7 +245,7 @@ def test_nonloop1(dag):
     dag.connect(gs[0], gs[1], Connection('out_p', 'in_p'))
 
 def test_must_connect(dag):
-    """Ensure that new gizmos are connected to existing gizmos."""
+    """Ensure that new blocks are connected to existing blocks."""
 
     p1 = PassThrough()
     p2 = PassThrough()
@@ -253,7 +253,7 @@ def test_must_connect(dag):
     p4 = PassThrough()
 
     dag.connect(p1, p2, Connection('out_p', 'in_p'))
-    with pytest.raises(GizmoError):
+    with pytest.raises(BlockError):
         dag.connect(p3, p4, Connection('out_p', 'in_p'))
 
 def test_sorted1(dag):
@@ -302,8 +302,8 @@ def test_onlychanged(dag):
     assert a.in_a == 0
     assert a.out_a == 1
 
-def test_call_gizmo():
-    """Ensure that we can call a gizmo directly."""
+def test_call_block():
+    """Ensure that we can call a block directly."""
 
     a = Add(1)
     result = a(in_a=5)

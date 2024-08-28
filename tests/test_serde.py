@@ -5,16 +5,16 @@
 
 import pytest
 
-from gizmo import Gizmo, Dag, Connection, GizmoError, Library
+from sier2 import Block, Dag, Connection, Library
 import param
 
-class P(Gizmo):
+class P(Block):
     """In and out parameters."""
 
     in_p = param.Number()
     out_p = param.Number()
 
-class Increment(Gizmo):
+class Increment(Block):
     """Increment the input."""
 
     in_i = param.Integer()
@@ -59,12 +59,12 @@ def test_serialise(dag):
     # pprint(dump)
     del dag
 
-    assert len(dump['gizmos']) == 4
+    assert len(dump['blocks']) == 4
     assert len(dump['connections']) == 3
 
-    incr_gizmos = [g for g in dump['gizmos'] if g['gizmo'].endswith('.Increment')]
-    assert len(incr_gizmos) == 2
-    assert set([g['args']['incr'] for g in incr_gizmos]) == set([2, 3])
+    incr_blocks = [g for g in dump['blocks'] if g['block'].endswith('.Increment')]
+    assert len(incr_blocks) == 2
+    assert set([g['args']['incr'] for g in incr_blocks]) == set([2, 3])
 
     # Gizmos must be in the library to be restored.
     #
@@ -75,8 +75,8 @@ def test_serialise(dag):
     #
     dag2 = Library.load_dag(dump)
 
-    first_g = dag2.gizmo_by_name(first_name)
-    last_g = dag2.gizmo_by_name(last_name)
+    first_g = dag2.block_by_name(first_name)
+    last_g = dag2.block_by_name(last_name)
 
     first_g.out_p = 1
     dag2.execute()

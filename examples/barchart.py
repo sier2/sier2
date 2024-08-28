@@ -1,20 +1,20 @@
 #
 
-# A demonstration of three gizmos.
-# - QueryGizmo emulates running a query and producing a dataframe and a column name.
-# - GroupByGizmo takes a dataframe and a column name, groups by the column,
+# A demonstration of three blocks.
+# - QueryBlock emulates running a query and producing a dataframe and a column name.
+# - GroupByBlock takes a dataframe and a column name, groups by the column,
 #   and outputs a dataframe, a category/column name, and a count/column name.
-# - BarChartGizmo takes those params and draws a horizontal bar chart.
+# - BarChartBlock takes those params and draws a horizontal bar chart.
 
 import pandas as pd
 import random
 import uuid
 
-from gizmo import Gizmo, Dag, Connection
+from sier2 import Block, Dag, Connection
 import param
 
-class QueryGizmo(Gizmo):
-    """A gizmo that performs a query and outputs a dataframe."""
+class QueryBlock(Block):
+    """A block that performs a query and outputs a dataframe."""
 
     out_df = param.DataFrame(
         label='Dataframe',
@@ -57,14 +57,14 @@ class QueryGizmo(Gizmo):
             'out_column': col
         })
 
-class GroupByGizmo(Gizmo):
+class GroupByBlock(Block):
     """A class that groups a dataframe by a specified column."""
 
     # Input params.
     #
     in_df = param.DataFrame(
         label='Input df',
-        doc='A dataframe from another gizmo'
+        doc='A dataframe from another block'
     )
     in_column = param.String(
         label='Group column',
@@ -104,8 +104,8 @@ class GroupByGizmo(Gizmo):
             'out_count': 'COUNT'
         })
 
-class BarChartGizmo(Gizmo):
-    """A gizmo that draws a horizontal bar chart."""
+class BarChartBlock(Block):
+    """A block that draws a horizontal bar chart."""
 
     # Input params.
     #
@@ -145,9 +145,9 @@ class BarChartGizmo(Gizmo):
 
         print()
 
-q = QueryGizmo()
-g = GroupByGizmo()
-b = BarChartGizmo()
+q = QueryBlock()
+g = GroupByBlock()
+b = BarChartBlock()
 
 dag = Dag(doc='Example: bar chart', title='bar chart')
 dag.connect(q, g,

@@ -2,7 +2,7 @@
 
 # Tutorial: gizmos with panel widgets.
 #
-from gizmo import Gizmo, Dag, Connection
+from gizmo import Block, Dag, Connection
 import param
 
 import random
@@ -12,7 +12,7 @@ import time
 import panel as pn
 pn.extension(inline=True)
 
-class UserInput(Gizmo):
+class UserInput(Block):
     """A gizmo that provides user input."""
 
     out_text = param.String(label='Input text', doc='Text to be translated')
@@ -39,7 +39,7 @@ class UserInput(Gizmo):
             sizing_mode='stretch_width'
         )
 
-class Translate(Gizmo):
+class Translate(Block):
     """A gizmo that transforms text.
 
     The text is split into paragraphs, then each word has its letters shuffled.
@@ -87,7 +87,7 @@ class Translate(Gizmo):
     def __panel__(self):
         return self.progress
 
-class Display(Gizmo):
+class Display(Block):
     """A gizmo that displays text."""
 
     in_text = param.String(label='Text', doc='Display text')

@@ -17,13 +17,13 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Gizmo'
+project = 'sier2'
 copyright = '2024, algol60'
 author = 'algol60'
 
 # The full version, including alpha/beta/rc tags
-import gizmo
-release = gizmo.__version__
+import sier2
+release = sier2.__version__
 
 
 # -- General configuration ---------------------------------------------------

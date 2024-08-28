@@ -6,37 +6,37 @@
 # **** NOT WORKING YET ****
 #
 
-from gizmo import Gizmo, Dag
+from gizmo import Block, Dag
 import param
 
-class ThisGizmo(Gizmo):
+class ThisGizmo(Block):
     # Inputs.
     #
     intp = param.Integer(label='An integer')
     strp = param.Integer(label='A string')
     dfp = param.DataFrame(label='A dataframe')
 
-class Gizmo1(Gizmo):
+class Gizmo1(Block):
     # Outputs.
     #
     dfp = param.DataFrame(label='A dataframe')
     intp = param.Integer(label='An integer')
     strp = param.Integer(label='A string')
 
-class Gizmo2(Gizmo):
+class Gizmo2(Block):
     # Outputs.
     #
     dataframep = param.DataFrame(label='A dataframe')
     numberp = param.Integer(label='An integer')
     boolp = param.Boolean(label='A boolean')
 
-class Gizmo3(Gizmo):
+class Gizmo3(Block):
     # Outputs.
     #
     nump = param.Integer(label='An integer')
     boolp = param.Boolean(label='A boolean')
 
-class Gizmo4(Gizmo):
+class Gizmo4(Block):
     # Outputs.
     #
     boolp = param.Boolean(label='A boolean')

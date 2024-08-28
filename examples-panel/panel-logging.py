@@ -1,9 +1,9 @@
-from gizmo import Gizmo,Dag, Connection
+from gizmo import Block,Dag, Connection
 from gizmo.panel import show_dag
 import panel as pn
 import param
 
-class NumberGizmo(Gizmo):
+class NumberGizmo(Block):
     """Take user input and output it."""
 
     out_number = param.Number(label='Output number', default=None, doc='Output number')
@@ -15,7 +15,7 @@ class NumberGizmo(Gizmo):
     def __panel__(self):
         return pn.widgets.FloatInput.from_param(self.param.out_number)
 
-class AddGizmo(Gizmo):
+class AddGizmo(Block):
     """Add two numbers.
 
     The action does not happen if either of the inputs is None.
@@ -50,7 +50,7 @@ class AddGizmo(Gizmo):
     def __panel__(self):
         return pn.widgets.FloatInput.from_param(self.param.out_result)
 
-class Display(Gizmo):
+class Display(Block):
     """Display a number."""
 
     in_result = param.Number(label='Result', default=None, doc='The result')

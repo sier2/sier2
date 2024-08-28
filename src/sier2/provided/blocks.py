@@ -4,11 +4,11 @@
 # These are here to demonstrate building a dag from a data structure.
 #
 
-from gizmo import Gizmo
+from sier2 import Block
 import param
 import random
 
-class RandomNumberGizmo(Gizmo):
+class RandomNumberBlock(Block):
     """Produce a random number.
 
     Uses random.randint() to produce an integer in 1 .. 100 inclusive.
@@ -28,16 +28,16 @@ class RandomNumberGizmo(Gizmo):
         print(f'Random: {n}')
         self.out_n = n
 
-class ConstantNumberGizmo(Gizmo):
-    """Produce a constant number specified when the gizmo is created."""
+class ConstantNumberBlock(Block):
+    """Produce a constant number specified when the block is created."""
 
     out_constant = param.Number(
         label='A constant number',
-        doc='A number determined at gizmo creation time'
+        doc='A number determined at block creation time'
     )
 
     def __init__(self, x, name=None, *args, **kwargs):
-        """Initialise the number. Use id(self) to allow two gizmos with the same constant."""
+        """Initialise the number. Use id(self) to allow two blocks with the same constant."""
 
         if name is None:
             name = f'Number{x}-{id(self)}'
@@ -48,7 +48,7 @@ class ConstantNumberGizmo(Gizmo):
     def go(self):
         self.out_constant = self.x
 
-class AddGizmo(Gizmo):
+class AddBlock(Block):
     """Add two numbers.
 
     The action does not happen if either of the inputs is None.

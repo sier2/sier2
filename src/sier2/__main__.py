@@ -2,15 +2,15 @@ import argparse
 from importlib.metadata import version
 from param.ipython import ParamPager
 
-from gizmo import Library
-from ._library import _find_gizmos, _find_dags, run_dag
+from sier2 import Library
+from ._library import _find_blocks, _find_dags, run_dag
 
-def gizmos_cmd(args):
-    """Display the gizmos found via plugin entry points."""
+def blocks_cmd(args):
+    """Display the blocks found via plugin entry points."""
 
     curr_ep = None
-    for entry_point, gi in _find_gizmos():
-        show = not args.gizmo or gi.key.endswith(args.gizmo)
+    for entry_point, gi in _find_blocks():
+        show = not args.block or gi.key.endswith(args.block)
         if curr_ep is None or entry_point!=curr_ep:
             if show:
                 s = f'In {entry_point.module} v{version(entry_point.module)}'
@@ -54,10 +54,10 @@ def main():
     run.add_argument('dag', type=str, help='A dag to run')
     run.set_defaults(func=run_cmd)
 
-    gizmos = subparsers.add_parser('gizmos', help='Show available gizmos')
-    gizmos.add_argument('-v', '--verbose', action='store_true', help='Show help')
-    gizmos.add_argument('gizmo', nargs='?', help='Show all gizmos ending with this string')
-    gizmos.set_defaults(func=gizmos_cmd)
+    blocks = subparsers.add_parser('blocks', help='Show available blocks')
+    blocks.add_argument('-v', '--verbose', action='store_true', help='Show help')
+    blocks.add_argument('block', nargs='?', help='Show all blocks ending with this string')
+    blocks.set_defaults(func=blocks_cmd)
 
     dags = subparsers.add_parser('dags', help='Show available dags')
     dags.add_argument('dag', nargs='?', help='Show all dags ending with this string')

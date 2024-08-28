@@ -1,6 +1,6 @@
 #
 
-# This demonstrates that two gizmos can provide inputs to a single gizmo.
+# This demonstrates that two blocks can provide inputs to a single block.
 #
 # - NumberGizmo outputs a number.
 # - AddGizmo takes outputs from two instances of NumberGizmo and adds them.
@@ -11,10 +11,10 @@
 
 import random
 
-from gizmo import Gizmo, Dag, Connection
+from sier2 import Block, Dag, Connection
 import param
 
-class NumberGizmo(Gizmo):
+class NumberBlock(Block):
     """Produce a random number."""
 
     out_n = param.Integer(
@@ -31,7 +31,7 @@ class NumberGizmo(Gizmo):
         print(f'{self.name}={r}')
         self.out_n = r
 
-class AddGizmo(Gizmo):
+class AddBlock(Block):
     """Add two numbers.
 
     The action does not happen if either of the inputs is None.
@@ -55,20 +55,20 @@ class AddGizmo(Gizmo):
         print(f'{self.in_a} + {self.in_b} = {self.in_a+self.in_b}')
 
 def main():
-    """Pretend to be a gizmo manager."""
+    """Pretend to be a block manager."""
 
-    nga = NumberGizmo(name='source-of-a')
-    ngb = NumberGizmo(name='source-of-b')
-    addg = AddGizmo()
+    nga = NumberBlock(name='source-of-a')
+    ngb = NumberBlock(name='source-of-b')
+    addg = AddBlock()
 
     dag = Dag(doc='Example: add numbers', title='add numbers')
     dag.connect(nga, addg, Connection('out_n', 'in_a'))
     dag.connect(ngb, addg, Connection('out_n', 'in_b'))
 
-    print(f'\nSet gizmo {nga}')
+    print(f'\nSet block {nga}')
     nga.go()
 
-    print(f'\nSet gizmo {ngb}')
+    print(f'\nSet block {ngb}')
     ngb.go()
 
     print()

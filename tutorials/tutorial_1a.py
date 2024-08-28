@@ -2,10 +2,10 @@
 
 # Tutorial that builds a translation dag.
 #
-from gizmo import Gizmo, Dag, Connection
+from gizmo import Block, Dag, Connection
 import param
 
-class UserInput(Gizmo):
+class UserInput(Block):
     """A gizmo that provides user input."""
 
     # Outputs.
@@ -13,7 +13,7 @@ class UserInput(Gizmo):
     out_text = param.String(label='User input', doc='Text to be translated')
     out_flag = param.Boolean(label='Transform flag', doc='Changes how text is translated')
 
-class Translate(Gizmo):
+class Translate(Block):
     """A gizmo that transforms text.
 
     The text is split into paragraphs, then each word has its letters shuffled.

@@ -3,7 +3,7 @@ import panel as pn
 import pandas as pd
 import random
 
-from gizmo import Gizmo, Dag, Connection
+from gizmo import Block, Dag, Connection
 import param
 
 MAX_HEIGHT = 10
@@ -19,7 +19,7 @@ def _make_df(max_height=MAX_HEIGHT) -> pd.DataFrame:
         columns=['Colors', 'Counts']
     )
 
-class Query(Gizmo):
+class Query(Block):
     """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
     out_df = param.DataFrame(default=None)
@@ -63,7 +63,7 @@ class QueryWidget(Query):
 
         return pn.Row(pn.Column(height, text), df_pane)
 
-class BarchartWidget(Gizmo):#, Viewer):
+class BarchartWidget(Block):#, Viewer):
     """A barchart widget.
 
     This could have been written as separate Gizmo + Viewer classes,

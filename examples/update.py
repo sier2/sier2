@@ -1,22 +1,22 @@
 #
 
-# A demonstration of gizmos and individual vs batch updates.
+# A demonstration of blocks and individual vs batch updates.
 #
 # Assigning values to outputs separately triggers an event for each assignment.
 # Assigning values to outputs using ``update()`` triggers a single event.
 #
 # Actually, things have changed since this example was first written.
 # Rather than show the differences, it now demonstrates that there is
-# no difference. All updates are batched as far as the gizmos are concerned.
+# no difference. All updates are batched as far as the blocks are concerned.
 #
 
 import param
-from gizmo import Gizmo, Dag, Connection
+from sier2 import Block, Dag, Connection
 
-class Gizmo1(Gizmo):
-    """A gizmo that creates pointless outputs.
+class Block1(Block):
+    """A block that creates pointless outputs.
 
-    This gizmo has no inputs.
+    This block has no inputs.
     """
 
     # Use param to specify outputs.
@@ -47,8 +47,8 @@ class Gizmo1(Gizmo):
 
         self.param.update({'out_a_string': s, 'out_length': len(s)})
 
-class Gizmo2(Gizmo):
-    """A gizmo that depends on the outputs of Gizmo1."""
+class Block2(Block):
+    """A block that depends on the outputs of Gizmo1."""
 
     in_length = param.Number(label='A number', doc='I am given this number')
     in_a_string = param.String(label='A string', doc='I am given this string')
@@ -59,10 +59,10 @@ class Gizmo2(Gizmo):
     def execute(self):
         print(f'Action in {self.__class__.__name__}: {self.in_a_string=} {self.in_length=}')
 
-# Get gizmo instances and connect them via their params.
+# Get block instances and connect them via their params.
 #
-g1 = Gizmo1(name='Input')
-g2 = Gizmo2(name='Output')
+g1 = Block1(name='Input')
+g2 = Block2(name='Output')
 
 dag = Dag(doc='Example: assign vs update', title='assign vs update')
 dag.connect(g1, g2,
@@ -70,7 +70,7 @@ dag.connect(g1, g2,
     Connection('out_length', 'in_length')
 )
 
-print('Entering a string in gizmo1 will cause output of two params to gizmo2.')
+print('Entering a string in block1 will cause output of two params to block2.')
 
 print('To see the difference between separate and batch updating;')
 print('S: strings that start with S will do separate assignments,')

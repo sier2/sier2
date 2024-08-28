@@ -6,18 +6,18 @@
 from pprint import pprint
 import random
 
-from gizmo import Library, Dag, Connection
-from gizmo.provided import AddGizmo, ConstantNumberGizmo
+from sier2 import Library, Dag, Connection
+from sier2.provided import AddBlock, ConstantNumberBlock
 
 def main():
     n1 = random.randint(1, 100)
     n2 = random.randint(1, 100)
 
-    r1 = ConstantNumberGizmo(n1)
-    r2 = ConstantNumberGizmo(n2)
-    ag = AddGizmo(name='adder')
+    r1 = ConstantNumberBlock(n1)
+    r2 = ConstantNumberBlock(n2)
+    ag = AddBlock(name='adder')
 
-    # Remember the names of the two number gizmos.
+    # Remember the names of the two number blocks.
     #
     r1name = r1.name
     r2name = r2.name
@@ -47,16 +47,16 @@ def main():
     # We now have a new dag that is the same as the old dag.
     # If we had a GUI, the user could now provide input to run the dag.
     # Instead, we'll do it manually. Technically this is cheating, because
-    # we shouldn't know what the gizmos are, but since we hard-coded them,
+    # we shouldn't know what the blocks are, but since we hard-coded them,
     # we can do it.
     #
     print('\nRun the dag loaded from the dump.')
 
-    # The number gizmos will have the same names as in the original dag.
+    # The number blocks will have the same names as in the original dag.
     #
-    r1 = dag_b.gizmo_by_name(r1name)
-    r2 = dag_b.gizmo_by_name(r2name)
-    ag = dag_b.gizmo_by_name(agname)
+    r1 = dag_b.block_by_name(r1name)
+    r2 = dag_b.block_by_name(r2name)
+    ag = dag_b.block_by_name(agname)
 
     r1.go()
     r2.go()

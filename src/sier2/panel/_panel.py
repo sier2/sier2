@@ -4,7 +4,7 @@ import panel as pn
 import sys
 import threading
 
-from gizmo import Gizmo, GizmoState, Dag, GizmoError
+from sier2 import Block, GizmoState, Dag, GizmoError
 from ._feedlogger import getDagPanelLogger, getGizmoPanelLogger
 from ._util import _get_state_color
 
@@ -19,7 +19,7 @@ def _hms(sec):
     return f'{h:02}:{m:02}:{sec:02}'
 
 # def _get_state_color(gs: GizmoState) -> str:
-#     """Convert a gizmo state to a color."""
+#     """Convert a block state to a color."""
 
 #     match gs:
 #         case GizmoState.LOG:
@@ -44,55 +44,55 @@ def _hms(sec):
 #     return color
 
 class _PanelContext:
-    """A context manager to wrap the execution of a gizmo within a dag.
+    """A context manager to wrap the execution of a block within a dag.
 
-    This default context manager handles the gizmo state, the stopper,
-    and converts gizmo execution errors to GimzoError exceptions.
+    This default context manager handles the block state, the stopper,
+    and converts block execution errors to GimzoError exceptions.
 
     It also uses the panel UI to provide extra information to the user.
     """
 
-    def __init__(self, *, gizmo: Gizmo, dag: Dag, dag_logger=None):
-        self.gizmo = gizmo
+    def __init__(self, *, block: Block, dag: Dag, dag_logger=None):
+        self.block = block
         self.dag = dag
         self.dag_logger = dag_logger
 
     def __enter__(self):
         state = GizmoState.EXECUTING
-        self.gizmo._gizmo_state = state
+        self.block._block_state = state
         self.t0 = datetime.now()
         if self.dag_logger:
-            self.dag_logger.info('Execute', gizmo_name=self.gizmo.name, gizmo_state=state)
+            self.dag_logger.info('Execute', block_name=self.block.name, block_state=state)
 
-        gizmo_logger = getGizmoPanelLogger(self.gizmo.name)
-        self.gizmo.logger = gizmo_logger
+        block_logger = getGizmoPanelLogger(self.block.name)
+        self.block.logger = block_logger
 
-        return self.gizmo
+        return self.block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         delta = (datetime.now() - self.t0).total_seconds()
         if exc_type is None:
-            state = GizmoState.WAITING if self.gizmo.user_input else GizmoState.SUCCESSFUL
-            self.gizmo._gizmo_state = state
+            state = GizmoState.WAITING if self.block.user_input else GizmoState.SUCCESSFUL
+            self.block._block_state = state
             if self.dag_logger:
-                self.dag_logger.info(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state.value)
+                self.dag_logger.info(f'after {_hms(delta)}', block_name=self.block.name, block_state=state.value)
         elif isinstance(exc_type, KeyboardInterrupt):
             state = GizmoState.INTERRUPTED
-            self.gizmo_state._gizmo_state = state
+            self.block_state._block_state = state
             self.dag._stopper.event.set()
             if self.dag_logger:
-                self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
+                self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', block_name=self.block.name, block_state=state)
         else:
             state = GizmoState.ERROR
-            self.gizmo._gizmo_state = state
+            self.block._block_state = state
             if self.dag_logger:
-                self.dag_logger.exception(f'after {_hms(delta)}', gizmo_name=self.gizmo.name, gizmo_state=state)
-            msg = f'While in {self.gizmo.name}.execute(): {exc_val}'
+                self.dag_logger.exception(f'after {_hms(delta)}', block_name=self.block.name, block_state=state)
+            msg = f'While in {self.block.name}.execute(): {exc_val}'
             self.dag._stopper.event.set()
 
-            # Convert the error in the gizmo to a GizmoError.
+            # Convert the error in the block to a GizmoError.
             #
-            raise GizmoError(f'Gizmo {self.gizmo.name}: {str(exc_val)}') from exc_val
+            raise GizmoError(f'Gizmo {self.block.name}: {str(exc_val)}') from exc_val
 
         return False
 
@@ -119,7 +119,7 @@ def interrupt_thread(tid, exctype):
 def show_dag(dag: Dag):
     # Replace the default context with the panel-based context.
     #
-    dag._gizmo_context = _PanelContext
+    dag._block_context = _PanelContext
 
     template = pn.template.BootstrapTemplate(
         site=dag.site,
@@ -196,10 +196,10 @@ def show_dag(dag: Dag):
     template.show(threaded=False)
 
 class GizmoCard(pn.Card):
-    """A custom card to wrap around a gizmo.
+    """A custom card to wrap around a block.
 
-    This adds the gizmo title and a status light to the card header.
-    The light updates to match the gizmo state.
+    This adds the block title and a status light to the card header.
+    The light updates to match the block state.
     """
 
     @staticmethod
@@ -213,7 +213,7 @@ class GizmoCard(pn.Card):
     #     """TODO connect this to the template"""
     #     print(message)
 
-    def __init__(self, *args, parent_template, dag: Dag, w: Gizmo, dag_logger=None, **kwargs):
+    def __init__(self, *args, parent_template, dag: Dag, w: Block, dag_logger=None, **kwargs):
         # Make this look like <h3> (the default Card header text).
         #
         name_text = pn.widgets.StaticText(
@@ -228,21 +228,21 @@ class GizmoCard(pn.Card):
         )
 
         if w.user_input:
-            # This is a user_input gizmo, so add a 'Continue' button.
+            # This is a user_input block, so add a 'Continue' button.
             #
             def on_continue(_event):
                 # The user may not have changed anything from the default values,
-                # so there won't be anything on the gizmo queue.
+                # so there won't be anything on the block queue.
                 # Therefore, we trigger the output params to put their
                 # current values on the queue.
                 # If their values are already there, it doesn't matter.
                 #
-                w.param.trigger(*w._gizmo_out_params)
+                w.param.trigger(*w._block_out_params)
                 parent_template.main[0].loading = True
                 try:
                     if dag_logger:
-                        dag_logger.info('', gizmo_name=None, gizmo_state=None)
-                        dag_logger.info('Execute dag', gizmo_name='', gizmo_state=GizmoState.DAG)
+                        dag_logger.info('', block_name=None, block_state=None)
+                        dag_logger.info('Execute dag', block_name='', block_state=GizmoState.DAG)
                     dag.execute(dag_logger=dag_logger)
                 finally:
                     parent_template.main[0].loading = False
@@ -264,17 +264,17 @@ class GizmoCard(pn.Card):
             name_text,
             pn.VSpacer(),
             spacer,
-            self._get_state_light(_get_state_color(w._gizmo_state))
+            self._get_state_light(_get_state_color(w._block_state))
         )
 
-        # Watch the gizmo state so we can update the staus light.
+        # Watch the block state so we can update the staus light.
         #
-        w.param.watch_values(self.state_change, '_gizmo_state')
+        w.param.watch_values(self.state_change, '_block_state')
 
-    def state_change(self, _gizmo_state: GizmoState):
-        """Watcher for the gizmo state.
+    def state_change(self, _block_state: GizmoState):
+        """Watcher for the block state.
 
         Updates the state light.
         """
 
-        self.header[-1] = self._get_state_light(_get_state_color(_gizmo_state))
+        self.header[-1] = self._get_state_light(_get_state_color(_block_state))

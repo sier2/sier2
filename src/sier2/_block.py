@@ -6,16 +6,16 @@ from collections import defaultdict
 
 from . import _logger
 
-class GizmoError(Exception):
-    """Raised if a Gizmo configuration is invalid."""
+class BlockError(Exception):
+    """Raised if a Block configuration is invalid."""
 
     pass
 
-class GizmoState(StrEnum):
-    """The current state of a gizmo; also used for logging."""
+class BlockState(StrEnum):
+    """The current state of a block; also used for logging."""
 
     DAG = 'DAG'                 # Dag logging.
-    GIZMO = 'GIZMO'             # Gizmo logging.
+    BLOCK = 'BLOCK'             # Block logging.
     INPUT = 'INPUT'
     READY = 'READY'
     EXECUTING = 'EXECUTING'
@@ -24,59 +24,59 @@ class GizmoState(StrEnum):
     INTERRUPTED = 'INTERRUPTED'
     ERROR = 'ERROR'
 
-class Gizmo(param.Parameterized):
-    """The base class for gizmos.
+class Block(param.Parameterized):
+    """The base class for blocks.
 
-    A gizmo is implemented as:
+    A block is implemented as:
 
     .. code-block:: python
 
-        class MyGizmo(Gizmo):
+        class MyBlock(Block):
             ...
 
-    A typical gizmo will have at least one input parameter, and an ``execute()``
+    A typical block will have at least one input parameter, and an ``execute()``
     method that is called when an input parameter value changes.
 
     .. code-block:: python
 
-        class MyGizmo(Gizmo):
+        class MyBlock(Block):
             value_in = param.String(label='Input Value')
 
             def execute(self):
                 print(f'New value is {self.value_in}')
     """
 
-    _gizmo_state = param.String(default=GizmoState.READY)
+    _block_state = param.String(default=BlockState.READY)
 
     def __init__(self, *args, user_input=False, **kwargs):
         super().__init__(*args, **kwargs)
 
         if not self.__doc__:
-            raise GizmoError(f'Class {self.__class__} must have a docstring')
+            raise BlockError(f'Class {self.__class__} must have a docstring')
 
         self.user_input = user_input
-        self._gizmo_state = GizmoState.INPUT if user_input else GizmoState.READY
+        self._block_state = BlockState.INPUT if user_input else BlockState.READY
         self.logger = _logger.get_logger(self.name)
 
-        # Maintain a map of "gizmo+output parameter being watched" -> "input parameter".
-        # This is used by _gizmo_event() to set the correct input parameter.
+        # Maintain a map of "block+output parameter being watched" -> "input parameter".
+        # This is used by _block_event() to set the correct input parameter.
         #
-        self._gizmo_name_map: dict[tuple[str, str], str] = {}
+        self._block_name_map: dict[tuple[str, str], str] = {}
 
-        # Record this gizmo's output parameters.
-        # If this is a user_input gizmo, we need to trigger
-        # the output values before executing the next gizmo,
+        # Record this block's output parameters.
+        # If this is a user_input block, we need to trigger
+        # the output values before executing the next block,
         # in case the user didn't change anything.
         #
-        self._gizmo_out_params = []
+        self._block_out_params = []
 
-        # self._gizmo_context = _EmptyContext()
+        # self._block_context = _EmptyContext()
 
     @classmethod
-    def gizmo_key(cls):
-        """The unique key of this gizmo class.
+    def block_key(cls):
+        """The unique key of this block class.
 
-        Gizmos require a unique key so they can be identified in the gizmo library.
+        Blocks require a unique key so they can be identified in the block library.
         The default implementation should be sufficient, but can be overridden
         in case of refactoring or name clashes.
         """
@@ -88,14 +88,14 @@ class Gizmo(param.Parameterized):
     def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.
 
-        Override this method in a Gizmo subclass.
+        Override this method in a Block subclass.
 
         The ``execute()`` method can have arguments. The arguments can be specified
         in any order. It is not necessary to specify all, or any, arguments.
         Arguments will not be passed via ``*args`` or ``**kwargs``.
 
         * ``stopper`` - an indicator that the dag has been stopped. This may be
-            set while the gizmo is executing, in which case the gizmo should
+            set while the block is executing, in which case the block should
             stop executing as soon as possible.
         * ``events`` - the param events that caused execute() to be called.
         """
@@ -104,12 +104,12 @@ class Gizmo(param.Parameterized):
         pass
 
     def __call__(self, **kwargs) -> dict[str, Any]:
-        """Allow a gizmo to be called directly."""
+        """Allow a block to be called directly."""
 
         in_names = [name for name in self.__class__.param if name.startswith('in_')]
         if len(kwargs)!=len(in_names) or any(name not in in_names for name in kwargs):
             names = ', '.join(in_names)
-            raise GizmoError(f'All input params must be specified: {names}')
+            raise BlockError(f'All input params must be specified: {names}')
 
         for name, value in kwargs.items():
             setattr(self, name, value)

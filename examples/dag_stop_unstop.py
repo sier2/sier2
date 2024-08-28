@@ -3,12 +3,12 @@
 # Demonstrate displaying a dag.
 #
 
-from gizmo import Gizmo, Dag, Connection
+from sier2 import Block, Dag, Connection
 import param
 import threading
 import time
 
-class Sleeper(Gizmo):
+class Sleeper(Block):
     """Sleep for a number of seconds specified by the input param.
 
     Sleeping is done one second at a time, so we can demonstrate disabling a dag.
@@ -41,7 +41,7 @@ class Sleeper(Gizmo):
 
 def runner(dag: Dag, sleep_time: int):
     print('Starting ...')
-    s0: Sleeper = dag.gizmo_by_name('s0')
+    s0: Sleeper = dag.block_by_name('s0')
     s0.out_time = sleep_time
     dag.execute()
 
