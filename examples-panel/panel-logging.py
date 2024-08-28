@@ -1,9 +1,9 @@
-from gizmo import Block,Dag, Connection
-from gizmo.panel import show_dag
+from sier2 import Block, Dag, Connection
+from sier2.panel import show_dag
 import panel as pn
 import param
 
-class NumberGizmo(Block):
+class NumberBlock(Block):
     """Take user input and output it."""
 
     out_number = param.Number(label='Output number', default=None, doc='Output number')
@@ -15,7 +15,7 @@ class NumberGizmo(Block):
     def __panel__(self):
         return pn.widgets.FloatInput.from_param(self.param.out_number)
 
-class AddGizmo(Block):
+class AddBlock(Block):
     """Add two numbers.
 
     The action does not happen if either of the inputs is None.
@@ -59,11 +59,11 @@ class Display(Block):
         return pn.widgets.FloatInput.from_param(self.param.in_result)
 
 if __name__=='__main__':
-    n1 = NumberGizmo(3, name='num1', user_input=True)
-    n2 = NumberGizmo(5, name='num2', user_input=True)
-    n3 = NumberGizmo(7,name='num3', user_input=True)
-    aa = AddGizmo(name='First add')
-    ab = AddGizmo(name='Second add')
+    n1 = NumberBlock(3, name='num1', user_input=True)
+    n2 = NumberBlock(5, name='num2', user_input=True)
+    n3 = NumberBlock(7,name='num3', user_input=True)
+    aa = AddBlock(name='First add')
+    ab = AddBlock(name='Second add')
     display = Display()
 
     dag = Dag(site='examples', title='Logging', doc='Demonstrate logging')

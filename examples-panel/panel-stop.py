@@ -7,8 +7,8 @@ import threading
 import time
 import ctypes
 
-from gizmo import Block, Dag, Connection
-from gizmo.panel import show_dag
+from sier2 import Block, Dag, Connection
+from sier2.panel import show_dag
 import param
 
 NTHREADS = 2
@@ -105,11 +105,11 @@ def main():
     b1 = ProgressWidget(name='Progress1')
     b2 = ProgressWidget(name='Progress2')
 
-    dag = Dag(doc='Example: stopping and unstopping a dag in panel')
+    dag = Dag(title='Stop / Unstop', doc='Example: stopping and unstopping a dag in panel')
     dag.connect(q, b1, Connection('out_timer', 'in_timer'))
     dag.connect(b1, b2, Connection('out_timer', 'in_timer'))
 
-    show_dag(dag, site='Example stopper', title='demonstrate stopping a dag')
+    show_dag(dag)
 
     # switch = pn.widgets.Switch(name='Stop')
 

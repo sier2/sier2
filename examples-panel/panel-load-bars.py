@@ -11,8 +11,8 @@ import json
 from pathlib import Path
 import tempfile
 
-from gizmo import Library
-from gizmo.panel import show_dag
+from sier2 import Library
+from sier2.panel import show_dag
 
 from _panel_widgets import QueryWidget, BarchartWidget
 
@@ -35,7 +35,7 @@ def main():
     dag = Library.load_dag(dump)
     title = dump['panel']['title']
 
-    show_dag(dag, site='Barchart dag', title=title)
+    show_dag(dag)
 
 if __name__=='__main__':
     # Gizmos that are loaded from a dumped dag must be in the dag library.

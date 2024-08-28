@@ -4,8 +4,8 @@ import panel as pn
 import sys
 import threading
 
-from sier2 import Block, GizmoState, Dag, GizmoError
-from ._feedlogger import getDagPanelLogger, getGizmoPanelLogger
+from sier2 import Block, BlockState, Dag, BlockError
+from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._util import _get_state_color
 
 NTHREADS = 2
@@ -17,31 +17,6 @@ def _hms(sec):
     m, sec = divmod(sec, 60)
 
     return f'{h:02}:{m:02}:{sec:02}'
-
-# def _get_state_color(gs: GizmoState) -> str:
-#     """Convert a block state to a color."""
-
-#     match gs:
-#         case GizmoState.LOG:
-#             color = 'grey'
-#         case GizmoState.INPUT:
-#             color = '#f0c820'
-#         case GizmoState.READY:
-#             color='white'
-#         case GizmoState.EXECUTING:
-#             color='steelblue'
-#         case GizmoState.WAITING:
-#             color='yellow'
-#         case GizmoState.SUCCESSFUL:
-#             color = 'green'
-#         case GizmoState.INTERRUPTED:
-#             color= 'orange'
-#         case GizmoState.ERROR:
-#             color = 'red'
-#         case _:
-#             color = 'magenta'
-
-#     return color
 
 class _PanelContext:
     """A context manager to wrap the execution of a block within a dag.
@@ -58,13 +33,13 @@ class _PanelContext:
         self.dag_logger = dag_logger
 
     def __enter__(self):
-        state = GizmoState.EXECUTING
+        state = BlockState.EXECUTING
         self.block._block_state = state
         self.t0 = datetime.now()
         if self.dag_logger:
             self.dag_logger.info('Execute', block_name=self.block.name, block_state=state)
 
-        block_logger = getGizmoPanelLogger(self.block.name)
+        block_logger = getBlockPanelLogger(self.block.name)
         self.block.logger = block_logger
 
         return self.block
@@ -72,27 +47,27 @@ class _PanelContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         delta = (datetime.now() - self.t0).total_seconds()
         if exc_type is None:
-            state = GizmoState.WAITING if self.block.user_input else GizmoState.SUCCESSFUL
+            state = BlockState.WAITING if self.block.user_input else BlockState.SUCCESSFUL
             self.block._block_state = state
             if self.dag_logger:
                 self.dag_logger.info(f'after {_hms(delta)}', block_name=self.block.name, block_state=state.value)
         elif isinstance(exc_type, KeyboardInterrupt):
-            state = GizmoState.INTERRUPTED
+            state = BlockState.INTERRUPTED
             self.block_state._block_state = state
             self.dag._stopper.event.set()
             if self.dag_logger:
                 self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', block_name=self.block.name, block_state=state)
         else:
-            state = GizmoState.ERROR
+            state = BlockState.ERROR
             self.block._block_state = state
             if self.dag_logger:
                 self.dag_logger.exception(f'after {_hms(delta)}', block_name=self.block.name, block_state=state)
             msg = f'While in {self.block.name}.execute(): {exc_val}'
             self.dag._stopper.event.set()
 
-            # Convert the error in the block to a GizmoError.
+            # Convert the error in the block to a BlockError.
             #
-            raise GizmoError(f'Gizmo {self.block.name}: {str(exc_val)}') from exc_val
+            raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
         return False
 
@@ -125,7 +100,7 @@ def show_dag(dag: Dag):
         site=dag.site,
         title=dag.title,
         theme='dark',
-        sidebar=pn.Column('## Gizmos'),
+        sidebar=pn.Column('## Blocks'),
         collapsed_sidebar=True,
         sidebar_width=440
     )
@@ -180,7 +155,7 @@ def show_dag(dag: Dag):
     dag_logger = getDagPanelLogger(log_feed)
     template.main.append(
         pn.Column(
-            *(GizmoCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted())
+            *(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted())
         )
     )
     template.sidebar.append(
@@ -195,7 +170,7 @@ def show_dag(dag: Dag):
 
     template.show(threaded=False)
 
-class GizmoCard(pn.Card):
+class BlockCard(pn.Card):
     """A custom card to wrap around a block.
 
     This adds the block title and a status light to the card header.
@@ -242,7 +217,7 @@ class GizmoCard(pn.Card):
                 try:
                     if dag_logger:
                         dag_logger.info('', block_name=None, block_state=None)
-                        dag_logger.info('Execute dag', block_name='', block_state=GizmoState.DAG)
+                        dag_logger.info('Execute dag', block_name='', block_state=BlockState.DAG)
                     dag.execute(dag_logger=dag_logger)
                 finally:
                     parent_template.main[0].loading = False
@@ -271,7 +246,7 @@ class GizmoCard(pn.Card):
         #
         w.param.watch_values(self.state_change, '_block_state')
 
-    def state_change(self, _block_state: GizmoState):
+    def state_change(self, _block_state: BlockState):
         """Watcher for the block state.
 
         Updates the state light.

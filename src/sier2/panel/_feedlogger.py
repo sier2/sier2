@@ -143,7 +143,7 @@ class BlockPanelAdapter(logging.LoggerAdapter):
 
         return msg, kwargs
 
-def getGizmoPanelLogger(block_name: str):
+def getBlockPanelLogger(block_name: str):
     """A logger for blocks.
 
     The dag gets its logger first, so we can reuse _logger."""

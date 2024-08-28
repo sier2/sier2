@@ -3,7 +3,7 @@ import panel as pn
 import pandas as pd
 import random
 
-from gizmo import Block, Dag, Connection
+from sier2 import Block#, Dag, Connection
 import param
 
 MAX_HEIGHT = 10
@@ -20,7 +20,7 @@ def _make_df(max_height=MAX_HEIGHT) -> pd.DataFrame:
     )
 
 class Query(Block):
-    """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
+    """A plain Python block that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
     out_df = param.DataFrame(default=None)
 
@@ -30,7 +30,7 @@ class Query(Block):
         self.out_df = _make_df(max_height)
 
 class QueryWidget(Query):
-    """An example gizmo widget.
+    """An example block widget.
 
     Moving the slider causes Query.query() to be called with the value of the slider.
     """
@@ -43,7 +43,7 @@ class QueryWidget(Query):
             but pn.bind() expects a function that does return a value.
             This function just returns the output param.
             (Yes, I could have written Query.query() to return a value,
-            but a plain Python gizmo wouldn't do that, so I'm demonstrating that
+            but a plain Python block wouldn't do that, so I'm demonstrating that
             it's easy to make it work.)
             """
 
@@ -66,7 +66,7 @@ class QueryWidget(Query):
 class BarchartWidget(Block):#, Viewer):
     """A barchart widget.
 
-    This could have been written as separate Gizmo + Viewer classes,
+    This could have been written as separate Block + Viewer classes,
     but since the only thing this does is display a HoloViews Chart, why bother.
     """
 
