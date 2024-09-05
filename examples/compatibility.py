@@ -1,12 +1,12 @@
 #
 
-# Demonstrate finding gizmos that have compatible outputs.
-# An output is compatible with this gizmos inputs by type.
+# Demonstrate finding blocks that have compatible outputs.
+# An output is compatible with this blocks inputs by type.
 #
 # **** NOT WORKING YET ****
 #
 
-from gizmo import Block, Dag
+from sier2 import Block, Dag
 import param
 
 class ThisGizmo(Block):

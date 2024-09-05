@@ -2,7 +2,9 @@ Sier2
 ======
 
 Connect modular pieces of Python code ("blocks") into
-a processing dag pipeline.
+a processing dag pipeline. Blocks are an improvement on libraries;
+if you have a library, you still need to build an application.
+Blocks are pieces of an application, you just have to connect them.
 
 See the ``examples`` directory for examples.
 

@@ -15,5 +15,5 @@ dependencies = [
 where = ["src"]
 include = ["block_examples"]
 
-[project.entry-points."block.library"]
+[project.entry-points."sier2.library"]
 export = "block_examples:info"

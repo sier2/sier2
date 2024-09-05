@@ -34,7 +34,7 @@ def interrupt_thread(tid, exctype):
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
 class QueryWidget(Block):
-    """A plain Python gizmo that accepts a "query" (a maximum count value) and outputs a dataframe."""
+    """A plain Python block that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
     out_timer = param.Integer(default=5, bounds=(1, 10))
 
@@ -139,7 +139,7 @@ def main():
 
     # def wrap(w: Gizmo):
     #     running_status = pn.indicators.BooleanStatus(value=False, color='primary', align=('end', 'center'))
-    #     w._gizmo_context = StatusContext(running_status)
+    #     w._block_context = StatusContext(running_status)
     #     return pn.Card(
     #         w,
     #         header=pn.Row(

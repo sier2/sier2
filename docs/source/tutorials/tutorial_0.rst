@@ -1,66 +1,43 @@
-Tutorial part 0 - Gizmo
+Tutorial part 0 - Block
 =======================
 
-This is the first in a series of tutorials that explains gizmos and dags,
+This is the first in a series of tutorials that explains blocks and dags,
 and how to use them to build applications.
 
-We suggest that you create a new Python script file and follow along,
-so you can see how gizmos work.
-If things go wrong, copies of the tutorial scripts are in the ``tutorials``
-directory.
+The tutorial Python scripts are in the ``tutorials`` directory.
+Open each tutorial script in your favourite editor so you can refer
+to the code while reading the tutorial.
 
-Gizmos
+Blocks
 ------
 
-A gizmo is a unit of Python code that performs a specific action:
+A block is a unit of Python code that performs a specific action:
 adding two numbers, querying a database, or displaying data.
 
-Gizmos pass input and output values using a Python library called ``param``
+Blocks pass input and output values using a Python library called ``param``
 (see `the param web site <https://param.holoviz.org>`_). You don't need to
-know the details of how to use params - gizmos take care of the complexity.
+know the details of how to use params - blocks take care of the complexity.
 Tou just need to know how to declare params as inputs or outputs.
 
-Gizmos are implemented as Python classes. A gizmo must:
+Blocks are implemented as Python classes. A block:
 
-* be a subclass of ``Gizmo``;
-* have at least one input or output param;
-* input param names must start with ``in_``; output param names must start with ``out_``;
-* have an optional ``execute()`` method.
+* must be a subclass of ``Block``;
+* must have at least one input or output param - input param names must start with ``in_``, output param names must start with ``out_``;
+* may have an ``execute()`` method.
 
-Here is a simple gizmo that adds one to its input.
+The module ``tutorial_0a.py`` contains a simple block that adds one to its input.
 
-.. code-block:: python
-
-    from gizmo import Gizmo
-    import param
-
-    class AddOne(Gizmo):
-        """A gizmo that adds one to its input."""
-
-        in_a = param.Integer()
-        out_a = param.Integer()
-
-        def execute(self):
-            self.out_a = self.in_a + 1
-
-The class ``AddOne`` is a subclass of ``Gizmo``. It has two params:
+The class ``AddOne`` is a subclass of ``Block``. It has two params:
 an input param called ``in_a`` and an output param called ``out_a``.
-Both of these params are declared as type integer; we'll see why this matters
-below.
+Both of these params are declared as type ``param.Integer``; we'll see why this
+matters below.
 
-The ``execute()`` method defines what the gizmo does. In this case, the output
+The ``execute()`` method defines what the block does. In this case, the output
 param (``self.out_a``) is set to the input param plus one (``self.in_a + 1``).
 
-We can test our gizmo by creating an instance of ``AddOne``, setting the
+We can test our block by creating an instance of ``AddOne``, setting the
 value of the input param, calling ``execute()``, and displaying the value of
 the output param.
-
-.. code-block:: python
-
-    a1_gizmo = AddOne()
-    a1_gizmo.in_a = 3
-    a1_gizmo.execute()
-    print(a1_gizmo.out_a)
 
 The output is:
 
@@ -68,19 +45,20 @@ The output is:
 
     4
 
-Gizmos provide a short cut that does the same thing.
+Blocks provide a short cut that does the same thing. A ``Block`` instance
+is callable: calling the instance with keyword parameters corresponding
+to the input params will set the input params, call ``execute()``, and return
+a dictionary containing the output params and their values.
 
-.. code-block:: python
-
-    print(a1_gizmo(in_a=3))
-
-Calling the gizmo instance with the input params as keyword arguments will
-set the inputs, call ``execute()``, and return the result as a dictionary
-where the keys are the output param names. The output is:
+The output is:
 
 .. code-block:: text
 
     {'out_a': 4}
+
+.. note::
+
+    To see this dag in action, run ``tutorials/tutorial_0a.py``.
 
 Param types
 -----------

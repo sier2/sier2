@@ -2,20 +2,20 @@
 
 # Tutorial that builds a translation dag.
 #
-from gizmo import Block, Dag, Connection
+from sier2 import Block, Dag, Connection
 import param
 
 import random
 import re
 
 class UserInput(Block):
-    """A gizmo that provides user input."""
+    """A block that provides user input."""
 
     out_text = param.String(label='User input', doc='Text to be translated')
     out_flag = param.Boolean(label='Transform flag', doc='Changes how text is transformed')
 
 class Translate(Block):
-    """A gizmo that transforms text.
+    """A block that transforms text.
 
     The text is split into paragraphs, then each word has its letters shuffled.
     If flag is set, capitalise each word.
@@ -33,12 +33,12 @@ class Translate(Block):
         if self.in_flag:
             para_words = [[word.capitalize() for word in para] for para in para_words]
 
-        text = '\n\n'.join(' '.join(word for word in para) for para in para_words)
+        text = '\n'.join(' '.join(word for word in para) for para in para_words)
 
         self.out_text = text
 
 class Display(Block):
-    """A gizmo that displays text."""
+    """A block that displays text."""
 
     in_text = param.String(label='Text', doc='Display text')
 

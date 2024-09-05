@@ -1,6 +1,6 @@
-from gizmo import Info
+from sier2 import Info
 
-def gizmos():
+def blocks():
     info = [
         Info(f'{__package__}.tutorial_3b.UserInput', 'A text area and flag for input.'),
         Info(f'{__package__}.tutorial_3b.Translate', 'Translate text to English.'),

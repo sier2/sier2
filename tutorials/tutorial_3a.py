@@ -1,15 +1,15 @@
 #
 
-# Tutorial: UserInput gizmo with a panel widget.
+# Tutorial: UserInput block with a panel widget.
 #
-from gizmo import Block, Dag, Connection
+from sier2 import Block, Dag, Connection
 import param
 
 import panel as pn
 pn.extension(inline=True)
 
 class UserInput(Block):
-    """A gizmo that provides user input."""
+    """A block that provides user input."""
 
     out_text = param.String(label='Input text', doc='Text to be translated')
     out_flag = param.Boolean(label='Capitalise', doc='Changes how text is transformed')

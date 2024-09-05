@@ -1,8 +1,8 @@
 #
 
-# Tutorial: gizmos with panel widgets.
+# Tutorial: blocks with panel widgets.
 #
-from gizmo import Block, Dag, Connection
+from sier2 import Block, Dag, Connection
 import param
 
 import random
@@ -13,7 +13,7 @@ import panel as pn
 pn.extension(inline=True)
 
 class UserInput(Block):
-    """A gizmo that provides user input."""
+    """A block that provides user input."""
 
     out_text = param.String(label='Input text', doc='Text to be translated')
     out_flag = param.Boolean(label='Capitalise', doc='Changes how text is transformed')
@@ -40,7 +40,7 @@ class UserInput(Block):
         )
 
 class Translate(Block):
-    """A gizmo that transforms text.
+    """A block that transforms text.
 
     The text is split into paragraphs, then each word has its letters shuffled.
     If flag is set, capitlaize each word.
@@ -88,7 +88,7 @@ class Translate(Block):
         return self.progress
 
 class Display(Block):
-    """A gizmo that displays text."""
+    """A block that displays text."""
 
     in_text = param.String(label='Text', doc='Display text')
 

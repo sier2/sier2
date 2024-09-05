@@ -53,14 +53,14 @@ def run_dag(dag_name):
     func()
 
 def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
-    """Use ``importlib.metadata.entry_points`` to look up entry points named ``block.library``.
+    """Use ``importlib.metadata.entry_points`` to look up entry points named ``sier2.library``.
 
     For each entry point, call ``load()`` to get a module,
     then call ``getattr(module, func_name)()`` to get a list of
     ``GizmoInfo`` instances.
     """
 
-    library = entry_points(group='block.library')
+    library = entry_points(group='sier2.library')
 
     for entry_point in library:
         try:

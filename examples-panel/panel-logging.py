@@ -29,11 +29,11 @@ class AddBlock(Block):
     #     super().__init__(*args, **kwargs)
 
     def execute(self):
-        self.logger.debug('Execute gizmo (debug)')
-        self.logger.info('Execute gizmo (info)')
-        self.logger.warning('Execute gizmo (warning)')
-        self.logger.error('Execute gizmo (error)')
-        self.logger.critical('Execute gizmo (critical)')
+        self.logger.debug('Execute block (debug)')
+        self.logger.info('Execute block (info)')
+        self.logger.warning('Execute block (warning)')
+        self.logger.error('Execute block (error)')
+        self.logger.critical('Execute block (critical)')
 
         self.logger.warning('Execute %s', self.name)
         self.logger.info('Inputs: a=%s b=%s', self.in_a, self.in_b)
