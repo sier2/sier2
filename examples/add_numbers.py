@@ -2,10 +2,10 @@
 
 # This demonstrates that two blocks can provide inputs to a single block.
 #
-# - NumberGizmo outputs a number.
-# - AddGizmo takes outputs from two instances of NumberGizmo and adds them.
+# - NumberBlock outputs a number.
+# - AddBlock takes outputs from two instances of NumberBlock and adds them.
 #
-# AddGizmo must allow for either or both of the inputs being None, and only
+# AddBlock must allow for either or both of the inputs being None, and only
 # continue if both inputs are valid.
 #
 

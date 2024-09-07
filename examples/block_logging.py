@@ -2,7 +2,7 @@
 
 # Demonstrate how to do logging in a block.
 #
-# Gizmos are provided with a logger in self.logger.
+# Blocks are provided with a logger in self.logger.
 # This is a stanndard Python logger implemented using the logger module,
 # so read the Python documentation for details.
 #
@@ -15,12 +15,12 @@ from sier2 import Block, Dag, Connection
 import param
 import logging
 
-class NumberGizmo(Block):
+class NumberBlock(Block):
     """Take user input and output it."""
 
     out_number = param.Number(label='Output number', default=None, doc='Output number')
 
-class AddGizmo(Block):
+class AddBlock(Block):
     """Add two numbers.
 
     The action does not happen if either of the inputs is None.
@@ -54,11 +54,11 @@ class Display(Block):
     in_result = param.Number(label='Result', default=None, doc='The result')
 
 if __name__=='__main__':
-    n1 = NumberGizmo()
-    n2 = NumberGizmo()
-    n3 = NumberGizmo(user_input=True)
-    aa = AddGizmo(name='First add')
-    ab = AddGizmo(name='Second add')
+    n1 = NumberBlock()
+    n2 = NumberBlock()
+    n3 = NumberBlock(user_input=True)
+    aa = AddBlock(name='First add')
+    ab = AddBlock(name='Second add')
     display = Display()
     # display.logger.setLevel(logging.INFO)
 

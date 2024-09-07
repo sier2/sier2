@@ -67,14 +67,14 @@ class _BlockContext:
         elif isinstance(exc_type, KeyboardInterrupt):
             self.block_state._block_state = BlockState.INTERRUPTED
             self.dag._stopper.event.set()
-            print(f'KEYBOARD INTERRUPT IN GIZMO {self.name}')
+            print(f'KEYBOARD INTERRUPT IN BLOCK {self.name}')
         else:
             self.block._block_state = BlockState.ERROR
             msg = f'While in {self.block.name}.execute(): {exc_val}'
             # LOGGER.exception(msg)
             self.dag._stopper.event.set()
 
-            # Convert the error in the block to a GizmoError.
+            # Convert the error in the block to a BlockError.
             #
             raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
@@ -125,12 +125,12 @@ class Dag:
                     yield g
 
     def stop(self):
-        """Stop further execution of Gizmo instances in this dag."""
+        """Stop further execution of Block instances in this dag."""
 
         self._stopper.event.set()
 
     def unstop(self):
-        """Enable further execution of Gizmo instances in this dag."""
+        """Enable further execution of Block instances in this dag."""
 
         self._stopper.event.clear()
 
@@ -170,7 +170,7 @@ class Dag:
         for conn in connections:
             # dst_param = getattr(dst.param, conn.dst_param_name)
             # if dst_param.allow_refs:
-            #     raise GizmoError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
+            #     raise BlockError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
 
             src_param = getattr(src.param, conn.src_param_name)
             if src_param.allow_refs:
@@ -269,7 +269,7 @@ class Dag:
 
         Parameters
         ----------
-        g: Gizmo
+        g: Block
             The block to be disconnected.
         """
 
@@ -316,7 +316,7 @@ class Dag:
 
         Returns
         -------
-        dict[Gizmo, int]
+        dict[Block, int]
             A mapping of block to rank
         """
 

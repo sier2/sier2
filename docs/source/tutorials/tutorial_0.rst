@@ -69,7 +69,7 @@ to an input parameter, ``param`` will raise an error.
 
 .. code-block:: python
 
-    a1_gizmo.in_a = 'x'
+    a1_block.in_a = 'x'
 
 .. code-block:: text
 

@@ -1,42 +1,31 @@
-Tutorial part 6 - dumoing a dag
-===============================
+Tutorial part 6 - dag library
+=============================
 
-In this tutorial, we find out how to dump a dag to a file,
-and run the app from that file.
+In this tutorial, we find out how to use the dag library to
+run a pre-defined dag.
 
-We now have a fully functioning app, using gizmos from the library,
-which in turn has found them in their pip installed package.
+In the previous tutorial, we installed the ``sier2-examples`` package,
+which defined some blocks we used in our dag. The package also contains
+a pre-defined dag, which we can run directly without writing any Python code.
 
-We'll reuse the code from ``tutorial_5b.py``, but instead of showing the dag,
-we do this.
-
-.. code:: python
-
-    dumped_dag = dag.dump()
-
-    import json
-    from pathlib import Path
-    import tempfile
-
-    p = Path(tempfile.gettempdir()) / 'translate.dag'
-    print(f'Saving dag to {p} ...')
-    with open(p, 'w', encoding='utf-8') as f:
-        json.dump(dumped_dag, f, indent=2)
-
-This dumps the dag to a data structure (which happens to be JSON),
-then saves that structure to a file.
-
-.. note::
-
-    To see this dag in action, run ``tutorials/tutorial_6a.py``.
-
-When run, the script prints the path of the file containing the saved dag.
-
-Now we can run the application using the saved dag. Substitute the path of
-the saved dag.
+To see the dags that the dag library knows about, run the command below.
 
 .. code:: bash
 
-    python -m gizmo panel <saved file>
+    python -m sier2 dags
 
-The application should be displayed in your browser.
+The output should be similar to:
+
+.. code:: text
+
+    In sier2_examples v0.13.3
+    sier2_examples.dag_library.translate_dag: Translation app
+
+To run the dag, we use the ``sier2`` ``run`` command, specifying the
+name of the dag. We can just use the last part of the dag name; we only
+need to use the full name if another library defines a dag called
+``translate_dag``.
+
+.. code:: bash
+
+    python -m sier2 run translate_dag

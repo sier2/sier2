@@ -1,5 +1,5 @@
-from gizmo import Dag, Connection
-from gizmo.panel import show_dag
+from sier2 import Dag, Connection
+from sier2.panel import show_dag
 
 from tutorial_3b import UserInput, Translate, Display
 

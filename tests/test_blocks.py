@@ -127,23 +127,23 @@ def test_disconnect(dag):
 
     dag.disconnect(a)
 
-    # Gizmo a is no longer watching b.b_out.
+    # Block a is no longer watching b.b_out.
     #
     assert n_watchers(p, 'out_p') == 1
 
-    # Gizmo t is no longer watching a.a_out.
+    # Block t is no longer watching a.a_out.
     #
     assert n_watchers(a, 'in_a') == 0
     assert n_watchers(a, 'out_a') == 0
 
-    # Gizmo t is still not being watched.
+    # Block t is still not being watched.
     #
     assert len(t.param.watchers) == 0
 
     assert len(a._block_name_map) == 0
 
-    # Gizmo a is no longer watching b.b_out.
-    # Gizmo t is still watching b.b_out.
+    # Block a is no longer watching b.b_out.
+    # Block t is still watching b.b_out.
     #
     p.out_p = 5
     dag.execute()

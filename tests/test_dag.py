@@ -36,7 +36,7 @@ def test_no_inputs(dag):
         dag.execute()
 
 def test_mismatched_types(dag):
-    """Ensure that mismatched parameter values can't be assigned, and raise a GizmoError."""
+    """Ensure that mismatched parameter values can't be assigned, and raise a BlockError."""
 
     class OneOut(Block):
         """One output parameter."""
@@ -57,7 +57,7 @@ def test_mismatched_types(dag):
         dag.execute()
 
 def test_block_exception(dag):
-    """Ensure that exceptions in a block raise a GizmoError."""
+    """Ensure that exceptions in a block raise a BlockError."""
 
     class OneOut(Block):
         """One output parameter."""
@@ -138,7 +138,7 @@ def test_user_input(dag):
 def test_block_state(dag):
     """Ensure that block states are set correctly."""
 
-    class IncrementGizmo(Block):
+    class IncrementBlock(Block):
         """Increment the input."""
 
         in_p = param.Integer(default=0)
@@ -147,11 +147,11 @@ def test_block_state(dag):
         def execute(self):
             self.out_p = self.in_p + 1
 
-    inc0 = IncrementGizmo(name='inc0')
-    inc1 = IncrementGizmo(name='inc1')
-    inc2 = IncrementGizmo(name='inc2', user_input=True)
-    inc3 = IncrementGizmo(name='inc3')
-    inc4 = IncrementGizmo(name='inc4')
+    inc0 = IncrementBlock(name='inc0')
+    inc1 = IncrementBlock(name='inc1')
+    inc2 = IncrementBlock(name='inc2', user_input=True)
+    inc3 = IncrementBlock(name='inc3')
+    inc4 = IncrementBlock(name='inc4')
 
     dag.connect(inc0, inc1, Connection('out_p', 'in_p'))
     dag.connect(inc1, inc2, Connection('out_p', 'in_p'))

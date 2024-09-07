@@ -9,44 +9,44 @@
 from sier2 import Block, Dag
 import param
 
-class ThisGizmo(Block):
+class ThisBlock(Block):
     # Inputs.
     #
     intp = param.Integer(label='An integer')
     strp = param.Integer(label='A string')
     dfp = param.DataFrame(label='A dataframe')
 
-class Gizmo1(Block):
+class Block1(Block):
     # Outputs.
     #
     dfp = param.DataFrame(label='A dataframe')
     intp = param.Integer(label='An integer')
     strp = param.Integer(label='A string')
 
-class Gizmo2(Block):
+class Block2(Block):
     # Outputs.
     #
     dataframep = param.DataFrame(label='A dataframe')
     numberp = param.Integer(label='An integer')
     boolp = param.Boolean(label='A boolean')
 
-class Gizmo3(Block):
+class Block3(Block):
     # Outputs.
     #
     nump = param.Integer(label='An integer')
     boolp = param.Boolean(label='A boolean')
 
-class Gizmo4(Block):
+class Block4(Block):
     # Outputs.
     #
     boolp = param.Boolean(label='A boolean')
 
 if __name__=='__main__':
-    thisg = ThisGizmo()
+    thisg = ThisBlock()
 
-    g1 = Gizmo1()
-    g2 = Gizmo2()
-    g3 = Gizmo3()
+    g1 = Block1()
+    g2 = Block2()
+    g3 = Block3()
 
     from pprint import pprint
     pprint(Dag.compatible_outputs(thisg, g1))

@@ -97,7 +97,7 @@ def main():
         title=title,
         theme='dark',
         site='PoC ',
-        sidebar=pn.Column('## Gizmos'),
+        sidebar=pn.Column('## Blocks'),
         collapsed_sidebar=True
     )
 
@@ -137,7 +137,7 @@ def main():
 
     # pn.bind(on_switch, switch, watch=True)
 
-    # def wrap(w: Gizmo):
+    # def wrap(w: Block):
     #     running_status = pn.indicators.BooleanStatus(value=False, color='primary', align=('end', 'center'))
     #     w._block_context = StatusContext(running_status)
     #     return pn.Card(

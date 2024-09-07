@@ -2,9 +2,9 @@ from sier2 import Info
 
 def blocks() -> list[Info]:
     return [
-        Info(f'{__package__}.blocks.RandomNumberGizmo', 'Random number generator'),
-        Info(f'{__package__}.blocks.ConstantNumberGizmo', 'Constant number generator'),
-        Info(f'{__package__}.blocks.AddGizmo', 'Add two numbers')
+        Info(f'{__package__}.blocks.RandomNumberBlock', 'Random number generator'),
+        Info(f'{__package__}.blocks.ConstantNumberBlock', 'Constant number generator'),
+        Info(f'{__package__}.blocks.AddBlock', 'Add two numbers')
     ]
 
 def dags() -> list[Info]:

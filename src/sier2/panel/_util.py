@@ -3,7 +3,7 @@ from .._block import BlockState
 def _get_state_color(gs: BlockState) -> str:
     """Convert a block state (as logged by the dag) to a color.
 
-    The colors are arbitrary, except for GIZMO. When a block logs a message,
+    The colors are arbitrary, except for BLOCK. When a block logs a message,
     it is executing by definition, so no color is required.
     """
 

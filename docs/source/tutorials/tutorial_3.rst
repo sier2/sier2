@@ -27,7 +27,7 @@ directory, run python to get a REPL prompt and enter these commands.
     >>> import tutorials.tutorial_3a as t3a
     >>> ui = t3a.UserInput()
     >>> ui
-    UserInput(_gizmo_state=<BlockState.READY: 2>, name='UserInput00882', out_flag=False, out_text='The quick brown\nfox jumps over the lazy\ndog.\n\nThe end.')
+    UserInput(_block_state=<BlockState.READY: 2>, name='UserInput00882', out_flag=False, out_text='The quick brown\nfox jumps over the lazy\ndog.\n\nThe end.')
     >>> ui.__panel__().show(threaded=True)
 
 This instantiates a ``UserInput`` block and displays its default value,
@@ -42,7 +42,7 @@ Change the text and set the flag, then look at the value of ``ui`` again.
 .. code-block:: python
 
     >>> ui
-    UserInput(_gizmo_state=<GizmoState.READY: 2>, name='UserInput00882', out_flag=True, out_text='New text.')
+    UserInput(_block_state=<GizmoState.READY: 2>, name='UserInput00882', out_flag=True, out_text='New text.')
 
 Because the panel widgets automatically update the param values, we can see the new
 values of ``out_text`` and ``out_flag``.
@@ -52,7 +52,7 @@ the previous tutorials, we've presented a UI to the user. However, if you'd
 like to test your block in a Python script, or in a ``pytest`` unit test,
 you can still just set the out params as before.
 
-After adding ``__panel__()`` methods to the other gizmos, we can
+After adding ``__panel__()`` methods to the other blocks, we can
 test our dag.
 
 .. code-block:: python

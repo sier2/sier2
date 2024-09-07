@@ -1,19 +1,19 @@
 [project]
-name = "block-examples"
-version = "0.0.5"
-description = "Example block library"
+name = "sier2-examples"
+version = "0.13.3"
+description = "Example sier2 block library"
 readme = "README.md"
 #authors = [
 #    {name="Example author", email="author@example.com"}
 #]
 requires-python = ">=3.12"
 dependencies = [
-    "gizmo>=0.8.0"
+    "sier2>=0.8.0"
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["block_examples"]
+include = ["sier2_examples"]
 
 [project.entry-points."sier2.library"]
-export = "block_examples:info"
+export = "sier2_examples:info"

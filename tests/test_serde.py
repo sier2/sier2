@@ -66,7 +66,7 @@ def test_serialise(dag):
     assert len(incr_blocks) == 2
     assert set([g['args']['incr'] for g in incr_blocks]) == set([2, 3])
 
-    # Gizmos must be in the library to be restored.
+    # Blocks must be in the library to be restored.
     #
     Library.add(P)
     Library.add(Increment)

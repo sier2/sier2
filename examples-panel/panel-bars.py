@@ -50,7 +50,7 @@ def main():
     #     title=title,
     #     theme='dark',
     #     site='PoC ',
-    #     sidebar=pn.Column('## Gizmos'),
+    #     sidebar=pn.Column('## Blocks'),
     #     collapsed_sidebar=True
     # )
     # template.main.objects = [pn.Column(q, b, bi)]

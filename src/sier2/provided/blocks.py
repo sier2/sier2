@@ -1,6 +1,6 @@
 #
 
-# Gizmos provided by a builtin library.
+# Blocks provided by a builtin library.
 # These are here to demonstrate building a dag from a data structure.
 #
 

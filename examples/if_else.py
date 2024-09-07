@@ -44,8 +44,8 @@ class Notify(Block):
         print(f'In block {self.name}, {self.in_b} branch: value is {self.msg}')
 
 if_else = IfEvenElseOdd()
-is_even = Notify(name='EvenGizmo', msg='even')
-is_odd = Notify(name='OddGizmo', msg='odd')
+is_even = Notify(name='EvenBlock', msg='even')
+is_odd = Notify(name='OddBlock', msg='odd')
 
 dag = Dag(doc='Example: run a branch depending on a value', title='run a branch depending on a value')
 dag.connect(if_else, is_even,

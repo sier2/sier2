@@ -5,6 +5,9 @@ from param.ipython import ParamPager
 from sier2 import Library
 from ._library import _find_blocks, _find_dags, run_dag
 
+BOLD = '' # '\x1b[1;37m'
+NORM = '' # '\x1b[0m'
+
 def blocks_cmd(args):
     """Display the blocks found via plugin entry points."""
 
@@ -14,13 +17,13 @@ def blocks_cmd(args):
         if curr_ep is None or entry_point!=curr_ep:
             if show:
                 s = f'In {entry_point.module} v{version(entry_point.module)}'
-                u = '#' * len(s)
-                print(f'\n\x1b[1;37m{s}\n{u}\x1b[0m')
+                u = '' # '\n' + '#' * len(s)
+                print(f'\n{BOLD}{s}{u}{NORM}')
                 # print(f'\x1b[1mIn {entry_point.module} v{version(entry_point.module)}:\x1b[0m')
                 curr_ep = entry_point
 
         if show:
-            print(f'\x1b[1;37m{gi.key}: {gi.doc}\x1b[0m')
+            print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
 
             if args.verbose:
                 G = Library.get(gi.key)
@@ -36,12 +39,12 @@ def dags_cmd(args):
         if curr_ep is None or entry_point!=curr_ep:
             if show:
                 s = f'In {entry_point.module} v{version(entry_point.module)}'
-                u = '#' * len(s)
-                print(f'\n\x1b[1;37m{s}\n{u}\x1b[0m')
+                u = '' # '\n' + '#' * len(s)
+                print(f'\n{BOLD}{s}{u}{NORM}')
                 curr_ep = entry_point
 
         if show:
-            print(f'\x1b[1;37m{gi.key}: {gi.doc}\x1b[0m')
+            print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
 
 def run_cmd(args):
     run_dag(args.dag)

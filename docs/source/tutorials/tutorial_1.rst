@@ -54,10 +54,10 @@ This method is called automatically by the dag after the input values have been 
 param values are.)
 
 The ``main()`` function creates two block instances, then creates a ``Dag`` and
-connects the two blocks. After creating each gizmo, we create a dag, then use the
-dag to connect the two gizmos. The ``connect()`` method connects the source gizmo
-``ui`` to the destination gizmo  ``tr``. The ``Connection()`` arguments indicate
-how the gizmos are connected.
+connects the two blocks. After creating each block, we create a dag, then use the
+dag to connect the two blocks. The ``connect()`` method connects the source block
+``ui`` to the destination block  ``tr``. The ``Connection()`` arguments indicate
+how the blocks are connected.
 
 * ``out_text`` (in the ``ui`` block) is connected to ``in_text`` (in the ``tr`` block)
 * ``out_flag`` (in the ``ui`` block) is connected to ``in_flag`` (in the ``tr`` block)

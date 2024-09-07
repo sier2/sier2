@@ -1,15 +1,15 @@
 import logging
 
-_GIZMO_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s [%(block_name)s] %(message)s', datefmt='%H:%M:%S')
+_BLOCK_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s [%(block_name)s] %(message)s', datefmt='%H:%M:%S')
 # formatter = logging.Formatter('%(asctime)s %(levelname)s [%(block_name)s] - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
 
-# class GizmoHandler(logging.StreamHandler):
+# class BlockHandler(logging.StreamHandler):
 #     def format(self, record):
 #         fmt = info_formatter# if record.levelno==logging.INFO else formatter
 
 #         return fmt.format(record)
 
-class GizmoAdapter(logging.LoggerAdapter):
+class BlockAdapter(logging.LoggerAdapter):
     """An adapter that log messages from blocks.
 
     Each block has its own adapter, so the log automatically includes the block name.
@@ -39,7 +39,7 @@ class GizmoAdapter(logging.LoggerAdapter):
         super().critical(msg, *args, extra={'block_name': self.block_name, 'block_state': self.block_state})
 
     def process(self, msg, kwargs):
-        # print(f'GIZMOADAPTER {msg=} {kwargs=} {self.extra=}')
+        # print(f'BLOCKADAPTER {msg=} {kwargs=} {self.extra=}')
         if 'block_state' not in kwargs['extra']:
             kwargs['extra']['block_state'] = '?'
         if 'block_name' not in kwargs['extra']:
@@ -50,16 +50,16 @@ class GizmoAdapter(logging.LoggerAdapter):
 _logger = logging.getLogger('block.stream')
 _logger.setLevel(logging.INFO)
 
-# _ph = GizmoHandler()
+# _ph = BlockHandler()
 # _ph.setLevel(logging.DEBUG)
 
 _ph = logging.StreamHandler()
-_ph.setFormatter(_GIZMO_FORMATTER)
+_ph.setFormatter(_BLOCK_FORMATTER)
 _ph.setLevel(logging.DEBUG)
 
 _logger.addHandler(_ph)
 
 def get_logger(block_name: str):
-    adapter = GizmoAdapter(_logger, block_name, None)
+    adapter = BlockAdapter(_logger, block_name, None)
 
     return adapter

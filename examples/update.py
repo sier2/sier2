@@ -48,7 +48,7 @@ class Block1(Block):
         self.param.update({'out_a_string': s, 'out_length': len(s)})
 
 class Block2(Block):
-    """A block that depends on the outputs of Gizmo1."""
+    """A block that depends on the outputs of Block1."""
 
     in_length = param.Number(label='A number', doc='I am given this number')
     in_a_string = param.String(label='A string', doc='I am given this string')

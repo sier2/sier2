@@ -7,7 +7,7 @@ import warnings
 
 from sier2 import Block, Dag, Connection, BlockError
 
-# Store a mapping from a unique key to a Gizmo class.
+# Store a mapping from a unique key to a Block class.
 # When plugins are initially scanned, the classes are not loaded.
 #
 _block_library: dict[str, type[Block]|None] = {}
@@ -47,8 +47,8 @@ def run_dag(dag_name):
 
     m = importlib.import_module(dag_name[:ix])
     func = getattr(m, dag_name[ix+1:])
-    # if not issubclass(cls, Gizmo):
-    #     raise GizmoError(f'{key} is not a block')
+    # if not issubclass(cls, Block):
+    #     raise BlockError(f'{key} is not a block')
 
     func()
 
@@ -57,7 +57,7 @@ def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
 
     For each entry point, call ``load()`` to get a module,
     then call ``getattr(module, func_name)()`` to get a list of
-    ``GizmoInfo`` instances.
+    ``BlockInfo`` instances.
     """
 
     library = entry_points(group='sier2.library')
@@ -77,15 +77,14 @@ def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
                         for gi in block_info_list:
                             yield entry_point, gi
         except Exception as e:
-            warnings.warn(f'While loading {entry_point}:')
-            raise BlockError(str(e)) from e
+            raise BlockError(f'While loading {entry_point}: {e}') from e
 
 class Library:
     @staticmethod
     def collect():
         """Collect block information.
 
-        Use ``_find_blocks()`` to yield ``GizmoInfo`` instances.
+        Use ``_find_blocks()`` to yield ``BlockInfo`` instances.
 
         Note that we don't load the blocks here. We don't want to import
         any modules: this would cause every block module to be imported,
@@ -96,7 +95,7 @@ class Library:
 
         for entry_point, gi in _find_blocks():
             if gi.key in _block_library:
-                warnings.warn(f'Gizmo plugin {entry_point}: key {gi.key} already in library')
+                warnings.warn(f'Block plugin {entry_point}: key {gi.key} already in library')
             else:
                 _block_library[gi.key] = None
 
@@ -105,28 +104,28 @@ class Library:
         """Add a local block class to the library.
 
         The library initially loads block classes using Python's entry_points() mechanism.
-        This method allows local Gizmos to be added to the libray.
+        This method allows local Blocks to be added to the libray.
 
         This is useful for testing, for example.
 
         Parameters
         ----------
-        block_class: type[Gizmo]
-            The Gizmo's class.
+        block_class: type[Block]
+            The Block's class.
         key: str
-            The Gizmo's unique key string. By default, the block's block_key()
+            The Block's unique key string. By default, the block's block_key()
             class method will be used to obtain the key.
         """
 
         if not issubclass(block_class, Block):
-            print(f'{key} is not a Gizmo')
+            print(f'{key} is not a Block')
 
         # if not key:
         #     key = block_class.block_key()
         key_ = key if key else block_class.block_key()
 
         if key_ in _block_library:
-            raise BlockError(f'Gizmo {key_} is already in the library')
+            raise BlockError(f'Block {key_} is already in the library')
 
         _block_library[key_] = block_class
 
@@ -151,7 +150,7 @@ class Library:
 
     @staticmethod
     def load_dag(dump: dict[str, Any]) -> Dag:
-        """Load a dag from a serialised structure produced by Gizmo.dump()."""
+        """Load a dag from a serialised structure produced by Block.dump()."""
 
         # Create new instances of the specified blocks.
         #
