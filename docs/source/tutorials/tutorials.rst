@@ -12,3 +12,4 @@ Tutorials
     tutorial_4
     tutorial_5
     tutorial_6
+    tutorial_9

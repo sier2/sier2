@@ -1,36 +1,37 @@
-Gizmos
+Blocks
 ======
 
-Connect modular pieces of Python code ("gizmos") into
+Connect modular pieces of Python code ("blocks") into
 a processing pipeline that forms a directed acyclic graph.
 
 Description
 -----------
 
-A gizmo is a self-contained piece of code with input and output parameters.
-Gizmos can be connected to each other using a ``Dag`` to create
-a dag of gizmos.
+A block is a self-contained piece of code with input and output parameters.
+Blocks can be connected to each other using a ``Dag`` to create
+a dag of blocks. Unlike a library, where you must write an application
+to use it, blocks are pieces of an application - you just have to connect them.
 
-More precisely, output parameters in one gizmo can be connected to input parameters
-in another gizmo. The connections need not be one-to-one: parameters in multiple gizmos
-can be connected to parameters in a single gizmo; conversely, parameters in a single gizmo
-can be connected to parameters in multiple gizmos.
+More precisely, output parameters in one block can be connected to input parameters
+in another block. The connections need not be one-to-one: parameters in multiple
+blocks can be connected to parameters in a single block; conversely, parameters
+in a single block can be connected to parameters in multiple blocks.
 
-Gizmo parameters use `param <https://param.holoviz.org/>`_, which not only implements
+Block parameters use `param <https://param.holoviz.org/>`_, which not only implements
 triggering and watching of events, but allows parameters to be named and documented.
 
-Simple Gizmo implementations look like this.
+Simple Block implementations look like this.
 
 .. code-block:: python
 
-    from gizmo import Gizmo, Dag, Connection
+    from sier2 import Block, Dag, Connection
     import param
 
-    class Assign(Gizmo):
+    class Assign(Block):
         initial = param.Integer(label='Initial value')
 
-    class Increment(Gizmo):
-        """A gizmo that adds one to the input value."""
+    class Increment(Block):
+        """A block that adds one to the input value."""
 
         initial = param.Integer(label='The input', doc='An integer')
         int_out = param.Integer(label='The output', doc='The incremented value')
@@ -38,25 +39,25 @@ Simple Gizmo implementations look like this.
         def execute(self):
             self.int_out = self.initial + 1
 
-    class Display(Gizmo):
+    class Display(Block):
         result = param.Integer(label='Result', doc='to be displayed')
 
         def execute(self):
             print(f'Result is {self.result}.')
 
-The ``execute()`` method in each Gizmo is called automatically when an input parameter is assigned a value.
+The ``execute()`` method in each block is called automatically when an input parameter is assigned a value.
 
 Creating a dag
 --------------
 
-A dag is created using an instance of :class:`gizmo.Dag`.
+A dag is created using an instance of :class:`sier2.Dag`.
 
 .. code-block:: python
 
     dag = Dag(doc='Increment and display')
 
-The dag is used to connect gizmo instances using the
-:func:`gizmo.Dag.connect` method.
+The dag is used to connect block instances using the
+:func:`sier2.Dag.connect` method.
 
 .. code-block:: python
 
@@ -66,7 +67,7 @@ The dag is used to connect gizmo instances using the
     dag.connect(assign, incr, Connection('initial'))
     dag.connect(incr, disp, Connection('int_out', 'result'))
 
-This creates instances of the ``Assign``,  ``Increment``, and ``Display`` gizmos,
+This creates instances of the ``Assign``,  ``Increment``, and ``Display`` blocks,
 and connects them.
 
 A ``Connection`` specifies a pair of output and input parameters.
@@ -75,12 +76,12 @@ Because the output parameter of ``Assign`` and the input parameter of
 specified once. The output parameter of ``Increment`` and the input parameter
 of ``Display`` have different names, so each name must be specified.
 
-After creating the connections, gizmo ``incr`` is watching parameter
-``assign.initial`` and gizmo ``disp`` is watching parameter ``incr.int_out``.
+After creating the connections, block ``incr`` is watching parameter
+``assign.initial`` and block ``disp`` is watching parameter ``incr.int_out``.
 
 When a value is assigned to ``assign.initial``, ``incr.initial``
 is set to that value and ``incr.execute()`` is called.
-Likewise, when a value is assigned to gizmo ``incr.in_out``, ``disp.result``
+Likewise, when a value is assigned to block ``incr.in_out``, ``disp.result``
 is set to that value and ``disp.execute()`` is called.
 
 To run the dag, assign a value to ``assign.initial``.
@@ -105,7 +106,7 @@ See the ``examples`` directory in the source code for examples.
     :caption: Contents:
 
     tutorials/tutorials
-    gizmo
+    block
     dag
     library
 

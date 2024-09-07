@@ -1,5 +1,5 @@
 Dag
 ===
 
-.. autoclass:: gizmo.Dag
+.. autoclass:: sier2.Dag
     :members:

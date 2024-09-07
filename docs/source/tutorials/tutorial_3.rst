@@ -42,7 +42,7 @@ Change the text and set the flag, then look at the value of ``ui`` again.
 .. code-block:: python
 
     >>> ui
-    UserInput(_block_state=<GizmoState.READY: 2>, name='UserInput00882', out_flag=True, out_text='New text.')
+    UserInput(_block_state=<BlockState.READY: 2>, name='UserInput00882', out_flag=True, out_text='New text.')
 
 Because the panel widgets automatically update the param values, we can see the new
 values of ``out_text`` and ``out_flag``.

@@ -1,5 +1,5 @@
 Library
 =======
 
-.. autoclass:: gizmo.Library
+.. autoclass:: sier2.Library
     :members:
