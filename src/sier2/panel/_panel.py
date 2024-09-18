@@ -42,10 +42,17 @@ class _PanelContext:
         block_logger = getBlockPanelLogger(self.block.name)
         self.block.logger = block_logger
 
+        if self.block._progress:
+            self.block._progress.active = True
+
         return self.block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         delta = (datetime.now() - self.t0).total_seconds()
+
+        if self.block._progress:
+            self.block._progress.active = False
+
         if exc_type is None:
             state = BlockState.WAITING if self.block.user_input else BlockState.SUCCESSFUL
             self.block._block_state = state
@@ -201,6 +208,22 @@ class BlockCard(pn.Card):
                 min_width='1px', min_height='1px'
             )
         )
+
+        # If a block has no __panel__() method, Panel will by default
+        # inspect the class and display the param attributes.
+        # This is obviously not what we want.
+        #
+        # Instead, we want to display an indefinite progress bar.
+        # The Panel context manager will activate and deactivate it.
+        #
+        has_panel = '__panel__' in w.__class__.__dict__
+        if not has_panel:
+            w._progress = pn.indicators.Progress(
+                name='Block progress',
+                bar_color='primary',
+                active=False,
+                value=-1
+            )
 
         if w.user_input:
             # This is a user_input block, so add a 'Continue' button.

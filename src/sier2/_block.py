@@ -72,6 +72,8 @@ class Block(param.Parameterized):
 
         # self._block_context = _EmptyContext()
 
+        self._progress = None
+
     @classmethod
     def block_key(cls):
         """The unique key of this block class.
@@ -102,6 +104,25 @@ class Block(param.Parameterized):
 
         # print(f'** EXECUTE {self.__class__=}')
         pass
+
+    def __panel__(self):
+        """A default Panel component.
+
+        When run in a Panel context, a block will typically implement
+        its own __panel__() method. If it doesn't, this method will be
+        used as a default. When a block without a __panel__() is wrapped
+        in a Card, self.progress will be assigned a pn.indicators.Progress()
+        widget which is returned here. The Panel context will make it active
+        before executing the block, and non-active after executing the block.
+        (Why not have a default Progress()? Because we don't want any
+        Panel-related code in the core implementation.)
+
+        If the block implements __panel__(), this will obviously be overridden.
+
+        When run in non-Panel context, this will remain unused.
+        """
+
+        return self._progress
 
     def __call__(self, **kwargs) -> dict[str, Any]:
         """Allow a block to be called directly."""
