@@ -30,9 +30,9 @@ class Query(Block):
         self.out_df = _make_df(max_height)
 
 class QueryWidget(Query):
-    """An example block widget.
+    """## An example block widget.
 
-    Moving the slider causes Query.query() to be called with the value of the slider.
+    Moving the slider causes `Query.query()` to be called with the value of the slider.
     """
 
     def __panel__(self):
@@ -64,9 +64,10 @@ class QueryWidget(Query):
         return pn.Row(pn.Column(height, text), df_pane)
 
 class BarchartWidget(Block):#, Viewer):
-    """A barchart widget.
+    """## A barchart widget.
 
-    This could have been written as separate Block + Viewer classes,
+    This could have been written as separate "text-only" `Block` class,
+    and a separate subclass implementing `__panel__()`,
     but since the only thing this does is display a HoloViews Chart, why bother.
     """
 

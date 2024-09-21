@@ -10,6 +10,16 @@ from ._util import _get_state_color
 
 NTHREADS = 2
 
+# From https://tabler.io/icons/icon/info-circle
+#
+INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+  <path d="M12 9h.01" />
+  <path d="M11 12h1v4h1" />
+</svg>
+'''
+
 pn.extension(inline=True, nthreads=NTHREADS, loading_spinner='bar')
 
 def _hms(sec):
@@ -98,19 +108,83 @@ def interrupt_thread(tid, exctype):
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
+def trim(docstring):
+    """From PEP-257: Fix docstring indentation"""
+
+    if not docstring:
+        return ''
+    # Convert tabs to spaces (following the normal Python rules)
+    # and split into a list of lines:
+    lines = docstring.expandtabs().splitlines()
+    # Determine minimum indentation (first line doesn't count):
+    indent = sys.maxsize
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:
+            indent = min(indent, len(line) - len(stripped))
+    # Remove indentation (first line is special):
+    trimmed = [lines[0].strip()]
+    if indent < sys.maxsize:
+        for line in lines[1:]:
+            trimmed.append(line[indent:].rstrip())
+    # Strip off trailing and leading blank lines:
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+    # Return a single string:
+    return '\n'.join(trimmed)
+
 def show_dag(dag: Dag):
-    # Replace the default context with the panel-based context.
+    """Display the dag in a panel template."""
+
+    # Replace the default text-based context with the panel-based context.
     #
     dag._block_context = _PanelContext
 
+    info_button = pn.widgets.ButtonIcon(
+        icon=INFO_SVG,
+        active_icon=INFO_SVG,
+        description='Dag Help',
+        align='center'
+    )
+
+    fp_holder = pn.Column(visible=False)
+
+    sidebar_title = pn.Row(info_button, '## Blocks')
     template = pn.template.BootstrapTemplate(
         site=dag.site,
         title=dag.title,
         theme='dark',
-        sidebar=pn.Column('## Blocks'),
+        sidebar=pn.Column(sidebar_title),
         collapsed_sidebar=True,
         sidebar_width=440
     )
+
+    def display_info(_event):
+        """Display a FloatPanel containing help for the dag and blocks."""
+
+        # TODO add block inputs + outputs; move this to a util function.
+
+        # A Block may be in the dag more than once.
+        # Don't include the documentation for such blocks more than once.
+        #
+        blocks = dag.get_sorted()
+        uniq_blocks = []
+        seen_blocks = set()
+        for b in blocks:
+            if type(b) not in seen_blocks:
+                uniq_blocks.append(b)
+                seen_blocks.add(type(b))
+        block_docs = '\n\n'.join(trim(block.__doc__) for block in uniq_blocks)
+
+        config = {
+            'headerControls': {'maximize': 'remove'},
+            'contentOverflow': 'scroll'
+        }
+        fp = pn.layout.FloatPanel(f'{trim(dag.doc)}\n\n{block_docs}', name=dag.title, width=450, height=350, contained=False, position='center', config=config)
+        fp_holder[:] = [fp]
+    info_button.on_click(display_info)
 
     switch = pn.widgets.Switch(name='Stop')
 
@@ -150,6 +224,7 @@ def show_dag(dag: Dag):
         for card in col:
             status = card.header[0]
 
+
     # We use a Panel Feed widget to display log messages.
     #
     log_feed = pn.Feed(
@@ -158,8 +233,8 @@ def show_dag(dag: Dag):
         auto_scroll_limit=1,
         sizing_mode='stretch_width'
     )
-
     dag_logger = getDagPanelLogger(log_feed)
+
     template.main.append(
         pn.Column(
             *(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted())
@@ -169,7 +244,8 @@ def show_dag(dag: Dag):
         pn.Column(
             switch,
             pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
-            log_feed
+            log_feed,
+            fp_holder
         )
     )
 

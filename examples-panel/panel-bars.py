@@ -10,9 +10,18 @@ from sier2.panel import show_dag
 from _panel_widgets import QueryWidget, BarchartWidget
 
 NTHREADS = 2
+DOC = """# Generate barcharts
+
+This dag contains an input block that takes a number and generates
+a `pandas` dataframe containing random numbers in the range 1 .. number.
+
+The dataframe is then passed to *two* instances of a **barchart** block,
+one displaying the dataframe, the other displaying the "inverse"
+of the dataframe.
+""" + '\n\n'.join(['xyzzy'] * 20)
 
 hv.extension('bokeh', inline=True)
-pn.extension(nthreads=NTHREADS, loading_spinner='bar', inline=True)
+pn.extension('floatpanel', nthreads=NTHREADS, loading_spinner='bar', inline=True)
 # hv.renderer('bokeh').theme = 'dark_minimal'
 
 def main():
@@ -22,7 +31,7 @@ def main():
     b = BarchartWidget(name='Results bars')
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 
-    dag = Dag(doc='Example: generate bar charts', site='Example', title='Bars')
+    dag = Dag(doc=DOC, site='Example', title='Bars')
     dag.connect(q, b, Connection('out_df', 'in_df'))
     dag.connect(q, bi, Connection('out_df', 'in_df'))
 
