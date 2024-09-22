@@ -22,7 +22,7 @@ def _make_df(max_height=MAX_HEIGHT) -> pd.DataFrame:
 class Query(Block):
     """A plain Python block that accepts a "query" (a maximum count value) and outputs a dataframe."""
 
-    out_df = param.DataFrame(default=None)
+    out_df = param.DataFrame(default=None, doc='A dataframe with columns `Colors` and `Counts`. The counts are a random number between 0 and the slider value.')
 
     def query(self, max_height):
         """Output a dataframe with a maximum counts value."""
@@ -30,7 +30,7 @@ class Query(Block):
         self.out_df = _make_df(max_height)
 
 class QueryWidget(Query):
-    """## An example block widget.
+    """An example block widget.
 
     Moving the slider causes `Query.query()` to be called with the value of the slider.
     """
@@ -71,7 +71,7 @@ class BarchartWidget(Block):#, Viewer):
     but since the only thing this does is display a HoloViews Chart, why bother.
     """
 
-    in_df = param.DataFrame(default=None)
+    in_df = param.DataFrame(default=None, doc='A dataframe with columns `Colors` and `Counts`.')
 
     def __init__(self, inverted=False, *args, **kwargs):
         super().__init__(*args, **kwargs)

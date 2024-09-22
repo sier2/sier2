@@ -6,7 +6,7 @@ import threading
 
 from sier2 import Block, BlockState, Dag, BlockError
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
-from ._util import _get_state_color
+from ._util import _get_state_color, dag_doc
 
 NTHREADS = 2
 
@@ -108,33 +108,6 @@ def interrupt_thread(tid, exctype):
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
-def trim(docstring):
-    """From PEP-257: Fix docstring indentation"""
-
-    if not docstring:
-        return ''
-    # Convert tabs to spaces (following the normal Python rules)
-    # and split into a list of lines:
-    lines = docstring.expandtabs().splitlines()
-    # Determine minimum indentation (first line doesn't count):
-    indent = sys.maxsize
-    for line in lines[1:]:
-        stripped = line.lstrip()
-        if stripped:
-            indent = min(indent, len(line) - len(stripped))
-    # Remove indentation (first line is special):
-    trimmed = [lines[0].strip()]
-    if indent < sys.maxsize:
-        for line in lines[1:]:
-            trimmed.append(line[indent:].rstrip())
-    # Strip off trailing and leading blank lines:
-    while trimmed and not trimmed[-1]:
-        trimmed.pop()
-    while trimmed and not trimmed[0]:
-        trimmed.pop(0)
-    # Return a single string:
-    return '\n'.join(trimmed)
-
 def show_dag(dag: Dag):
     """Display the dag in a panel template."""
 
@@ -164,25 +137,12 @@ def show_dag(dag: Dag):
     def display_info(_event):
         """Display a FloatPanel containing help for the dag and blocks."""
 
-        # TODO add block inputs + outputs; move this to a util function.
-
-        # A Block may be in the dag more than once.
-        # Don't include the documentation for such blocks more than once.
-        #
-        blocks = dag.get_sorted()
-        uniq_blocks = []
-        seen_blocks = set()
-        for b in blocks:
-            if type(b) not in seen_blocks:
-                uniq_blocks.append(b)
-                seen_blocks.add(type(b))
-        block_docs = '\n\n'.join(trim(block.__doc__) for block in uniq_blocks)
-
+        text = dag_doc(dag)
         config = {
             'headerControls': {'maximize': 'remove'},
             'contentOverflow': 'scroll'
         }
-        fp = pn.layout.FloatPanel(f'{trim(dag.doc)}\n\n{block_docs}', name=dag.title, width=450, height=350, contained=False, position='center', config=config)
+        fp = pn.layout.FloatPanel(text, name=dag.title, width=550, height=450, contained=False, position='center', theme='dark filleddark', config=config)
         fp_holder[:] = [fp]
     info_button.on_click(display_info)
 
