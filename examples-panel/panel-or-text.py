@@ -11,7 +11,7 @@
 #
 
 from sier2 import Block, Dag, Connection
-from sier2.panel import show_dag
+from sier2.panel import PanelDag
 import param
 import panel as pn
 import sys
@@ -70,12 +70,12 @@ class Out(Block):
 
         return pn.Row(rw)
 
-def make_dag():
+def make_dag(DagType):
     in_block = In(name='do inputs', user_input=True)
     calc_block = Calc(name='do calc')
     out_block = Out(name='do result')
 
-    dag = Dag(title='The dag', doc='Demonstrate panel-less blocks.')
+    dag = DagType(title='The dag', doc='Demonstrate panel-less blocks.')
     dag.connect(
         in_block, calc_block,
         Connection('out_a', 'in_a'),
@@ -89,17 +89,19 @@ def make_dag():
     return dag
 
 def main(context):
-    dag = make_dag()
+    is_text = context=='text'
+
+    dag = make_dag(Dag if is_text else PanelDag)
     inb = dag.block_by_name('do inputs')
     inb.out_a = 8
     inb.out_b = 9
 
-    if context=='text':
+    if is_text:
         dag.execute()
         r = dag.block_by_name('do calc').out_result
         print(f'{r=}')
     else:
-        show_dag(dag)
+        dag.show()
 
 if __name__=='__main__':
     context = sys.argv[1] if len(sys.argv)>1 else None

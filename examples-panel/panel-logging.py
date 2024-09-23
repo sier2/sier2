@@ -1,5 +1,5 @@
-from sier2 import Block, Dag, Connection
-from sier2.panel import show_dag
+from sier2 import Block, Connection
+from sier2.panel import PanelDag
 import panel as pn
 import param
 
@@ -66,11 +66,11 @@ if __name__=='__main__':
     ab = AddBlock(name='Second add')
     display = Display()
 
-    dag = Dag(site='examples', title='Logging', doc='Demonstrate logging')
+    dag = PanelDag(site='examples', title='Logging', doc='Demonstrate logging')
     dag.connect(n1, aa, Connection('out_number', 'in_a'))
     dag.connect(n2, aa, Connection('out_number', 'in_b'))
     dag.connect(aa, ab, Connection('out_result', 'in_a'))
     dag.connect(n3, ab, Connection('out_number', 'in_b'))
     dag.connect(ab, display, Connection('out_result', 'in_result'))
 
-    show_dag(dag)
+    dag.show()

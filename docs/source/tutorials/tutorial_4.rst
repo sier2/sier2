@@ -4,8 +4,12 @@ Tutorial part 4 - themed application
 In this tutorial, we'll use the blocks we built in the previous tutorial
 to create a themed block application. We'll import them and build a dag.
 
-This time, we'll use the :func:`sier2.panel.show_dag` method to display the dag.
-``show_dag`` first extracts the blocks from the dag in sorted order (see below);
+This time, we'll use the :class:`sier2.panel.PanelDag` class to display the dag.
+A ``PanelDag`` is just like a normal "text-only" ``Dag``, but it adds the
+necessary plumbing to provide a graphical user interface using the ``panel``
+library.
+
+``PanelDag`` first extracts the blocks from the dag in sorted order (see below);
 each block is wrapped in a ``panel`` ``Card``, and the cards are displayed in
 a column. All of this is displayed in a ``panel`` template.
 

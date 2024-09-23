@@ -12,7 +12,7 @@ from pathlib import Path
 import tempfile
 
 from sier2 import Library
-from sier2.panel import show_dag
+from sier2.panel import PanelDag
 
 from _panel_widgets import QueryWidget, BarchartWidget
 
@@ -33,9 +33,8 @@ def main():
         dump = json.load(f)
 
     dag = Library.load_dag(dump)
-    title = dump['panel']['title']
 
-    show_dag(dag)
+    dag.show()
 
 if __name__=='__main__':
     # Blocks that are loaded from a dumped dag must be in the dag library.

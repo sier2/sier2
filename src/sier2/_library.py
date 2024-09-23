@@ -6,6 +6,7 @@ from typing import Any, cast
 import warnings
 
 from sier2 import Block, Dag, Connection, BlockError
+from sier2.panel import PanelDag
 
 # Store a mapping from a unique key to a Block class.
 # When plugins are initially scanned, the classes are not loaded.
@@ -41,6 +42,9 @@ def run_dag(dag_name):
                     raise BlockError(f'Found duplicate: {dag_name}, d')
 
                 found_dag = d
+
+        if found_dag is None:
+            raise BlockError('No such dag')
 
         dag_name = found_dag.key
         ix = dag_name.rfind('.')
@@ -134,6 +138,7 @@ class Library:
         if not _block_library:
             Library.collect()
 
+        print(_block_library)
         if key not in _block_library:
             raise BlockError(f'Name {key} is not in the library')
 
@@ -166,7 +171,8 @@ class Library:
 
         # Connect the blocks.
         #
-        dag = Dag(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
+        DagType = PanelDag if dump['dag']['type']=='PanelDag' else Dag
+        dag = DagType(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
         for conn in dump['connections']:
             conns = [Connection(**kwargs) for kwargs in conn['conn_args']]
             dag.connect(instances[conn['src']], instances[conn['dst']], *conns)

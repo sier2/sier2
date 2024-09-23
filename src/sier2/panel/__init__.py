@@ -1,1 +1,1 @@
-from ._panel import show_dag
+from ._panel import PanelDag

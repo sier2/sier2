@@ -416,6 +416,7 @@ class Dag:
 
         return {
             'dag': {
+                'type': self.__class__.__name__,
                 'doc': self.doc,
                 'site': self.site,
                 'title': self.title
@@ -555,4 +556,3 @@ def _get_sorted(block_pairs: list[tuple[Block, Block]]):
         raise BlockError('Dag contains a cycle')
 
     return ordered
-

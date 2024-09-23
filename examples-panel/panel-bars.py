@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 
 from sier2 import Dag, Connection
-from sier2.panel import show_dag
+from sier2.panel import PanelDag
 
 from _panel_widgets import QueryWidget, BarchartWidget
 
@@ -31,7 +31,7 @@ def main():
     b = BarchartWidget(name='Results bars')
     bi = BarchartWidget(inverted=True, name='Results bars (inverted)')
 
-    dag = Dag(doc=DOC, site='Example', title='Bars')
+    dag = PanelDag(doc=DOC, site='Example', title='Bars')
     dag.connect(q, b, Connection('out_df', 'in_df'))
     dag.connect(q, bi, Connection('out_df', 'in_df'))
 
@@ -40,9 +40,9 @@ def main():
     # Dump the dag and add panel information.
     #
     dump = dag.dump()
-    dump['panel'] = {
-        'title': title
-    }
+    # dump['panel'] = {
+    #     'title': title
+    # }
 
     # Save the dump.
     #
@@ -51,7 +51,7 @@ def main():
     with open(p, 'w', encoding='utf-8') as f:
         json.dump(dump, f, indent=2)
 
-    show_dag(dag)#, site='Barchart dag', title='demonstrate passing a dataframe')
+    dag.show()
 
     # # Build a panel app.
     # #

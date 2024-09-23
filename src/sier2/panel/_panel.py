@@ -6,7 +6,7 @@ import threading
 
 from sier2 import Block, BlockState, Dag, BlockError
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
-from ._util import _get_state_color, dag_doc
+from ._panel_util import _get_state_color, dag_doc
 
 NTHREADS = 2
 
@@ -108,7 +108,7 @@ def interrupt_thread(tid, exctype):
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
-def show_dag(dag: Dag):
+def _show_dag(dag: Dag):
     """Display the dag in a panel template."""
 
     # Replace the default text-based context with the panel-based context.
@@ -183,7 +183,6 @@ def show_dag(dag: Dag):
         col = template.main.objects[0]
         for card in col:
             status = card.header[0]
-
 
     # We use a Panel Feed widget to display log messages.
     #
@@ -312,3 +311,10 @@ class BlockCard(pn.Card):
         """
 
         self.header[-1] = self._get_state_light(_get_state_color(_block_state))
+
+class PanelDag(Dag):
+    def __init__(self, *, site: str='Panel Dag', title: str, doc: str):
+        super().__init__(site=site, title=title, doc=doc)
+
+    def show(self):
+        _show_dag(self)

@@ -8,7 +8,7 @@ import time
 import ctypes
 
 from sier2 import Block, Dag, Connection
-from sier2.panel import show_dag
+from sier2.panel import PanelDag
 import param
 
 NTHREADS = 2
@@ -105,11 +105,11 @@ def main():
     b1 = ProgressWidget(name='Progress1')
     b2 = ProgressWidget(name='Progress2')
 
-    dag = Dag(title='Stop / Unstop', doc='Example: stopping and unstopping a dag in panel')
+    dag = PanelDag(title='Stop / Unstop', doc='Example: stopping and unstopping a dag in panel')
     dag.connect(q, b1, Connection('out_timer', 'in_timer'))
     dag.connect(b1, b2, Connection('out_timer', 'in_timer'))
 
-    show_dag(dag)
+    dag.show()
 
     # switch = pn.widgets.Switch(name='Stop')
 

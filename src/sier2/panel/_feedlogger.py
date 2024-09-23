@@ -7,7 +7,7 @@ import logging
 import panel as pn
 
 from .._block import BlockState
-from ._util import _get_state_color
+from ._panel_util import _get_state_color
 
 _INFO_FORMATTER = logging.Formatter('%(asctime)s %(block_state)s %(block_name)s %(message)s', datefmt='%H:%M:%S')
 _FORMATTER = logging.Formatter('%(asctime)s %(block_state)s %(block_name)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')

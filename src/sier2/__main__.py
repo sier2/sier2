@@ -1,9 +1,9 @@
 import argparse
 from importlib.metadata import version
-from param.ipython import ParamPager
 
 from sier2 import Library
 from ._library import _find_blocks, _find_dags, run_dag
+from ._util import block_doc_text, dag_doc_text
 
 BOLD = '' # '\x1b[1;37m'
 NORM = '' # '\x1b[0m'
@@ -26,8 +26,8 @@ def blocks_cmd(args):
             print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
 
             if args.verbose:
-                G = Library.get(gi.key)
-                print(ParamPager()(G))
+                block = Library.get(gi.key)
+                print(block_doc_text(block))
                 print()
 
 def dags_cmd(args):
@@ -46,6 +46,10 @@ def dags_cmd(args):
         if show:
             print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
 
+            if args.verbose:
+                dag = Library.get(gi.key)
+                print(dag_doc_text(dag))
+
 def run_cmd(args):
     run_dag(args.dag)
 
@@ -63,6 +67,7 @@ def main():
     blocks.set_defaults(func=blocks_cmd)
 
     dags = subparsers.add_parser('dags', help='Show available dags')
+    dags.add_argument('-v', '--verbose', action='store_true', help='Show help')
     dags.add_argument('dag', nargs='?', help='Show all dags ending with this string')
     dags.set_defaults(func=dags_cmd)
 

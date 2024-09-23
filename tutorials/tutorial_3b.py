@@ -43,7 +43,7 @@ class Translate(Block):
     """A block that transforms text.
 
     The text is split into paragraphs, then each word has its letters shuffled.
-    If flag is set, capitlaize each word.
+    If flag is set, capitalize each word.
     """
 
     in_text = param.String(label='Input text', doc='Text to be transformed')
