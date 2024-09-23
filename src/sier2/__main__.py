@@ -26,7 +26,7 @@ def blocks_cmd(args):
             print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
 
             if args.verbose:
-                block = Library.get(gi.key)
+                block = Library.get_block(gi.key)
                 print(block_doc_text(block))
                 print()
 
@@ -47,7 +47,9 @@ def dags_cmd(args):
             print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
 
             if args.verbose:
-                dag = Library.get(gi.key)
+                # We have to instantiate the dag to get the documentation.
+                #
+                dag = Library.get_dag(gi.key)
                 print(dag_doc_text(dag))
 
 def run_cmd(args):

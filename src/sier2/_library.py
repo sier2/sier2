@@ -12,6 +12,7 @@ from sier2.panel import PanelDag
 # When plugins are initially scanned, the classes are not loaded.
 #
 _block_library: dict[str, type[Block]|None] = {}
+_dag_library: set[str] = set()
 
 @dataclass
 class Info:
@@ -54,7 +55,7 @@ def run_dag(dag_name):
     # if not issubclass(cls, Block):
     #     raise BlockError(f'{key} is not a block')
 
-    func()
+    func().show()
 
 def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
     """Use ``importlib.metadata.entry_points`` to look up entry points named ``sier2.library``.
@@ -62,30 +63,36 @@ def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
     For each entry point, call ``load()`` to get a module,
     then call ``getattr(module, func_name)()`` to get a list of
     ``BlockInfo`` instances.
+
+    Parameters
+    ----------
+    func_name: str
+        The name of the function that will be called to get a list[Info].
+        Either ``'blocks'`` or ``'dags'``.
     """
 
     library = entry_points(group='sier2.library')
 
     for entry_point in library:
         try:
-            blocks_lib = entry_point.load()
-            blocks_func = getattr(blocks_lib, func_name, None)
-            if blocks_func is not None:
-                if not callable(blocks_func):
-                    warnings.warn(f'In {entry_point.module}, {blocks_func} is not a function')
+            lib = entry_point.load()
+            func = getattr(lib, func_name, None)
+            if func is not None:
+                if not callable(func):
+                    warnings.warn(f'In {entry_point.module}, {func} is not a function')
                 else:
-                    block_info_list: list[Info] = blocks_func()
-                    if not isinstance(block_info_list, list) or any(not isinstance(s, Info) for s in block_info_list):
-                        warnings.warn(f'In {entry_point.module}, {blocks_func} does not return a list of {Info.__name__} instances')
+                    info_list: list[Info] = func()
+                    if not isinstance(info_list, list) or any(not isinstance(s, Info) for s in info_list):
+                        warnings.warn(f'In {entry_point.module}, {func} does not return a list of {Info.__name__} instances')
                     else:
-                        for gi in block_info_list:
+                        for gi in info_list:
                             yield entry_point, gi
         except Exception as e:
             raise BlockError(f'While loading {entry_point}: {e}') from e
 
 class Library:
     @staticmethod
-    def collect():
+    def collect_blocks():
         """Collect block information.
 
         Use ``_find_blocks()`` to yield ``BlockInfo`` instances.
@@ -93,8 +100,8 @@ class Library:
         Note that we don't load the blocks here. We don't want to import
         any modules: this would cause every block module to be imported,
         which would cause a lot of imports to happen. Therefore, we just
-        create the keys in the dictionary, and let ``get()`` import block
-        modules as required.
+        create the keys in the dictionary, and let ``get_block()`` import
+        block modules as required.
         """
 
         for entry_point, gi in _find_blocks():
@@ -104,11 +111,19 @@ class Library:
                 _block_library[gi.key] = None
 
     @staticmethod
-    def add(block_class: type[Block], key: str|None=None):
+    def collect_dags():
+        for entry_point, gi in _find_dags():
+            if gi.key in _dag_library:
+                warnings.warn(f'Dag plugin {entry_point}: key {gi.key} already in library')
+            else:
+                _dag_library.add(gi.key)
+
+    @staticmethod
+    def add_block(block_class: type[Block], key: str|None=None):
         """Add a local block class to the library.
 
         The library initially loads block classes using Python's entry_points() mechanism.
-        This method allows local Blocks to be added to the libray.
+        This method allows local Blocks to be added to the library.
 
         This is useful for testing, for example.
 
@@ -134,13 +149,12 @@ class Library:
         _block_library[key_] = block_class
 
     @staticmethod
-    def get(key: str) -> type[Block]:
+    def get_block(key: str) -> type[Block]:
         if not _block_library:
-            Library.collect()
+            Library.collect_blocks()
 
-        print(_block_library)
         if key not in _block_library:
-            raise BlockError(f'Name {key} is not in the library')
+            raise BlockError(f'Block name {key} is not in the library')
 
         if _block_library[key] is None:
             ix = key.rfind('.')
@@ -154,6 +168,24 @@ class Library:
         return cast(type[Block], _block_library[key])
 
     @staticmethod
+    def get_dag(key: str) -> type[Dag]:
+        if not _dag_library:
+            Library.collect_dags()
+
+        if key not in _dag_library:
+            raise BlockError(f'Dag name {key} is not in the library')
+
+        if key in _dag_library:
+            ix = key.rfind('.')
+            m = importlib.import_module(key[:ix])
+            func = getattr(m, key[ix+1:])
+            dag = func()
+            if not isinstance(dag, Dag):
+                raise BlockError(f'{key} is not a dag')
+
+        return cast(type[Dag], dag)
+
+    @staticmethod
     def load_dag(dump: dict[str, Any]) -> Dag:
         """Load a dag from a serialised structure produced by Block.dump()."""
 
@@ -164,7 +196,7 @@ class Library:
             class_name = g['block']
             instance = g['instance']
             if instance not in instances:
-                gclass = Library.get(class_name)
+                gclass = Library.get_block(class_name)
                 instances[instance] = gclass(**g['args'])
             else:
                 raise BlockError(f'Instance {instance} ({class_name}) already exists')

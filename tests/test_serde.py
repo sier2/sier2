@@ -68,8 +68,8 @@ def test_serialise(dag):
 
     # Blocks must be in the library to be restored.
     #
-    Library.add(P)
-    Library.add(Increment)
+    Library.add_block(P)
+    Library.add_block(Increment)
 
     # Start again.
     #

@@ -40,7 +40,7 @@ if __name__=='__main__':
     # Blocks that are loaded from a dumped dag must be in the dag library.
     # Because this is a demonstration, we load the required block classes manually.
     #
-    Library.add(QueryWidget)
-    Library.add(BarchartWidget)
+    Library.add_block(QueryWidget)
+    Library.add_block(BarchartWidget)
 
     main()

@@ -3,18 +3,18 @@ from sier2.panel import PanelDag
 
 from tutorial_3b import UserInput, Translate, Display
 
-Library.add(UserInput, 'tutorial_3b.UserInput')
-Library.add(Translate, 'tutorial_3b.Translate')
-Library.add(Display, 'tutorial_3b.Display')
+Library.add_block(UserInput, 'tutorial_3b.UserInput')
+Library.add_block(Translate, 'tutorial_3b.Translate')
+Library.add_block(Display, 'tutorial_3b.Display')
 
 if __name__=='__main__':
-    UiBlock = Library.get('tutorial_3b.UserInput')
+    UiBlock = Library.get_block('tutorial_3b.UserInput')
     ui = UiBlock(name='User input', user_input=True)
 
-    TrBlock = Library.get('tutorial_3b.Translate')
+    TrBlock = Library.get_block('tutorial_3b.Translate')
     tr = TrBlock(name='Translation')
 
-    DiBlock = Library.get('tutorial_3b.Display')
+    DiBlock = Library.get_block('tutorial_3b.Display')
     di = DiBlock(name='Display output')
 
     dag = PanelDag(doc='Translation', title='translate text')
