@@ -10,7 +10,9 @@ def demo_dag():
     dag.connect(rnga, add, Connection('out_n', 'in_a'))
     dag.connect(rngb, add, Connection('out_n', 'in_b'))
 
-    rnga.go()
-    rngb.go()
+    # rnga.go()
+    # rngb.go()
 
-    dag.execute()
+    # dag.execute()
+
+    return dag

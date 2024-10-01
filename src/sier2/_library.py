@@ -55,7 +55,11 @@ def run_dag(dag_name):
     # if not issubclass(cls, Block):
     #     raise BlockError(f'{key} is not a block')
 
-    func().show()
+    dag = func()
+    if not hasattr(dag, 'show'):
+        raise BlockError(f'Dag {dag_name} does not have a user interface')
+
+    dag.show()
 
 def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
     """Use ``importlib.metadata.entry_points`` to look up entry points named ``sier2.library``.
