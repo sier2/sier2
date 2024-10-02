@@ -1,5 +1,5 @@
 from sier2 import Dag, Connection
-from .blocks import RandomNumberBlock, AddBlock
+from ..blocks._blocks import RandomNumberBlock, AddBlock
 
 def demo_dag():
     rnga = RandomNumberBlock()

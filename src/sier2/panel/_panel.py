@@ -20,7 +20,7 @@ INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vie
 </svg>
 '''
 
-pn.extension(inline=True, nthreads=NTHREADS, loading_spinner='bar')
+pn.extension('floatpanel', inline=True, nthreads=NTHREADS, loading_spinner='bar')
 
 def _hms(sec):
     h, sec = divmod(int(sec), 3600)

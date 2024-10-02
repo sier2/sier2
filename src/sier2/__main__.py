@@ -8,6 +8,9 @@ from ._util import block_doc_text, dag_doc_text
 BOLD = '' # '\x1b[1;37m'
 NORM = '' # '\x1b[0m'
 
+def _pkg(module):
+    return module.split('.')[0]
+
 def blocks_cmd(args):
     """Display the blocks found via plugin entry points."""
 
@@ -16,7 +19,8 @@ def blocks_cmd(args):
         show = not args.block or gi.key.endswith(args.block)
         if curr_ep is None or entry_point!=curr_ep:
             if show:
-                s = f'In {entry_point.module} v{version(entry_point.module)}'
+                pkg = _pkg(entry_point.module)
+                s = f'In {pkg} v{version(pkg)}'
                 u = '' # '\n' + '#' * len(s)
                 print(f'\n{BOLD}{s}{u}{NORM}')
                 # print(f'\x1b[1mIn {entry_point.module} v{version(entry_point.module)}:\x1b[0m')
@@ -38,7 +42,8 @@ def dags_cmd(args):
         show = not args.dag or gi.key.endswith(args.dag)
         if curr_ep is None or entry_point!=curr_ep:
             if show:
-                s = f'In {entry_point.module} v{version(entry_point.module)}'
+                pkg = _pkg(entry_point.module)
+                s = f'In {pkg} v{version(pkg)}'
                 u = '' # '\n' + '#' * len(s)
                 print(f'\n{BOLD}{s}{u}{NORM}')
                 curr_ep = entry_point

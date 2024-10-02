@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sier2"
-version = "0.15.1"
+version = "0.16"
 description = "Block code dags"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
 readme = "README.rst"
@@ -22,7 +22,7 @@ panel = ">=1.4.4"
 param = ">=2.1.0"
 
 [tool.poetry.plugins."sier2.library"]
-export = "sier2:provided.info"
+export = "sier2.shelf"
 
 [[tool.mypy.overrides]]
 module = [
