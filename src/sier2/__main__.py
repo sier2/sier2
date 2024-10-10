@@ -14,6 +14,7 @@ def _pkg(module):
 def blocks_cmd(args):
     """Display the blocks found via plugin entry points."""
 
+    seen = set()
     curr_ep = None
     for entry_point, gi in _find_blocks():
         show = not args.block or gi.key.endswith(args.block)
@@ -27,16 +28,20 @@ def blocks_cmd(args):
                 curr_ep = entry_point
 
         if show:
-            print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
+            dup = f' (DUPLICATE)' if gi.key in seen else ''
+            print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}{dup}')
 
             if args.verbose:
                 block = Library.get_block(gi.key)
                 print(block_doc_text(block))
                 print()
 
+            seen.add(gi.key)
+
 def dags_cmd(args):
     """Display the dags found via plugin entry points."""
 
+    seen = set()
     curr_ep = None
     for entry_point, gi in _find_dags():
         show = not args.dag or gi.key.endswith(args.dag)
@@ -49,13 +54,16 @@ def dags_cmd(args):
                 curr_ep = entry_point
 
         if show:
-            print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}')
+            dup = f' (DUPLICATE)' if gi.key in seen else ''
+            print(f'  {BOLD}{gi.key}: {gi.doc}{NORM}{dup}')
 
             if args.verbose:
                 # We have to instantiate the dag to get the documentation.
                 #
                 dag = Library.get_dag(gi.key)
                 print(dag_doc_text(dag))
+
+            seen.add(gi.key)
 
 def run_cmd(args):
     run_dag(args.dag)

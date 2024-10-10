@@ -1,5 +1,5 @@
-Blocks
-======
+Sier2
+=====
 
 Connect modular pieces of Python code ("blocks") into
 a processing pipeline that forms a directed acyclic graph.
@@ -95,11 +95,6 @@ The result is:
 .. code-block:: text
 
     Result is 2.
-
-Examples
---------
-
-See the ``examples`` directory in the source code for examples.
 
 .. toctree::
     :maxdepth: 2

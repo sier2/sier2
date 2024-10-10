@@ -48,6 +48,8 @@ class Block(param.Parameterized):
 
     _block_state = param.String(default=BlockState.READY)
 
+    SIER2_KEY = '_sier2__key'
+
     def __init__(self, *args, user_input=False, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -84,6 +86,9 @@ class Block(param.Parameterized):
         """
 
         im = inspect.getmodule(cls)
+
+        if hasattr(cls, Block.SIER2_KEY):
+            return getattr(cls, Block.SIER2_KEY)
 
         return f'{im.__name__}.{cls.__qualname__}'
 

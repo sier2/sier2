@@ -167,6 +167,14 @@ class Library:
             if not issubclass(cls, Block):
                 raise BlockError(f'{key} is not a block')
 
+            # The fully qualified name of the class is probably not the same as
+            # the library key string. This matters when the dag is dumped and loaded.
+            # Therefore we tell the class what its key is so the key can be dumped,
+            # and when the dag is loaded, the block can be found using
+            # Library.get_block().
+            #
+            setattr(cls, Block.SIER2_KEY, key)
+
             _block_library[key] = cls
 
         return cast(type[Block], _block_library[key])
@@ -197,13 +205,13 @@ class Library:
         #
         instances = {}
         for g in dump['blocks']:
-            class_name = g['block']
+            block_key = g['block']
             instance = g['instance']
             if instance not in instances:
-                gclass = Library.get_block(class_name)
+                gclass = Library.get_block(block_key)
                 instances[instance] = gclass(**g['args'])
             else:
-                raise BlockError(f'Instance {instance} ({class_name}) already exists')
+                raise BlockError(f'Instance {instance} ({block_key}) already exists')
 
         # Connect the blocks.
         #

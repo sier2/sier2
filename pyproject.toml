@@ -21,9 +21,6 @@ holoviews = "^1.18.3"
 panel = ">=1.4.4"
 param = ">=2.1.0"
 
-[tool.poetry.plugins."sier2.library"]
-export = "sier2.shelf"
-
 [[tool.mypy.overrides]]
 module = [
     "holoviews",
