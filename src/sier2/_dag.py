@@ -258,9 +258,17 @@ class Dag:
 
             if item.dst.user_input:
                 # If the current destination block requires user input,
-                # continue to set params, but don't execute anything.
+                # stop executing the dag immediately, because we don't
+                # want to be setting the input params of further blocks
+                # and causing them to do things.
                 #
-                can_execute = False
+                # This possibly leaves items on the queue, which will be
+                # executed on the next call to execute().
+                #
+                # (This used to be "can_execute = False", but that kept executing
+                # more blocks.)
+                #
+                break
 
     def disconnect(self, g: Block) -> None:
         """Disconnect block g from other blocks.

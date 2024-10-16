@@ -1,12 +1,14 @@
 [tool.poetry]
 name = "sier2"
-version = "0.17"
+version = "0.18"
 description = "Block code dags"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
 readme = "README.rst"
 packages = [{include = "sier2", from = "src"}]
 classifiers = [
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
@@ -17,7 +19,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = "^3.11"
 
-holoviews = "^1.18.3"
+holoviews = ">=1.19.0"
 panel = ">=1.4.4"
 param = ">=2.1.0"
 
@@ -27,6 +29,9 @@ module = [
     "param"
 ]
 ignore_missing_imports = true
+
+[project.urls]
+Homepage = "https://github.com/algol60/sier2"
 
 [build-system]
 requires = ["poetry-core"]
