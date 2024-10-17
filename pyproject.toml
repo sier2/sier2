@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sier2"
-version = "0.18"
+version = "0.19"
 description = "Block code dags"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
 readme = "README.rst"

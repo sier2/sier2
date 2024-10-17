@@ -28,7 +28,8 @@ class _InputValues:
     """Record a param value change.
 
     When a block updates an output param, the update is queued until
-    the block finishes executing. This class is what is queued.
+    the block finishes executing. Instances of this class are
+    what is queued.
     """
 
     # The block to be updated.
@@ -38,6 +39,14 @@ class _InputValues:
     # The values to be set before the block executes.
     #
     values: dict[str, Any] = field(default_factory=dict)
+
+    # When the dag gets to a user_input block, it stops executing.
+    # However, when the user clicks the "Continue" button, we want
+    # to push that user_input block on the head of the dag's queue
+    # so its execute() method is called.
+    # This tells the dag to keep executing.
+    #
+    continue_user_input_block: bool = False
 
 class _BlockContext:
     """A context manager to wrap the execution of a block within a dag.
@@ -252,11 +261,16 @@ class Dag:
                 self._stopper.event.set()
                 raise BlockError(msg) from e
 
-            if can_execute:
+            # Execute the block.
+            # Don't execute user_input blocks when we get to them,
+            # unless this is after the user has selected the "Continue"
+            # button.
+            #
+            if can_execute and (not item.dst.user_input or item.continue_user_input_block):
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
                     g.execute()
 
-            if item.dst.user_input:
+            if item.dst.user_input and not item.continue_user_input_block:
                 # If the current destination block requires user input,
                 # stop executing the dag immediately, because we don't
                 # want to be setting the input params of further blocks

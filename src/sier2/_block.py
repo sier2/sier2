@@ -1,13 +1,17 @@
 from enum import StrEnum
 import inspect
 import param
-from typing import Any, Callable
-from collections import defaultdict
+from typing import Any
 
 from . import _logger
 
 class BlockError(Exception):
     """Raised if a Block configuration is invalid."""
+
+    pass
+
+class BlockValidateError(BlockError):
+    """Raised if Block.execute() determines that input data is invalid."""
 
     pass
 
@@ -50,13 +54,14 @@ class Block(param.Parameterized):
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, user_input=False, **kwargs):
+    def __init__(self, *args, user_input=False, continue_label='Continue', **kwargs):
         super().__init__(*args, **kwargs)
 
         if not self.__doc__:
             raise BlockError(f'Class {self.__class__} must have a docstring')
 
         self.user_input = user_input
+        self.continue_label = continue_label
         self._block_state = BlockState.INPUT if user_input else BlockState.READY
         self.logger = _logger.get_logger(self.name)
 

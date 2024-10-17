@@ -5,6 +5,7 @@ import sys
 import threading
 
 from sier2 import Block, BlockState, Dag, BlockError
+from .._dag import _InputValues
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
 
@@ -276,12 +277,21 @@ class BlockCard(pn.Card):
                     if dag_logger:
                         dag_logger.info('', block_name=None, block_state=None)
                         dag_logger.info('Execute dag', block_name='', block_state=BlockState.DAG)
+
+                    # We want this block's execute() method to run first
+                    # after the user clicks the "Continue" button.
+                    # We make this happen by pushing this block on the head
+                    # of the queue, but without any values - we don't want
+                    # to trigger any param changes.
+                    #
+                    dag._block_queue.appendleft(_InputValues(w, {}, True))
+
                     dag.execute(dag_logger=dag_logger)
                 finally:
                     parent_template.main[0].loading = False
 
-            c_button = pn.widgets.Button(name='Continue', button_type='primary')
-            pn.bind(on_continue, c_button, watch=True)
+            c_button = pn.widgets.Button(name=w.continue_label, button_type='primary')
+            c_button.on_click(on_continue)
 
             w_ = pn.Column(
                 w,
