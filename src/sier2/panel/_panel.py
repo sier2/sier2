@@ -284,9 +284,9 @@ class BlockCard(pn.Card):
                     # of the queue, but without any values - we don't want
                     # to trigger any param changes.
                     #
-                    dag._block_queue.appendleft(_InputValues(w, {}, True))
-
-                    dag.execute(dag_logger=dag_logger)
+                    # dag._block_queue.appendleft(_InputValues(w, {}, True))
+                    # dag.execute(dag_logger=dag_logger)
+                    dag.execute_after_input(w, dag_logger=dag_logger)
                 finally:
                     parent_template.main[0].loading = False
 

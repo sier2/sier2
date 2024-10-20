@@ -1,6 +1,6 @@
 import pytest
 
-from sier2 import Block, BlockState, Dag, Connection, BlockError, Library
+from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
 import param
 
 @pytest.fixture
@@ -137,6 +137,64 @@ def test_user_input(dag):
     with pytest.raises(BlockError):
         dag.execute()
 
+def test_user_input_validation(dag):
+    """Ensure that input validation works."""
+
+    class PassThrough(Block):
+        """Pass a value through unchanged."""
+
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def execute(self):
+            self.out_p = self.in_p
+
+    class ValidateInput(Block):
+        """Pass a value through unchanged."""
+
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def execute_input(self):
+            if self.in_p == 1:
+                raise BlockValidateError('validation')
+
+        def execute(self):
+            self.out_p = self.in_p
+
+    p0 = PassThrough()
+    p1 = ValidateInput(user_input=True)
+    p2 = PassThrough()
+    dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    dag.connect(p1, p2, Connection('out_p', 'in_p'))
+
+    # Invalid input.
+    #
+    p0.out_p = 1
+    with pytest.raises(BlockValidateError):
+        dag.execute()
+
+    assert p1.in_p == 1
+
+    # Start a new execution with valid input.
+    #
+    p0.out_p = 2
+    dag.execute()
+    assert p1.in_p == 2
+
+    # User input.
+    #
+    p1.in_p = 3
+
+    # Waiting for input.
+    # Give the dag something to execute.
+    # Continue execution().
+    #
+    dag.execute_after_input(p1)
+    assert p1.out_p == 3
+    assert p2.in_p == 3
+    assert p2.out_p == 3
+
 def test_block_state(dag):
     """Ensure that block states are set correctly."""
 
@@ -163,7 +221,8 @@ def test_block_state(dag):
     inc0.out_p = 1
     dag.execute()
 
-    assert inc2.out_p == 3
+    assert inc2.in_p == 2
+    assert inc2.out_p == 0
 
     assert inc0._block_state == BlockState.READY
     assert inc1._block_state == BlockState.SUCCESSFUL
@@ -173,6 +232,9 @@ def test_block_state(dag):
 
     inc2.out_p = 5
     dag.execute()
+
+    assert inc4.in_p == 6
+    assert inc4.out_p == 7
 
     assert inc0._block_state == BlockState.READY
     assert inc1._block_state == BlockState.SUCCESSFUL

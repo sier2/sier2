@@ -1,4 +1,4 @@
-from ._block import Block, BlockError, BlockState
+from ._block import Block, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
@@ -37,16 +37,19 @@ class _InputValues:
     dst: Block
 
     # The values to be set before the block executes.
+    # For a normal block, values will be non-empty when execute() is called.
+    # For a user_input block, if values is non-empty, execute_input()
+    # will be called, else execute() will be called
     #
     values: dict[str, Any] = field(default_factory=dict)
 
-    # When the dag gets to a user_input block, it stops executing.
-    # However, when the user clicks the "Continue" button, we want
-    # to push that user_input block on the head of the dag's queue
-    # so its execute() method is called.
-    # This tells the dag to keep executing.
-    #
-    continue_user_input_block: bool = False
+    # # When the dag gets to a user_input block, it stops executing.
+    # # However, when the user clicks the "Continue" button, we want
+    # # to push that user_input block on the head of the dag's queue
+    # # so its execute() method is called.
+    # # This tells the dag to keep executing.
+    # #
+    # continue_user_input_block: bool = False
 
 class _BlockContext:
     """A context manager to wrap the execution of a block within a dag.
@@ -73,20 +76,30 @@ class _BlockContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             self.block._block_state = BlockState.WAITING if self.block.user_input else BlockState.SUCCESSFUL
-        elif isinstance(exc_type, KeyboardInterrupt):
+        elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
             self.dag._stopper.event.set()
             print(f'KEYBOARD INTERRUPT IN BLOCK {self.name}')
         else:
-            self.block._block_state = BlockState.ERROR
-            msg = f'While in {self.block.name}.execute(): {exc_val}'
-            # LOGGER.exception(msg)
-            self.dag._stopper.event.set()
-
-            # Convert the error in the block to a BlockError.
+            # TODO Investigate priming the block queue here
+            # if there was a BlockValidateError.
             #
-            raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+            if exc_type is not BlockValidateError:
+                # Validation errors don't set the stopper;
+                # they just stop execution.
+                #
+                self.block._block_state = BlockState.ERROR
+                msg = f'While in {self.block.name}.execute(): {exc_val}'
+                # LOGGER.exception(msg)
+                self.dag._stopper.event.set()
 
+            if not issubclass(exc_type, BlockError):
+                # Convert non-BlockErrors in the block to a BlockError.
+                #
+                raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+
+        # Don't suppress the original exception.
+        #
         return False
 
 class _Stopper:
@@ -222,6 +235,23 @@ class Dag:
                 item.values[inp] = new
                 self._block_queue.append(item)
 
+    def execute_after_input(self, block, *, dag_logger=None):
+        """Execute the dag after running execute_input() in a user_input block.
+
+        After execute_input() executes, and the user has possibly
+        provided input, the dag must continue with execute() in the
+        same block.
+
+        This method will prime the block queue with the specified block
+        and call execute().
+
+        TODO Investigate priming the queue after execute_input() runs,
+        so we can remove this method entirely.
+        """
+
+        self._block_queue.appendleft(_InputValues(block, {}))
+        self.execute(dag_logger=dag_logger)
+
     def execute(self, *, dag_logger=None):
         """Execute the dag.
 
@@ -266,11 +296,19 @@ class Dag:
             # unless this is after the user has selected the "Continue"
             # button.
             #
-            if can_execute and (not item.dst.user_input or item.continue_user_input_block):
+            if can_execute: # and (not item.dst.user_input or item.continue_user_input_block):
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
-                    g.execute()
+                    # If this is a user_input block, and there are input
+                    # values, call execute_input() if it exists.
+                    #
+                    if item.dst.user_input and item.values:
+                        if hasattr(item.dst, 'execute_input'):
+                            g.execute_input()
+                    else:
+                        g.execute()
 
-            if item.dst.user_input and not item.continue_user_input_block:
+            # if item.dst.user_input and not item.continue_user_input_block:
+            if item.dst.user_input and item.values:
                 # If the current destination block requires user input,
                 # stop executing the dag immediately, because we don't
                 # want to be setting the input params of further blocks
@@ -278,9 +316,6 @@ class Dag:
                 #
                 # This possibly leaves items on the queue, which will be
                 # executed on the next call to execute().
-                #
-                # (This used to be "can_execute = False", but that kept executing
-                # more blocks.)
                 #
                 break
 
