@@ -100,7 +100,6 @@ The result is:
     :maxdepth: 2
     :caption: Contents:
 
-    tutorials/tutorials
     block
     dag
     library

@@ -6,12 +6,21 @@ from typing import Any
 from . import _logger
 
 class BlockError(Exception):
-    """Raised if a Block configuration is invalid."""
+    """Raised if a Block configuration is invalid.
+
+    If this exception is raised, the executing dag sets its stop
+    flag (which must be manually reset), and displays a stacktrace.
+    """
 
     pass
 
 class BlockValidateError(BlockError):
-    """Raised if Block.execute() determines that input data is invalid."""
+    """Raised if ``InputBlock.prepare()`` or ``Block.execute()`` determines that input data is invalid.
+
+    If this exception is raised, it will be caught by the executing dag.
+    The dag will not set its stop flag, no stacktrace will be displayed,
+    and the error message will be displayed.
+    """
 
     pass
 
@@ -54,15 +63,14 @@ class Block(param.Parameterized):
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, user_input=False, continue_label='Continue', **kwargs):
+    def __init__(self, *args, continue_label='Continue', **kwargs):
         super().__init__(*args, **kwargs)
 
         if not self.__doc__:
             raise BlockError(f'Class {self.__class__} must have a docstring')
 
-        self.user_input = user_input
         self.continue_label = continue_label
-        self._block_state = BlockState.INPUT if user_input else BlockState.READY
+        # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)
 
         # Maintain a map of "block+output parameter being watched" -> "input parameter".
@@ -71,7 +79,7 @@ class Block(param.Parameterized):
         self._block_name_map: dict[tuple[str, str], str] = {}
 
         # Record this block's output parameters.
-        # If this is a user_input block, we need to trigger
+        # If this is an input block, we need to trigger
         # the output values before executing the next block,
         # in case the user didn't change anything.
         #
@@ -151,3 +159,34 @@ class Block(param.Parameterized):
         result = {name: getattr(self, name) for name in out_names}
 
         return result
+
+class InputBlock(Block):
+    """A ``Block`` that accepts user input.
+
+    An ``InputBlock`` executes in two steps().
+
+    When the block is executed by a dag, the dag first sets the input
+     params, then calls ``prepare()``. Execution of the dag then stops.
+
+    The dag is then restarted using ``dag.execute_after_input(input_block)``.
+    (An input block must be specified because it is not required that the
+    same input block be used immediately.) This causes the block's
+    ``execute()`` method to be called without resetting the input params.
+
+    Dag execution then continues as normal.
+    """
+
+    def __init__(self, *args, continue_label='Continue', **kwargs):
+        super().__init__(*args, continue_label=continue_label, **kwargs)
+        self._block_state = BlockState.INPUT
+
+    def prepare(self):
+        """Called by a dag before calling ``execute()```.
+
+        This gives the block author an opportunity to validate the
+        input params and set up a user inteface.
+
+        After the dag restarts on this block, ``execute()`` will be called.
+        """
+
+        pass

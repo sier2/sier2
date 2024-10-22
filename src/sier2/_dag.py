@@ -1,4 +1,4 @@
-from ._block import Block, BlockError, BlockValidateError, BlockState
+from ._block import Block, InputBlock, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
@@ -38,18 +38,10 @@ class _InputValues:
 
     # The values to be set before the block executes.
     # For a normal block, values will be non-empty when execute() is called.
-    # For a user_input block, if values is non-empty, execute_input()
+    # For an input block, if values is non-empty, prepare()
     # will be called, else execute() will be called
     #
     values: dict[str, Any] = field(default_factory=dict)
-
-    # # When the dag gets to a user_input block, it stops executing.
-    # # However, when the user clicks the "Continue" button, we want
-    # # to push that user_input block on the head of the dag's queue
-    # # so its execute() method is called.
-    # # This tells the dag to keep executing.
-    # #
-    # continue_user_input_block: bool = False
 
 class _BlockContext:
     """A context manager to wrap the execution of a block within a dag.
@@ -75,7 +67,7 @@ class _BlockContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.block._block_state = BlockState.WAITING if self.block.user_input else BlockState.SUCCESSFUL
+            self.block._block_state = BlockState.WAITING if isinstance(self.block, InputBlock) else BlockState.SUCCESSFUL
         elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
             self.dag._stopper.event.set()
@@ -235,38 +227,45 @@ class Dag:
                 item.values[inp] = new
                 self._block_queue.append(item)
 
-    def execute_after_input(self, block, *, dag_logger=None):
-        """Execute the dag after running execute_input() in a user_input block.
+    def execute_after_input(self, block: InputBlock, *, dag_logger=None):
+        """Execute the dag after running ``prepare()`` in an input block.
 
-        After execute_input() executes, and the user has possibly
+        After prepare() executes, and the user has possibly
         provided input, the dag must continue with execute() in the
         same block.
 
-        This method will prime the block queue with the specified block
-        and call execute().
-
-        TODO Investigate priming the queue after execute_input() runs,
-        so we can remove this method entirely.
+        This method will prime the block queue with the specified block's
+        output, and call execute().
         """
 
+        if not isinstance(block, InputBlock):
+            raise BlockError(f'A dag can only restart an InputBlock, not {block.name}')
+
+        # Prime the block queue, using an empty input param values dict
+        # to indicate that this is a restart, and Block.execute()
+        # must be called.
+        #
         self._block_queue.appendleft(_InputValues(block, {}))
         self.execute(dag_logger=dag_logger)
 
     def execute(self, *, dag_logger=None):
         """Execute the dag.
 
-        The dag is executed by iterating through the block events queue
+        The dag is executed by iterating through the block event queue
         and popping events from the head of the queue. For each event,
         update the destination block's input parameters and call
         that block's execute() method.
 
-        If the current destination block has user_flag True,
-        the loop will continue to set param values until the queue is empty,
-        but no execute() method will be called.
+        If the current destination block is an ``InputBlock``,
+        the loop will call ``block.prepare()` instead of ``block.execute()``,
+        then stop. The dag can then be restarted with
+        ``dag.execute_after_input()``.
 
-        To start (or restart) the dag, there must be something in the event queue.
-        The first (or current) user_input block must have updated at least one
-        output param before the dag's execute() is called.
+        To start the dag, there must be something in the event queue -
+        the dag must be "primed". A block must have updated at least one
+        output param before the dag's execute() is called. Calling
+        ``dag.execute()`` will then execute the dag starting with
+        the blocks connected to the first block.
         """
 
         if not self._block_queue:
@@ -292,23 +291,22 @@ class Dag:
                 raise BlockError(msg) from e
 
             # Execute the block.
-            # Don't execute user_input blocks when we get to them,
+            # Don't execute input blocks when we get to them,
             # unless this is after the user has selected the "Continue"
             # button.
             #
-            if can_execute: # and (not item.dst.user_input or item.continue_user_input_block):
+            is_input_block = isinstance(item.dst, InputBlock)
+            if can_execute:
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
-                    # If this is a user_input block, and there are input
-                    # values, call execute_input() if it exists.
+                    # If this is an iinput block, and there are input
+                    # values, call prepare() if it exists.
                     #
-                    if item.dst.user_input and item.values:
-                        if hasattr(item.dst, 'execute_input'):
-                            g.execute_input()
+                    if is_input_block and item.values:
+                        g.prepare()
                     else:
                         g.execute()
 
-            # if item.dst.user_input and not item.continue_user_input_block:
-            if item.dst.user_input and item.values:
+            if is_input_block and item.values:
                 # If the current destination block requires user input,
                 # stop executing the dag immediately, because we don't
                 # want to be setting the input params of further blocks
@@ -429,10 +427,6 @@ class Dag:
             for var in vars:
                 if hasattr(g, var):
                     args[var] = getattr(g, var)
-
-            # TODO is there a better way of checking for user_input?
-            if hasattr(g, 'user_input'):
-                args['user_input'] = getattr(g, 'user_input')
 
             block = {
                 'block': g.block_key(),

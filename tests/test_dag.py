@@ -1,6 +1,6 @@
 import pytest
 
-from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
+from sier2 import Block, InputBlock, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
 import param
 
 @pytest.fixture
@@ -80,7 +80,7 @@ def test_block_exception(dag):
         oo.out_o = 'plugh'
         dag.execute()
 
-def test_user_input(dag):
+def test_input_block(dag):
     """Ensure that dag execution stops at a user-input block."""
 
     class PassThrough(Block):
@@ -92,9 +92,21 @@ def test_user_input(dag):
         def execute(self):
             self.out_p = self.in_p
 
+    class PassThroughI(InputBlock):
+        """Pass a value through unchanged."""
+
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def prepare(self):
+            self.value = self.in_p
+
+        def execute(self):
+            self.out_p = self.value+1
+
     p0 = PassThrough()
     p1 = PassThrough()
-    p2 = PassThrough(user_input=True)
+    p2 = PassThroughI()
     p3 = PassThrough()
     p4 = PassThrough()
 
@@ -103,32 +115,29 @@ def test_user_input(dag):
     dag.connect(p2, p3, Connection('out_p', 'in_p'))
     dag.connect(p3, p4, Connection('out_p', 'in_p'))
 
-    # Emulate user input, and execute the dag up to user_input.
+    # Emulate user input, and execute the dag up to the input block.
     #
     p0.out_p = 5
     dag.execute()
 
     assert p1.in_p == 5
     assert p2.in_p == 5
+    assert p2.value == 5
+    assert p2.out_p == 0
     assert p3.in_p == 0
     assert p4.in_p == 0
 
-    # assert len(dag._block_queue) == 0
-
-    # # Executing without any pending events should raise.
-    # #
-    # with pytest.raises(BlockError):
-    #     dag.execute()
-
     # Emulate user input, and execute the dag to completion.
     #
-    p2.out_p = 7
-    dag.execute()
+    p2.value = 7
+    dag.execute_after_input(p2)
 
     assert p1.in_p == 5
     assert p2.in_p == 5
-    assert p3.in_p == 7
-    assert p4.in_p == 7
+    assert p2.value == 7
+    assert p2.out_p == 8
+    assert p3.in_p == 8
+    assert p4.in_p == 8
 
     assert len(dag._block_queue) == 0
 
@@ -137,7 +146,7 @@ def test_user_input(dag):
     with pytest.raises(BlockError):
         dag.execute()
 
-def test_user_input_validation(dag):
+def test_input_block_validation(dag):
     """Ensure that input validation works."""
 
     class PassThrough(Block):
@@ -149,13 +158,13 @@ def test_user_input_validation(dag):
         def execute(self):
             self.out_p = self.in_p
 
-    class ValidateInput(Block):
+    class ValidateInput(InputBlock):
         """Pass a value through unchanged."""
 
         in_p = param.Integer(default=0)
         out_p = param.Integer(default=0)
 
-        def execute_input(self):
+        def prepare(self):
             if self.in_p == 1:
                 raise BlockValidateError('validation')
 
@@ -163,7 +172,7 @@ def test_user_input_validation(dag):
             self.out_p = self.in_p
 
     p0 = PassThrough()
-    p1 = ValidateInput(user_input=True)
+    p1 = ValidateInput()
     p2 = PassThrough()
     dag.connect(p0, p1, Connection('out_p', 'in_p'))
     dag.connect(p1, p2, Connection('out_p', 'in_p'))
@@ -207,9 +216,21 @@ def test_block_state(dag):
         def execute(self):
             self.out_p = self.in_p + 1
 
+    class IncrementInputBlock(InputBlock):
+        """Increment the input."""
+
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def prepare(self):
+            self.value = self.in_p
+
+        def execute(self):
+            self.out_p = self.value + 1
+
     inc0 = IncrementBlock(name='inc0')
     inc1 = IncrementBlock(name='inc1')
-    inc2 = IncrementBlock(name='inc2', user_input=True)
+    inc2 = IncrementInputBlock(name='inc2')
     inc3 = IncrementBlock(name='inc3')
     inc4 = IncrementBlock(name='inc4')
 
@@ -221,6 +242,7 @@ def test_block_state(dag):
     inc0.out_p = 1
     dag.execute()
 
+    assert inc1.out_p == 2
     assert inc2.in_p == 2
     assert inc2.out_p == 0
 
@@ -230,11 +252,12 @@ def test_block_state(dag):
     assert inc3._block_state == BlockState.READY
     assert inc4._block_state == BlockState.READY
 
-    inc2.out_p = 5
-    dag.execute()
+    inc2.value = 5
+    dag.execute_after_input(inc2)
 
-    assert inc4.in_p == 6
-    assert inc4.out_p == 7
+    assert inc3.in_p == 6
+    assert inc4.in_p == 7
+    assert inc4.out_p == 8
 
     assert inc0._block_state == BlockState.READY
     assert inc1._block_state == BlockState.SUCCESSFUL
