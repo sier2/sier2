@@ -4,7 +4,7 @@ import panel as pn
 import sys
 import threading
 
-from sier2 import Block, BlockState, Dag, BlockError
+from sier2 import Block, InputBlock, BlockValidateError, BlockState, Dag, BlockError
 from .._dag import _InputValues
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
@@ -65,7 +65,7 @@ class _PanelContext:
             self.block._progress.active = False
 
         if exc_type is None:
-            state = BlockState.WAITING if self.block.user_input else BlockState.SUCCESSFUL
+            state = BlockState.WAITING if isinstance(self.block, InputBlock) else BlockState.SUCCESSFUL
             self.block._block_state = state
             if self.dag_logger:
                 self.dag_logger.info(f'after {_hms(delta)}', block_name=self.block.name, block_state=state.value)
@@ -76,16 +76,18 @@ class _PanelContext:
             if self.dag_logger:
                 self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', block_name=self.block.name, block_state=state)
         else:
-            state = BlockState.ERROR
-            self.block._block_state = state
-            if self.dag_logger:
-                self.dag_logger.exception(f'after {_hms(delta)}', block_name=self.block.name, block_state=state)
-            msg = f'While in {self.block.name}.execute(): {exc_val}'
-            self.dag._stopper.event.set()
+            if exc_type is not BlockValidateError:
+                state = BlockState.ERROR
+                self.block._block_state = state
+                if self.dag_logger:
+                    self.dag_logger.exception(f'after {_hms(delta)}', block_name=self.block.name, block_state=state)
+                msg = f'While in {self.block.name}.execute(): {exc_val}'
+                self.dag._stopper.event.set()
 
-            # Convert the error in the block to a BlockError.
-            #
-            raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+                if not issubclass(exc_type, BlockError):
+                    # Convert the error in the block to a BlockError.
+                    #
+                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
         return False
 
@@ -123,7 +125,9 @@ def _show_dag(dag: Dag):
         align='center'
     )
 
-    fp_holder = pn.Column(visible=False)
+    # A place to stash the info FloatPanel.
+    #
+    info_fp_holder = pn.Column(visible=False)
 
     sidebar_title = pn.Row(info_button, '## Blocks')
     template = pn.template.BootstrapTemplate(
@@ -144,7 +148,8 @@ def _show_dag(dag: Dag):
             'contentOverflow': 'scroll'
         }
         fp = pn.layout.FloatPanel(text, name=dag.title, width=550, height=450, contained=False, position='center', theme='dark filleddark', config=config)
-        fp_holder[:] = [fp]
+        info_fp_holder[:] = [fp]
+
     info_button.on_click(display_info)
 
     switch = pn.widgets.Switch(name='Stop')
@@ -205,7 +210,7 @@ def _show_dag(dag: Dag):
             switch,
             pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
             log_feed,
-            fp_holder
+            info_fp_holder
         )
     )
 
@@ -261,8 +266,8 @@ class BlockCard(pn.Card):
                 value=-1
             )
 
-        if w.user_input:
-            # This is a user_input block, so add a 'Continue' button.
+        if isinstance(w, InputBlock):
+            # This is an input block, so add a 'Continue' button.
             #
             def on_continue(_event):
                 # The user may not have changed anything from the default values,
@@ -284,9 +289,14 @@ class BlockCard(pn.Card):
                     # of the queue, but without any values - we don't want
                     # to trigger any param changes.
                     #
-                    # dag._block_queue.appendleft(_InputValues(w, {}, True))
-                    # dag.execute(dag_logger=dag_logger)
-                    dag.execute_after_input(w, dag_logger=dag_logger)
+                    try:
+                        dag.execute_after_input(w, dag_logger=dag_logger)
+                    except BlockValidateError as e:
+                        # TODO display this in the GUI
+                        # - include the block name.
+                        #
+                        print(f'**** EX {str(e)}')
+                        # display_validate_error(str(e))
                 finally:
                     parent_template.main[0].loading = False
 

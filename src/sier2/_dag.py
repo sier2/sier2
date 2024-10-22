@@ -73,9 +73,6 @@ class _BlockContext:
             self.dag._stopper.event.set()
             print(f'KEYBOARD INTERRUPT IN BLOCK {self.name}')
         else:
-            # TODO Investigate priming the block queue here
-            # if there was a BlockValidateError.
-            #
             if exc_type is not BlockValidateError:
                 # Validation errors don't set the stopper;
                 # they just stop execution.
@@ -85,10 +82,10 @@ class _BlockContext:
                 # LOGGER.exception(msg)
                 self.dag._stopper.event.set()
 
-            if not issubclass(exc_type, BlockError):
-                # Convert non-BlockErrors in the block to a BlockError.
-                #
-                raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+                if not issubclass(exc_type, BlockError):
+                    # Convert non-BlockErrors in the block to a BlockError.
+                    #
+                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
         # Don't suppress the original exception.
         #
@@ -236,6 +233,13 @@ class Dag:
 
         This method will prime the block queue with the specified block's
         output, and call execute().
+
+        Parameters
+        ----------
+        block: InputBlock
+            The block to restart the dag at.
+        dag_logger:
+            A logger adapter that will accept log messages.
         """
 
         if not isinstance(block, InputBlock):
