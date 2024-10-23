@@ -73,12 +73,19 @@ class _BlockContext:
             self.dag._stopper.event.set()
             print(f'KEYBOARD INTERRUPT IN BLOCK {self.name}')
         else:
+            state = BlockState.ERROR
+            self.block._block_state = state
             if exc_type is not BlockValidateError:
                 # Validation errors don't set the stopper;
                 # they just stop execution.
                 #
-                self.block._block_state = BlockState.ERROR
-                msg = f'While in {self.block.name}.execute(): {exc_val}'
+                if self.dag_logger:
+                    self.dag_logger.exception(
+                        block_name=self.block.name,
+                        block_state=state
+                    )
+
+                # msg = f'While in {self.block.name}.execute(): {exc_val}'
                 # LOGGER.exception(msg)
                 self.dag._stopper.event.set()
 
@@ -302,7 +309,7 @@ class Dag:
             is_input_block = isinstance(item.dst, InputBlock)
             if can_execute:
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
-                    # If this is an iinput block, and there are input
+                    # If this is an input block, and there are input
                     # values, call prepare() if it exists.
                     #
                     if is_input_block and item.values:

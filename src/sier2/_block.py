@@ -14,16 +14,6 @@ class BlockError(Exception):
 
     pass
 
-class BlockValidateError(BlockError):
-    """Raised if ``InputBlock.prepare()`` or ``Block.execute()`` determines that input data is invalid.
-
-    If this exception is raised, it will be caught by the executing dag.
-    The dag will not set its stop flag, no stacktrace will be displayed,
-    and the error message will be displayed.
-    """
-
-    pass
-
 class BlockState(StrEnum):
     """The current state of a block; also used for logging."""
 
@@ -190,3 +180,15 @@ class InputBlock(Block):
         """
 
         pass
+
+class BlockValidateError(BlockError):
+    """Raised if ``InputBlock.prepare()`` or ``Block.execute()`` determines that input data is invalid.
+
+    If this exception is raised, it will be caught by the executing dag.
+    The dag will not set its stop flag, no stacktrace will be displayed,
+    and the error message will be displayed.
+    """
+
+    def __init__(self, block_name: str, error: str):
+        super().__init__(error)
+        self.block_name = block_name

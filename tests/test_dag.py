@@ -166,7 +166,7 @@ def test_input_block_validation(dag):
 
         def prepare(self):
             if self.in_p == 1:
-                raise BlockValidateError('validation')
+                raise BlockValidateError(self.name, 'validation')
 
         def execute(self):
             self.out_p = self.in_p

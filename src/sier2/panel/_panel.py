@@ -1,5 +1,6 @@
 import ctypes
 from datetime import datetime
+import html
 import panel as pn
 import sys
 import threading
@@ -21,7 +22,7 @@ INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vie
 </svg>
 '''
 
-pn.extension('floatpanel', inline=True, nthreads=NTHREADS, loading_spinner='bar')
+pn.extension('floatpanel', inline=True, nthreads=NTHREADS, loading_spinner='bar', notifications=True)
 
 def _hms(sec):
     h, sec = divmod(int(sec), 3600)
@@ -76,12 +77,17 @@ class _PanelContext:
             if self.dag_logger:
                 self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', block_name=self.block.name, block_state=state)
         else:
+            state = BlockState.ERROR
+            self.block._block_state = state
             if exc_type is not BlockValidateError:
-                state = BlockState.ERROR
-                self.block._block_state = state
                 if self.dag_logger:
-                    self.dag_logger.exception(f'after {_hms(delta)}', block_name=self.block.name, block_state=state)
-                msg = f'While in {self.block.name}.execute(): {exc_val}'
+                    self.dag_logger.exception(
+                        f'after {_hms(delta)}',
+                        block_name=self.block.name,
+                        block_state=state
+                    )
+
+                # msg = f'While in {self.block.name}.execute(): {exc_val}'
                 self.dag._stopper.event.set()
 
                 if not issubclass(exc_type, BlockError):
@@ -292,11 +298,12 @@ class BlockCard(pn.Card):
                     try:
                         dag.execute_after_input(w, dag_logger=dag_logger)
                     except BlockValidateError as e:
-                        # TODO display this in the GUI
-                        # - include the block name.
+                        # Display the error as a notification.
                         #
-                        print(f'**** EX {str(e)}')
-                        # display_validate_error(str(e))
+                        block_name = html.escape(e.block_name)
+                        error = html.escape(str(e))
+                        notif = f'<b>{block_name}</b>:<br>{error}'
+                        pn.state.notifications.error(notif, duration=0)
                 finally:
                     parent_template.main[0].loading = False
 
