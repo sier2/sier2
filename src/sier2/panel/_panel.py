@@ -224,6 +224,113 @@ def _show_dag(dag: Dag):
 
     template.show(threaded=False)
 
+def _serveable_dag(dag: Dag):
+    """Display the dag in a panel template."""
+
+    # Replace the default text-based context with the panel-based context.
+    #
+    dag._block_context = _PanelContext
+
+    info_button = pn.widgets.ButtonIcon(
+        icon=INFO_SVG,
+        active_icon=INFO_SVG,
+        description='Dag Help',
+        align='center'
+    )
+
+    # A place to stash the info FloatPanel.
+    #
+    info_fp_holder = pn.Column(visible=False)
+
+    sidebar_title = pn.Row(info_button, '## Blocks')
+    template = pn.template.BootstrapTemplate(
+        site=dag.site,
+        title=dag.title,
+        theme='dark',
+        sidebar=pn.Column(sidebar_title),
+        collapsed_sidebar=True,
+        sidebar_width=440
+    )
+
+    def display_info(_event):
+        """Display a FloatPanel containing help for the dag and blocks."""
+
+        text = dag_doc(dag)
+        config = {
+            'headerControls': {'maximize': 'remove'},
+            'contentOverflow': 'scroll'
+        }
+        fp = pn.layout.FloatPanel(text, name=dag.title, width=550, height=450, contained=False, position='center', theme='dark filleddark', config=config)
+        info_fp_holder[:] = [fp]
+
+    info_button.on_click(display_info)
+
+    switch = pn.widgets.Switch(name='Stop')
+
+    def on_switch(event):
+        if switch.value:
+            dag.stop()
+            reset()
+
+            # Which thread are we running on?
+            #
+            current_tid = threading.current_thread().ident
+
+            # What other threads are running?
+            # There are multiple threads running, including the main thread
+            # and the bokeh server thread. We need to find the panel threads.
+            # Unfortunately, there is nothing special about them.
+            #
+            print('THREADS', current_tid, [t for t in threading.enumerate()])
+            all_threads = [t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')]
+            assert len(all_threads)<=NTHREADS, f'{all_threads=}'
+            other_thread = [t for t in all_threads if t.ident!=current_tid]
+
+            # It's possible that since the user might not have done anything yet,
+            # another thread hasn't spun up.
+            #
+            if other_thread:
+                interrupt_thread(other_thread[0].ident, KeyboardInterrupt)
+        else:
+            dag.unstop()
+            # TODO reset status for each card
+
+    pn.bind(on_switch, switch, watch=True)
+
+    def reset():
+        """Experiment."""
+        col = template.main.objects[0]
+        for card in col:
+            status = card.header[0]
+
+    # We use a Panel Feed widget to display log messages.
+    #
+    log_feed = pn.Feed(
+        view_latest=True,
+        scroll_button_threshold=20,
+        auto_scroll_limit=1,
+        sizing_mode='stretch_width'
+    )
+    dag_logger = getDagPanelLogger(log_feed)
+
+    template.main.append(
+        pn.Column(
+            *(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted())
+        )
+    )
+    template.sidebar.append(
+        pn.Column(
+            switch,
+            pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
+            log_feed,
+            info_fp_holder
+        )
+    )
+
+    pn.state.on_session_destroyed(_quit)
+
+    template.servable()
+
 class BlockCard(pn.Card):
     """A custom card to wrap around a block.
 
@@ -345,3 +452,6 @@ class PanelDag(Dag):
 
     def show(self):
         _show_dag(self)
+
+    def servable(self):
+        __serveable_dag(self)
