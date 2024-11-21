@@ -10,7 +10,7 @@ from .._dag import _InputValues
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
 
-NTHREADS = 2
+NTHREADS = 1
 
 # From https://tabler.io/icons/icon/info-circle
 #
@@ -22,7 +22,9 @@ INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vie
 </svg>
 '''
 
-pn.extension('floatpanel', inline=True, nthreads=NTHREADS, loading_spinner='bar', notifications=True)
+pn.extension('floatpanel', inline=True, 
+             # nthreads=NTHREADS, 
+             loading_spinner='bar', notifications=True)
 
 def _hms(sec):
     h, sec = divmod(int(sec), 3600)
@@ -45,6 +47,7 @@ class _PanelContext:
         self.dag_logger = dag_logger
 
     def __enter__(self):
+        print('a')
         state = BlockState.EXECUTING
         self.block._block_state = state
         self.t0 = datetime.now()
@@ -57,9 +60,13 @@ class _PanelContext:
         if self.block._progress:
             self.block._progress.active = True
 
+        print('b')
+
         return self.block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+
+        print('c')
         delta = (datetime.now() - self.t0).total_seconds()
 
         if self.block._progress:
@@ -73,7 +80,7 @@ class _PanelContext:
         elif isinstance(exc_type, KeyboardInterrupt):
             state = BlockState.INTERRUPTED
             self.block_state._block_state = state
-            self.dag._stopper.event.set()
+            # self.dag._stopper.event.set()
             if self.dag_logger:
                 self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', block_name=self.block.name, block_state=state)
         else:
@@ -88,13 +95,13 @@ class _PanelContext:
                     )
 
                 # msg = f'While in {self.block.name}.execute(): {exc_val}'
-                self.dag._stopper.event.set()
+                # self.dag._stopper.event.set()
 
                 if not issubclass(exc_type, BlockError):
                     # Convert the error in the block to a BlockError.
                     #
                     raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
-
+        print('d')
         return False
 
 def _quit(session_context):
@@ -162,6 +169,8 @@ def _prepare_to_show(dag: Dag):
         if switch.value:
             dag.stop()
             reset()
+
+            print('e')
 
             # Which thread are we running on?
             #
@@ -290,14 +299,16 @@ class BlockCard(pn.Card):
             # This is an input block, so add a 'Continue' button.
             #
             def on_continue(_event):
+                print('f')
                 # The user may not have changed anything from the default values,
                 # so there won't be anything on the block queue.
                 # Therefore, we trigger the output params to put their
                 # current values on the queue.
                 # If their values are already there, it doesn't matter.
                 #
-                w.param.trigger(*w._block_out_params)
                 parent_template.main[0].loading = True
+                w.param.trigger(*w._block_out_params)
+                
                 try:
                     if dag_logger:
                         dag_logger.info('', block_name=None, block_state=None)
@@ -320,7 +331,7 @@ class BlockCard(pn.Card):
                         pn.state.notifications.error(notif, duration=0)
                 finally:
                     parent_template.main[0].loading = False
-
+            print('g')
             c_button = pn.widgets.Button(name=w.continue_label, button_type='primary')
             c_button.on_click(on_continue)
 
