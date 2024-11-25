@@ -3,6 +3,7 @@ from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
 import threading
+import sys
 from typing import Any
 
 # By default, loops in a dag aren't allowed.
@@ -70,7 +71,8 @@ class _BlockContext:
             self.block._block_state = BlockState.WAITING if isinstance(self.block, InputBlock) else BlockState.SUCCESSFUL
         elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
-            # self.dag._stopper.event.set()
+            if not self.dag._is_pyodide:
+                self.dag._stopper.event.set()
             print(f'KEYBOARD INTERRUPT IN BLOCK {self.name}')
         else:
             state = BlockState.ERROR
@@ -87,7 +89,8 @@ class _BlockContext:
 
                 # msg = f'While in {self.block.name}.execute(): {exc_val}'
                 # LOGGER.exception(msg)
-                # self.dag._stopper.event.set()
+                if not self.dag._is_pyodide:
+                    self.dag._stopper.event.set()
 
                 if not issubclass(exc_type, BlockError):
                     # Convert non-BlockErrors in the block to a BlockError.
@@ -98,31 +101,33 @@ class _BlockContext:
         #
         return False
 
-# class _Stopper:
-#     def __init__(self):
-#         # self.event = threading.Event()
-#         self.event
+class _Stopper:
+    def __init__(self):
+        self.event = threading.Event()
 
-#     @property
-#     def is_stopped(self):
-#         return self.event
+    @property
+    def is_stopped(self):
+        return self.event
 
-#     @is_stopped.getter
-#     def is_stopped(self) -> bool:
-#         return self.event.is_set()
+    @is_stopped.getter
+    def is_stopped(self) -> bool:
+        return self.event.is_set()
 
-#     def __repr__(self):
-#         return f'stopped={self.is_stopped}'
+    def __repr__(self):
+        return f'stopped={self.is_stopped}'
 
 class Dag:
     """A directed acyclic graph of blocks."""
 
     def __init__(self, *, site: str='Block', title: str, doc: str):
         self._block_pairs: list[tuple[Block, Block]] = []
-        # self._stopper = _Stopper()
+        
         self.site = site
         self.title = title
         self.doc = doc
+
+        if not self._is_pyodide:
+            self._stopper = _Stopper()
 
         # We watch output params to be notified when they are set.
         # Events are queued here.
@@ -132,6 +137,10 @@ class Dag:
         # The context manager class to use to run blocks.
         #
         self._block_context = _BlockContext
+
+    @property
+    def _is_pyodide(self) -> bool:
+        return '_pyodide' in sys.modules
 
     def _for_each_once(self):
         """Yield each connected block once."""
@@ -145,13 +154,13 @@ class Dag:
 
     def stop(self):
         """Stop further execution of Block instances in this dag."""
-
-        # self._stopper.event.set()
+        if not self._is_pyodide:
+            self._stopper.event.set()
 
     def unstop(self):
         """Enable further execution of Block instances in this dag."""
-
-        # self._stopper.event.clear()
+        if not self._is_pyodide:
+            self._stopper.event.clear()
 
     def connect(self, src: Block, dst: Block, *connections: Connection):
         if any(not isinstance(c, Connection) for c in connections):
@@ -291,15 +300,17 @@ class Dag:
             # The user has set the "stop executing" flag.
             # Continue to set params, but don't execute anything
             #
-            # if self._stopper.is_stopped:
-            #     can_execute = False
+            if not self._is_pyodide:
+                if self._stopper.is_stopped:
+                    can_execute = False
 
             item = self._block_queue.popleft()
             try:
                 item.dst.param.update(item.values)
             except ValueError as e:
                 msg = f'While in {item.dst.name} setting a parameter: {e}'
-                # self._stopper.event.set()
+                if not self._is_pyodide:
+                    self._stopper.event.set()
                 raise BlockError(msg) from e
 
             # Execute the block.
