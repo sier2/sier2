@@ -21,13 +21,25 @@ INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vie
 '''
 
 if '_pyodide' in sys.modules:
-    NTHREADS = 1
+    # Pyodide (to be specific, WASM) doesn't allow threads.
+    # Specifying one thread for panel for some reason tries to start one, so we need to rely on the default.
+    #
+    pn.extension(
+        'floatpanel', 
+        inline=True, 
+        loading_spinner='bar', 
+        notifications=True,
+    )
 else:
-    NTHREADS = 2
+    pn.extension(
+        'floatpanel', 
+        inline=True, 
+        nthreads=2, 
+        loading_spinner='bar', 
+        notifications=True,
+    )
 
-pn.extension('floatpanel', inline=True, 
-             nthreads=NTHREADS, 
-             loading_spinner='bar', notifications=True)
+
 
 def _hms(sec):
     h, sec = divmod(int(sec), 3600)
@@ -66,6 +78,7 @@ class _PanelContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
 
+        print('c')
         delta = (datetime.now() - self.t0).total_seconds()
 
         if self.block._progress:
