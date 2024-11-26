@@ -77,8 +77,6 @@ class _PanelContext:
         return self.block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-
-        print('c')
         delta = (datetime.now() - self.t0).total_seconds()
 
         if self.block._progress:
