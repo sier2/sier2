@@ -10,8 +10,6 @@ from .._dag import _InputValues
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
 
-NTHREADS = 2
-
 # From https://tabler.io/icons/icon/info-circle
 #
 INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -22,7 +20,26 @@ INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" vie
 </svg>
 '''
 
-pn.extension('floatpanel', inline=True, nthreads=NTHREADS, loading_spinner='bar', notifications=True)
+if '_pyodide' in sys.modules:
+    # Pyodide (to be specific, WASM) doesn't allow threads.
+    # Specifying one thread for panel for some reason tries to start one, so we need to rely on the default.
+    #
+    pn.extension(
+        'floatpanel', 
+        inline=True, 
+        loading_spinner='bar', 
+        notifications=True,
+    )
+else:
+    pn.extension(
+        'floatpanel', 
+        inline=True, 
+        nthreads=2, 
+        loading_spinner='bar', 
+        notifications=True,
+    )
+
+
 
 def _hms(sec):
     h, sec = divmod(int(sec), 3600)
@@ -73,7 +90,8 @@ class _PanelContext:
         elif isinstance(exc_type, KeyboardInterrupt):
             state = BlockState.INTERRUPTED
             self.block_state._block_state = state
-            self.dag._stopper.event.set()
+            if not self.dag._is_pyodide:
+                self.dag._stopper.event.set()
             if self.dag_logger:
                 self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', block_name=self.block.name, block_state=state)
         else:
@@ -88,13 +106,13 @@ class _PanelContext:
                     )
 
                 # msg = f'While in {self.block.name}.execute(): {exc_val}'
-                self.dag._stopper.event.set()
+                if not self.dag._is_pyodide:
+                    self.dag._stopper.event.set()
 
                 if not issubclass(exc_type, BlockError):
                     # Convert the error in the block to a BlockError.
                     #
                     raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
-
         return False
 
 def _quit(session_context):
@@ -116,10 +134,8 @@ def interrupt_thread(tid, exctype):
         #
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
-
-def _show_dag(dag: Dag):
-    """Display the dag in a panel template."""
-
+        
+def _prepare_to_show(dag: Dag):
     # Replace the default text-based context with the panel-based context.
     #
     dag._block_context = _PanelContext
@@ -220,9 +236,25 @@ def _show_dag(dag: Dag):
         )
     )
 
+    return template
+
+def _show_dag(dag: Dag):
+    """Display the dag in a panel template."""
+
+    template = _prepare_to_show(dag)
+
     pn.state.on_session_destroyed(_quit)
 
     template.show(threaded=False)
+
+def _serveable_dag(dag: Dag):
+    """Serve the dag in a panel template."""
+
+    template = _prepare_to_show(dag)
+
+    pn.state.on_session_destroyed(_quit)
+
+    template.servable()
 
 class BlockCard(pn.Card):
     """A custom card to wrap around a block.
@@ -282,8 +314,9 @@ class BlockCard(pn.Card):
                 # current values on the queue.
                 # If their values are already there, it doesn't matter.
                 #
-                w.param.trigger(*w._block_out_params)
                 parent_template.main[0].loading = True
+                w.param.trigger(*w._block_out_params)
+                
                 try:
                     if dag_logger:
                         dag_logger.info('', block_name=None, block_state=None)
@@ -306,10 +339,9 @@ class BlockCard(pn.Card):
                         pn.state.notifications.error(notif, duration=0)
                 finally:
                     parent_template.main[0].loading = False
-
             c_button = pn.widgets.Button(name=w.continue_label, button_type='primary')
             c_button.on_click(on_continue)
-
+            
             w_ = pn.Column(
                 w,
                 pn.Row(c_button, align='end'),
@@ -345,3 +377,6 @@ class PanelDag(Dag):
 
     def show(self):
         _show_dag(self)
+
+    def servable(self):
+        _serveable_dag(self)

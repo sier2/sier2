@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sier2"
-version = "0.23"
+version = "0.25"
 description = "Blocks of code that are executed in dags"
 authors = ["algol60 <algol60@users.noreply.github.com>"]
 readme = "README.rst"
@@ -26,7 +26,8 @@ param = ">=2.1.0"
 [[tool.mypy.overrides]]
 module = [
     "holoviews",
-    "param"
+    "param",
+    "networkx",
 ]
 ignore_missing_imports = true
 
