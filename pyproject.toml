@@ -26,7 +26,8 @@ param = ">=2.1.0"
 [[tool.mypy.overrides]]
 module = [
     "holoviews",
-    "param"
+    "param",
+    "networkx",
 ]
 ignore_missing_imports = true
 
