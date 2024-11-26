@@ -103,6 +103,7 @@ The result is:
     block
     dag
     library
+    metrics
 
 Indices and tables
 ==================

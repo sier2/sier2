@@ -2,6 +2,7 @@ from ._block import Block, InputBlock, BlockError, BlockValidateError, BlockStat
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
+from importlib.metadata import entry_points
 import threading
 from typing import Any
 
@@ -113,6 +114,25 @@ class _Stopper:
     def __repr__(self):
         return f'stopped={self.is_stopped}'
 
+def _find_metrics():
+    PLUGIN_GROUP = 'sier2.metrics'
+    library = entry_points(group=PLUGIN_GROUP)
+    if (liblen:=len(library))==0:
+        # There is no metrics plugin, so return a dummy.
+        #
+        return lambda f, *args, **kwargs: f
+    elif liblen>1:
+        raise BlockError(f'More than one plugin for {PLUGIN_GROUP}')
+
+    ep = next(iter(library))
+    try:
+        metrics_func = ep.load()
+
+        return metrics_func
+    except AttributeError as e:
+        e.add_note(f'While attempting to load metrics function {ep.value}')
+        raise BlockError(e)
+
 class Dag:
     """A directed acyclic graph of blocks."""
 
@@ -131,6 +151,8 @@ class Dag:
         # The context manager class to use to run blocks.
         #
         self._block_context = _BlockContext
+
+        self.metrics = _find_metrics()
 
     def _for_each_once(self):
         """Yield each connected block once."""
@@ -309,13 +331,19 @@ class Dag:
             is_input_block = isinstance(item.dst, InputBlock)
             if can_execute:
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
+
+                    metrics_params = {
+                        'sier2_dag_': self.title,
+                        'sier2_block_': f'{item.dst.__class__.__qualname__}.{item.dst.name}'
+                    }
+
                     # If this is an input block, and there are input
                     # values, call prepare() if it exists.
                     #
                     if is_input_block and item.values:
-                        g.prepare()
+                        self.metrics(g.prepare, **metrics_params)()
                     else:
-                        g.execute()
+                        self.metrics(g.execute, **metrics_params)()
 
             if is_input_block and item.values:
                 # If the current destination block requires user input,
