@@ -117,11 +117,11 @@ class _Stopper:
     def __repr__(self):
         return f'stopped={self.is_stopped}'
 
-def _find_metrics():
-    PLUGIN_GROUP = 'sier2.metrics'
+def _find_logging():
+    PLUGIN_GROUP = 'sier2.logging'
     library = entry_points(group=PLUGIN_GROUP)
     if (liblen:=len(library))==0:
-        # There is no metrics plugin, so return a dummy.
+        # There is no logging plugin, so return a dummy.
         #
         return lambda f, *args, **kwargs: f
     elif liblen>1:
@@ -129,11 +129,11 @@ def _find_metrics():
 
     ep = next(iter(library))
     try:
-        metrics_func = ep.load()
+        logging_func = ep.load()
 
-        return metrics_func
+        return logging_func
     except AttributeError as e:
-        e.add_note(f'While attempting to load metrics function {ep.value}')
+        e.add_note(f'While attempting to load logging function {ep.value}')
         raise BlockError(e)
 
 class Dag:
@@ -158,9 +158,9 @@ class Dag:
         #
         self._block_context = _BlockContext
 
-        # Set up the metrics hook.
+        # Set up the logging hook.
         #
-        self.metrics = _find_metrics()
+        self.logging = _find_logging()
 
     @property
     def _is_pyodide(self) -> bool:
@@ -318,6 +318,8 @@ class Dag:
             #
             raise BlockError('Nothing to execute')
 
+        self.logging(None, sier2_dag_=self)
+
         can_execute = True
         while self._block_queue:
             # print(len(self._block_queue), self._block_queue)
@@ -346,18 +348,18 @@ class Dag:
             if can_execute:
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
 
-                    metrics_params = {
-                        'sier2_dag_': self.title,
-                        'sier2_block_': f'{item.dst.__class__.__qualname__}.{item.dst.name}'
+                    logging_params = {
+                        'sier2_dag_': self,
+                        'sier2_block_': f'{item.dst}'
                     }
 
                     # If this is an input block, and there are input
                     # values, call prepare() if it exists.
                     #
                     if is_input_block and item.values:
-                        self.metrics(g.prepare, **metrics_params)()
+                        self.logging(g.prepare, **logging_params)()
                     else:
-                        self.metrics(g.execute, **metrics_params)()
+                        self.logging(g.execute, **logging_params)()
 
             if is_input_block and item.values:
                 # If the current destination block requires user input,
