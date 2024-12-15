@@ -24,6 +24,29 @@ def docstring(func) -> str:
 
     return doc.split('\n')[0].strip()
 
+def _import_item(key):
+    """Look up an object by key.
+
+    The returned object may be a class (if a Block key) or a function (if a dag key).
+
+    See the Entry points specification at
+    https://packaging.python.org/en/latest/specifications/entry-points/#entry-points.
+    """
+
+    modname, qualname_separator, qualname = key.partition(':')
+    try:
+        obj = importlib.import_module(modname)
+        if qualname_separator:
+            for attr in qualname.split('.'):
+                obj = getattr(obj, attr)
+
+        return obj
+    except ModuleNotFoundError as e:
+        msg = str(e)
+        if not qualname_separator:
+            msg = f'{msg}. Is there a \':\' missing?'
+        raise BlockError(msg)
+
 def _find_blocks():
     yield from _find('blocks')
 
@@ -143,8 +166,6 @@ class Library:
         if not issubclass(block_class, Block):
             print(f'{key} is not a Block')
 
-        # if not key:
-        #     key = block_class.block_key()
         key_ = key if key else block_class.block_key()
 
         if key_ in _block_library:
@@ -161,9 +182,7 @@ class Library:
             raise BlockError(f'Block name {key} is not in the library')
 
         if _block_library[key] is None:
-            ix = key.rfind('.')
-            m = importlib.import_module(key[:ix])
-            cls = getattr(m, key[ix+1:])
+            cls = _import_item(key)
             if not issubclass(cls, Block):
                 raise BlockError(f'{key} is not a block')
 
@@ -188,9 +207,7 @@ class Library:
             raise BlockError(f'Dag name {key} is not in the library')
 
         if key in _dag_library:
-            ix = key.rfind('.')
-            m = importlib.import_module(key[:ix])
-            func = getattr(m, key[ix+1:])
+            func = _import_item(key)
             dag = func()
             if not isinstance(dag, Dag):
                 raise BlockError(f'{key} is not a dag')

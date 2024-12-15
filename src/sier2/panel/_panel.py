@@ -10,6 +10,8 @@ from .._dag import _InputValues
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
 
+NTHREADS = 2
+
 # From https://tabler.io/icons/icon/info-circle
 #
 INFO_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -25,17 +27,17 @@ if '_pyodide' in sys.modules:
     # Specifying one thread for panel for some reason tries to start one, so we need to rely on the default.
     #
     pn.extension(
-        'floatpanel', 
-        inline=True, 
-        loading_spinner='bar', 
+        'floatpanel',
+        inline=True,
+        loading_spinner='bar',
         notifications=True,
     )
 else:
     pn.extension(
-        'floatpanel', 
-        inline=True, 
-        nthreads=2, 
-        loading_spinner='bar', 
+        'floatpanel',
+        inline=True,
+        nthreads=NTHREADS,
+        loading_spinner='bar',
         notifications=True,
     )
 
@@ -134,7 +136,7 @@ def interrupt_thread(tid, exctype):
         #
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
-        
+
 def _prepare_to_show(dag: Dag):
     # Replace the default text-based context with the panel-based context.
     #
@@ -316,7 +318,7 @@ class BlockCard(pn.Card):
                 #
                 parent_template.main[0].loading = True
                 w.param.trigger(*w._block_out_params)
-                
+
                 try:
                     if dag_logger:
                         dag_logger.info('', block_name=None, block_state=None)
@@ -341,7 +343,7 @@ class BlockCard(pn.Card):
                     parent_template.main[0].loading = False
             c_button = pn.widgets.Button(name=w.continue_label, button_type='primary')
             c_button.on_click(on_continue)
-            
+
             w_ = pn.Column(
                 w,
                 pn.Row(c_button, align='end'),
