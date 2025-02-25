@@ -27,6 +27,19 @@ class BlockState(StrEnum):
     INTERRUPTED = 'INTERRUPTED'
     ERROR = 'ERROR'
 
+_PAUSE_EXECUTION_DOC = '''If True, a block executes in two steps.
+
+When the block is executed by a dag, the dag first sets the input
+params, then calls ``prepare()``. Execution of the dag then stops.
+
+The dag is then restarted using ``dag.execute_after_input(input_block)``.
+(An input block must be specified because it is not required that the
+same input block be used immediately.) This causes the block's
+``execute()`` method to be called without resetting the input params.
+
+Dag execution then continues as normal.
+'''
+
 class Block(param.Parameterized):
     """The base class for blocks.
 
@@ -49,16 +62,19 @@ class Block(param.Parameterized):
                 print(f'New value is {self.value_in}')
     """
 
+    block_pause_execution = param.Boolean(default=False, label='Pause execution', doc=_PAUSE_EXECUTION_DOC)
+
     _block_state = param.String(default=BlockState.READY)
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, continue_label='Continue', **kwargs):
+    def __init__(self, *args, block_pause_execution=False, continue_label='Continue', **kwargs):
         super().__init__(*args, **kwargs)
 
         if not self.__doc__:
             raise BlockError(f'Class {self.__class__} must have a docstring')
 
+        self.block_pause_execution = block_pause_execution
         self.continue_label = continue_label
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)
@@ -94,6 +110,17 @@ class Block(param.Parameterized):
             return getattr(cls, Block.SIER2_KEY)
 
         return f'{im.__name__}.{cls.__qualname__}'
+
+    def prepare(self):
+        """If blockpause_execution is True, called by a dag before calling ``execute()```.
+
+        This gives the block author an opportunity to validate the
+        input params and set up a user inteface.
+
+        After the dag restarts on this block, ``execute()`` will be called.
+        """
+
+        pass
 
     def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.
@@ -150,45 +177,45 @@ class Block(param.Parameterized):
 
         return result
 
-class InputBlock(Block):
-    """A ``Block`` that accepts user input.
+# class InputBlock(Block):
+#     """A ``Block`` that accepts user input.
 
-    An ``InputBlock`` executes in two steps().
+#     An ``InputBlock`` executes in two steps().
 
-    When the block is executed by a dag, the dag first sets the input
-     params, then calls ``prepare()``. Execution of the dag then stops.
+#     When the block is executed by a dag, the dag first sets the input
+#      params, then calls ``prepare()``. Execution of the dag then stops.
 
-    The dag is then restarted using ``dag.execute_after_input(input_block)``.
-    (An input block must be specified because it is not required that the
-    same input block be used immediately.) This causes the block's
-    ``execute()`` method to be called without resetting the input params.
+#     The dag is then restarted using ``dag.execute_after_input(input_block)``.
+#     (An input block must be specified because it is not required that the
+#     same input block be used immediately.) This causes the block's
+#     ``execute()`` method to be called without resetting the input params.
 
-    Dag execution then continues as normal.
-    """
+#     Dag execution then continues as normal.
+#     """
 
-    def __init__(self, *args, continue_label='Continue', **kwargs):
-        super().__init__(*args, continue_label=continue_label, **kwargs)
-        self._block_state = BlockState.INPUT
+#     def __init__(self, *args, continue_label='Continue', **kwargs):
+#         super().__init__(*args, continue_label=continue_label, **kwargs)
+#         self._block_state = BlockState.INPUT
 
-    def prepare(self):
-        """Called by a dag before calling ``execute()```.
+#     def prepare(self):
+#         """Called by a dag before calling ``execute()```.
 
-        This gives the block author an opportunity to validate the
-        input params and set up a user inteface.
+#         This gives the block author an opportunity to validate the
+#         input params and set up a user inteface.
 
-        After the dag restarts on this block, ``execute()`` will be called.
-        """
+#         After the dag restarts on this block, ``execute()`` will be called.
+#         """
 
-        pass
+#         pass
 
 class BlockValidateError(BlockError):
-    """Raised if ``InputBlock.prepare()`` or ``Block.execute()`` determines that input data is invalid.
+    """Raised if ``Block.prepare()`` or ``Block.execute()`` determines that input data is invalid.
 
     If this exception is raised, it will be caught by the executing dag.
     The dag will not set its stop flag, no stacktrace will be displayed,
     and the error message will be displayed.
     """
 
-    def __init__(self, block_name: str, error: str):
+    def __init__(self, *, block_name: str, error: str):
         super().__init__(error)
         self.block_name = block_name

@@ -1,6 +1,6 @@
 import pytest
 
-from sier2 import Block, InputBlock, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
+from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
 import param
 
 @pytest.fixture
@@ -80,6 +80,63 @@ def test_block_exception(dag):
         oo.out_o = 'plugh'
         dag.execute()
 
+def test_first_no_input(dag):
+    """A dag where the first block is not an input block, and the dag isnot primed, will fail."""
+
+    class PassThrough(Block):
+        """Pass a value through unchanged."""
+
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def execute(self):
+            self.out_p = self.in_p
+
+    p0 = PassThrough()
+    p1 = PassThrough()
+    dag.connect(p0, p1, Connection('out_p', 'in_p'))
+
+    with pytest.raises(BlockError):
+        dag.execute()
+
+def test_first_input(dag):
+    """A dag where the first block is an input block does not need to be primed."""
+
+    VALUE = 99
+
+    class Initial(Block):
+        """Initial input block, no in_ params required."""
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def __init__(self):
+            super().__init__(block_pause_execution=True)
+
+        def prepare(self):
+            self.in_p = VALUE
+
+        def execute(self):
+            self.out_p = self.in_p
+            pass
+
+    class PassThrough(Block):
+        """Pass a value through unchanged."""
+
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def execute(self):
+            self.out_p = self.in_p
+
+    p0 = Initial()
+    p1 = PassThrough()
+    dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    paused = dag.execute()
+    final = dag.execute_after_input(paused)
+
+    assert p1.out_p == VALUE
+    assert final is None
+
 def test_input_block(dag):
     """Ensure that dag execution stops at a user-input block."""
 
@@ -92,11 +149,14 @@ def test_input_block(dag):
         def execute(self):
             self.out_p = self.in_p
 
-    class PassThroughI(InputBlock):
+    class PassThroughI(Block):
         """Pass a value through unchanged."""
 
         in_p = param.Integer(default=0)
         out_p = param.Integer(default=0)
+
+        def __init__(self):
+            super().__init__(block_pause_execution=True)
 
         def prepare(self):
             self.value = self.in_p
@@ -118,7 +178,8 @@ def test_input_block(dag):
     # Emulate user input, and execute the dag up to the input block.
     #
     p0.out_p = 5
-    dag.execute()
+    pinput = dag.execute()
+    assert pinput is p2
 
     assert p1.in_p == 5
     assert p2.in_p == 5
@@ -130,7 +191,8 @@ def test_input_block(dag):
     # Emulate user input, and execute the dag to completion.
     #
     p2.value = 7
-    dag.execute_after_input(p2)
+    final = dag.execute_after_input(pinput)
+    assert final is None
 
     assert p1.in_p == 5
     assert p2.in_p == 5
@@ -158,15 +220,18 @@ def test_input_block_validation(dag):
         def execute(self):
             self.out_p = self.in_p
 
-    class ValidateInput(InputBlock):
+    class ValidateInput(Block):
         """Pass a value through unchanged."""
 
         in_p = param.Integer(default=0)
         out_p = param.Integer(default=0)
 
+        def __init__(self):
+            super().__init__(block_pause_execution=True)
+
         def prepare(self):
             if self.in_p == 1:
-                raise BlockValidateError(self.name, 'validation')
+                raise BlockValidateError(block_name=self.name, error='validation')
 
         def execute(self):
             self.out_p = self.in_p
@@ -216,11 +281,14 @@ def test_block_state(dag):
         def execute(self):
             self.out_p = self.in_p + 1
 
-    class IncrementInputBlock(InputBlock):
+    class InputIncrementBlock(Block):
         """Increment the input."""
 
         in_p = param.Integer(default=0)
         out_p = param.Integer(default=0)
+
+        def __init__(self, name):
+            super().__init__(name=name, block_pause_execution=True)
 
         def prepare(self):
             self.value = self.in_p
@@ -230,7 +298,7 @@ def test_block_state(dag):
 
     inc0 = IncrementBlock(name='inc0')
     inc1 = IncrementBlock(name='inc1')
-    inc2 = IncrementInputBlock(name='inc2')
+    inc2 = InputIncrementBlock(name='inc2')
     inc3 = IncrementBlock(name='inc3')
     inc4 = IncrementBlock(name='inc4')
 

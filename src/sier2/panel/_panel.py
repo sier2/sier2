@@ -5,7 +5,7 @@ import panel as pn
 import sys
 import threading
 
-from sier2 import Block, InputBlock, BlockValidateError, BlockState, Dag, BlockError
+from sier2 import Block, BlockValidateError, BlockState, Dag, BlockError
 from .._dag import _InputValues
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
@@ -85,7 +85,7 @@ class _PanelContext:
             self.block._progress.active = False
 
         if exc_type is None:
-            state = BlockState.WAITING if isinstance(self.block, InputBlock) else BlockState.SUCCESSFUL
+            state = BlockState.WAITING if self.block.block_pause_execution else BlockState.SUCCESSFUL
             self.block._block_state = state
             if self.dag_logger:
                 self.dag_logger.info(f'after {_hms(delta)}', block_name=self.block.name, block_state=state.value)
@@ -306,7 +306,7 @@ class BlockCard(pn.Card):
                 value=-1
             )
 
-        if isinstance(w, InputBlock):
+        if w.block_pause_execution:
             # This is an input block, so add a 'Continue' button.
             #
             def on_continue(_event):

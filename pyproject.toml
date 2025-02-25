@@ -1,6 +1,6 @@
 [project]
 name = "sier2"
-version = "0.27"
+version = "0.28"
 description = "Blocks of code that are executed in dags"
 authors = [
     {name="Algol60", email="algol60 <algol60@users.noreply.github.com>"}
@@ -37,5 +37,5 @@ ignore_missing_imports = true
 Homepage = "https://github.com/algol60/sier2"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.1.1"]
 build-backend = "poetry.core.masonry.api"

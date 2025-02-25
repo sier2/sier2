@@ -1,4 +1,4 @@
-from ._block import Block, InputBlock, BlockError, BlockValidateError, BlockState
+from ._block import Block, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
 import holoviews as hv
@@ -69,7 +69,7 @@ class _BlockContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.block._block_state = BlockState.WAITING if isinstance(self.block, InputBlock) else BlockState.SUCCESSFUL
+            self.block._block_state = BlockState.WAITING if self.block.block_pause_execution else BlockState.SUCCESSFUL
         elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
             if not self.dag._is_pyodide:
@@ -135,6 +135,11 @@ def _find_logging():
     except AttributeError as e:
         e.add_note(f'While attempting to load logging function {ep.value}')
         raise BlockError(e)
+
+# A marker from Dag.execute_after_input() to tell Dag.execute()
+# that this a restart.
+#
+_RESTART = ':restart:'
 
 class Dag:
     """A directed acyclic graph of blocks."""
@@ -265,7 +270,7 @@ class Dag:
                 item.values[inp] = new
                 self._block_queue.append(item)
 
-    def execute_after_input(self, block: InputBlock, *, dag_logger=None):
+    def execute_after_input(self, block: Block, *, dag_logger=None):
         """Execute the dag after running ``prepare()`` in an input block.
 
         After prepare() executes, and the user has possibly
@@ -277,23 +282,23 @@ class Dag:
 
         Parameters
         ----------
-        block: InputBlock
+        block: Block
             The block to restart the dag at.
         dag_logger:
             A logger adapter that will accept log messages.
         """
 
-        if not isinstance(block, InputBlock):
-            raise BlockError(f'A dag can only restart an InputBlock, not {block.name}')
+        if not block.block_pause_execution:
+            raise BlockError(f'A dag can only restart a paused Block, not {block.name}')
 
-        # Prime the block queue, using an empty input param values dict
+        # Prime the block queue, using _RESTART
         # to indicate that this is a restart, and Block.execute()
         # must be called.
         #
-        self._block_queue.appendleft(_InputValues(block, {}))
+        self._block_queue.appendleft(_InputValues(block, {_RESTART: True}))
         self.execute(dag_logger=dag_logger)
 
-    def execute(self, *, dag_logger=None):
+    def execute(self, *, dag_logger=None) -> Block|None:
         """Execute the dag.
 
         The dag is executed by iterating through the block event queue
@@ -301,17 +306,28 @@ class Dag:
         update the destination block's input parameters and call
         that block's execute() method.
 
-        If the current destination block is an ``InputBlock``,
+        If the current destination block's ``block_pause_execution` is True,
         the loop will call ``block.prepare()` instead of ``block.execute()``,
-        then stop. The dag can then be restarted with
-        ``dag.execute_after_input()``.
+        then stop; execute() will return the block that is puased on.
+        The dag can then be restarted with ``dag.execute_after_input()``,
+        using the paused block as the parameter.
 
-        To start the dag, there must be something in the event queue -
-        the dag must be "primed". A block must have updated at least one
-        output param before the dag's execute() is called. Calling
-        ``dag.execute()`` will then execute the dag starting with
-        the blocks connected to the first block.
+        To start the dag, either:
+        - there must be something in the event queue - the dag must be "primed". A block must have updated at least one output param before the dag's execute() is called;
+        - the first block in the dag must be an input block (block_pause_execution=True).
+
+        Calling ``dag.execute()`` will then execute the dag starting with the relevant block.
         """
+
+        if not self._block_queue:
+            # If there aren't any blocks on the queue, find the first block in the dag.
+            # If this block is an input block, put it on the queue.
+            #
+            sorted_blocks = self.get_sorted()
+            if sorted_blocks:
+                first = sorted_blocks[0]
+                if first.block_pause_execution:
+                    self._block_queue.appendleft(_InputValues(first, {}))
 
         if not self._block_queue:
             # Attempting to execute a dag with no updates is probably a mistake.
@@ -331,6 +347,7 @@ class Dag:
                     can_execute = False
 
             item = self._block_queue.popleft()
+            is_restart = item.values.pop(_RESTART, False)
             try:
                 item.dst.param.update(item.values)
             except ValueError as e:
@@ -344,7 +361,7 @@ class Dag:
             # unless this is after the user has selected the "Continue"
             # button.
             #
-            is_input_block = isinstance(item.dst, InputBlock)
+            is_input_block = item.dst.block_pause_execution
             if can_execute:
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
 
@@ -356,12 +373,15 @@ class Dag:
                     # If this is an input block, and there are input
                     # values, call prepare() if it exists.
                     #
-                    if is_input_block and item.values:
+                    if is_input_block and not is_restart:# and item.values:
                         self.logging(g.prepare, **logging_params)()
                     else:
                         self.logging(g.execute, **logging_params)()
 
-            if is_input_block and item.values:
+            # print(f'{is_input_block=}')
+            # print(f'{is_restart=}')
+            # print(f'{item.values=}')
+            if is_input_block and not is_restart:# and item.values:
                 # If the current destination block requires user input,
                 # stop executing the dag immediately, because we don't
                 # want to be setting the input params of further blocks
@@ -370,7 +390,9 @@ class Dag:
                 # This possibly leaves items on the queue, which will be
                 # executed on the next call to execute().
                 #
-                break
+                return item.dst
+
+        return None
 
     def disconnect(self, g: Block) -> None:
         """Disconnect block g from other blocks.
@@ -416,7 +438,7 @@ class Dag:
 
         return None
 
-    def get_sorted(self):
+    def get_sorted(self) -> list[Block]:
         """Return the blocks in this dag in topological order.
 
         This is useful for arranging the blocks in a GUI, for example.
@@ -655,7 +677,7 @@ def _has_cycle(block_pairs: list[tuple[Block, Block]]):
 
     return len(remaining)>0
 
-def _get_sorted(block_pairs: list[tuple[Block, Block]]):
+def _get_sorted(block_pairs: list[tuple[Block, Block]]) -> list[Block]:
     ordered, remaining = topological_sort(block_pairs)
 
     if remaining:

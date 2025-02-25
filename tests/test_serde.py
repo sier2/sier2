@@ -5,7 +5,7 @@
 
 import pytest
 
-from sier2 import Block, InputBlock, Dag, Connection, Library
+from sier2 import Block, Dag, Connection, Library
 import param
 
 class P(Block):
@@ -27,14 +27,14 @@ class Increment(Block):
     def execute(self):
         self.out_i = self.in_i + self.incr
 
-class InputIncrement(InputBlock):
+class InputIncrement(Block):
     """Increment the input."""
 
     in_i = param.Integer()
     out_i = param.Integer()
 
     def __init__(self, incr, *args, **kwargs):
-        super().__init__(name=f'Increment (with input) by {incr}')
+        super().__init__(block_pause_execution=True, name=f'Increment (with input) by {incr}')
         self.incr = incr
 
     def prepare(self):
@@ -52,7 +52,7 @@ def dag():
 def test_serialise(dag):
     """Ensure that a dag can be serialised and restored.
 
-    We use pass-through blocks to start and end, and an InputBlock
+    We use pass-through blocks to start and end, and an input Block
     and a Block in the middle.
     """
 
