@@ -4,6 +4,7 @@ import html
 import panel as pn
 import sys
 import threading
+from typing import Callable
 
 from sier2 import Block, BlockValidateError, BlockState, Dag, BlockError
 from .._dag import _InputValues
@@ -73,16 +74,16 @@ class _PanelContext:
         block_logger = getBlockPanelLogger(self.block.name)
         self.block.logger = block_logger
 
-        if self.block._progress:
-            self.block._progress.active = True
+        # if self.block._progress:
+        #     self.block._progress.active = True
 
         return self.block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         delta = (datetime.now() - self.t0).total_seconds()
 
-        if self.block._progress:
-            self.block._progress.active = False
+        # if self.block._progress:
+        #     self.block._progress.active = False
 
         if exc_type is None:
             state = BlockState.WAITING if self.block.block_pause_execution else BlockState.SUCCESSFUL
@@ -258,6 +259,16 @@ def _serveable_dag(dag: Dag):
 
     template.servable()
 
+def _default_panel(self) -> Callable[[Block], pn.Param]:
+    """Provide a default __panel__() implementation for blocks that don't have one.
+
+    This default will display the in_ parameters.
+    """
+
+    in_names = [name for name in self.param.values() if name.startswith('in_')]
+
+    return pn.Param(self, parameters=in_names, show_name=False)
+
 class BlockCard(pn.Card):
     """A custom card to wrap around a block.
 
@@ -294,17 +305,20 @@ class BlockCard(pn.Card):
         # inspect the class and display the param attributes.
         # This is obviously not what we want.
         #
-        # Instead, we want to display an indefinite progress bar.
-        # The Panel context manager will activate and deactivate it.
+        # We just want to display the in_ params.
         #
         has_panel = '__panel__' in w.__class__.__dict__
         if not has_panel:
-            w._progress = pn.indicators.Progress(
-                name='Block progress',
-                bar_color='primary',
-                active=False,
-                value=-1
-            )
+            # w._progress = pn.indicators.Progress(
+            #     name='Block progress',
+            #     bar_color='primary',
+            #     active=False,
+            #     value=-1
+            # )
+
+            # Go go gadget descriptor protocol.
+            #
+            w.__panel__ = _default_panel.__get__(w)
 
         if w.block_pause_execution:
             # This is an input block, so add a 'Continue' button.

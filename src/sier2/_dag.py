@@ -144,12 +144,20 @@ _RESTART = ':restart:'
 class Dag:
     """A directed acyclic graph of blocks."""
 
-    def __init__(self, *, site: str='Block', title: str, doc: str):
+    def __init__(self, *, site: str='Block', title: str, doc: str, author: dict[str, str]=None):
         self._block_pairs: list[tuple[Block, Block]] = []
 
         self.site = site
         self.title = title
         self.doc = doc
+
+        if author is not None:
+            if 'name' in author and 'email' in author:
+                self.author = {'name': author['name', 'email': author: 'email']}
+            else:
+                raise ValueError('Author must contain name and email keys')
+        else:
+            self.author = None
 
         if not self._is_pyodide:
             self._stopper = _Stopper()
