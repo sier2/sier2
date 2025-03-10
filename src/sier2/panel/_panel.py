@@ -264,6 +264,13 @@ def _serveable_dag(dag: Dag):
 
     pn.state.on_session_destroyed(_quit)
 
+    # Execute the dag.
+    # Since this is a panel dag, we expect the first block to be an input nlock.
+    # This ensures that the first block's prepare() method is called.
+    # If the first block is not an input block, it must be primed, just like a plain dag.
+    #
+    dag.execute()
+
     template.servable()
 
 def _default_panel(self) -> Callable[[Block], pn.Param]:
