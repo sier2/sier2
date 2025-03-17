@@ -50,16 +50,34 @@ class Block(param.Parameterized):
         class MyBlock(Block):
             ...
 
+    The ``Block`` class inherits from ``param.Parameterized``, and uses parameters
+    as described at https://param.holoviz.org/user_guide/Parameters.html.
+    There are three kinds of parameters:
+    * Input parameters start with ``in_``. These parameters are set before a block is executed.
+    * Output parameters start with ``out_``. The block sets these in its ``execute()`` method.
+    * Block parameters start with ``block_``. THese are reserved for use by blocks.
+
     A typical block will have at least one input parameter, and an ``execute()``
     method that is called when an input parameter value changes.
 
     .. code-block:: python
 
         class MyBlock(Block):
-            value_in = param.String(label='Input Value')
+            in_value = param.String(label='Input Value')
+            out_upper = param.String(label='Output value)
 
             def execute(self):
-                print(f'New value is {self.value_in}')
+                self.out_value = self.in_value.upper()
+                print(f'New value is {self.out_value}')
+
+    The block parameter ``block_pause_execution`` alows a block to act as an "input" block,
+    particularly when the block hsa a GUI interface. When set to True and dag execution
+    reaches this block, the block's ``prepare()`` method is called, then the dag stops executing.
+    This allows the user to interact with a user interface.
+
+    The dag is then restarted using ``dag.execute_after_input(input_block)`` (typically by
+    a "Continue" button in the GUI.) When the dag is continued at this block,
+    the block's ``execute()`` method is called, and dag execution continues.
     """
 
     block_pause_execution = param.Boolean(default=False, label='Pause execution', doc=_PAUSE_EXECUTION_DOC)
@@ -140,25 +158,6 @@ class Block(param.Parameterized):
         # print(f'** EXECUTE {self.__class__=}')
         pass
 
-    # def __panel__(self):
-    #     """A default Panel component.
-
-    #     When run in a Panel context, a block will typically implement
-    #     its own __panel__() method. If it doesn't, this method will be
-    #     used as a default. When a block without a __panel__() is wrapped
-    #     in a Card, self.progress will be assigned a pn.indicators.Progress()
-    #     widget which is returned here. The Panel context will make it active
-    #     before executing the block, and non-active after executing the block.
-    #     (Why not have a default Progress()? Because we don't want any
-    #     Panel-related code in the core implementation.)
-
-    #     If the block implements __panel__(), this will obviously be overridden.
-
-    #     When run in non-Panel context, this will remain unused.
-    #     """
-
-    #     return self._progress
-
     def __call__(self, **kwargs) -> dict[str, Any]:
         """Allow a block to be called directly."""
 
@@ -176,37 +175,6 @@ class Block(param.Parameterized):
         result = {name: getattr(self, name) for name in out_names}
 
         return result
-
-# class InputBlock(Block):
-#     """A ``Block`` that accepts user input.
-
-#     An ``InputBlock`` executes in two steps().
-
-#     When the block is executed by a dag, the dag first sets the input
-#      params, then calls ``prepare()``. Execution of the dag then stops.
-
-#     The dag is then restarted using ``dag.execute_after_input(input_block)``.
-#     (An input block must be specified because it is not required that the
-#     same input block be used immediately.) This causes the block's
-#     ``execute()`` method to be called without resetting the input params.
-
-#     Dag execution then continues as normal.
-#     """
-
-#     def __init__(self, *args, continue_label='Continue', **kwargs):
-#         super().__init__(*args, continue_label=continue_label, **kwargs)
-#         self._block_state = BlockState.INPUT
-
-#     def prepare(self):
-#         """Called by a dag before calling ``execute()```.
-
-#         This gives the block author an opportunity to validate the
-#         input params and set up a user inteface.
-
-#         After the dag restarts on this block, ``execute()`` will be called.
-#         """
-
-#         pass
 
 class BlockValidateError(BlockError):
     """Raised if ``Block.prepare()`` or ``Block.execute()`` determines that input data is invalid.
