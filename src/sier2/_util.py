@@ -1,4 +1,66 @@
+from functools import cache
+import importlib
+from importlib.metadata import entry_points
 import sys
+import warnings
+
+from sier2 import BlockError
+
+def _import_item(key):
+    """Look up an object by key.
+
+    The returned object may be a class (if a Block key) or a function (if a dag key).
+
+    See the Entry points specification at
+    https://packaging.python.org/en/latest/specifications/entry-points/#entry-points.
+    """
+
+    modname, qualname_separator, qualname = key.partition(':')
+    try:
+        obj = importlib.import_module(modname)
+        if qualname_separator:
+            for attr in qualname.split('.'):
+                obj = getattr(obj, attr)
+
+        return obj
+    except ModuleNotFoundError as e:
+        msg = str(e)
+        if not qualname_separator:
+            msg = f'{msg}. Is there a \':\' missing?'
+        raise BlockError(msg)
+
+@cache
+def get_block_config():
+    """A convenience function to get block configuration data.
+
+    Block can run in different environments; for example, a block that has access to the
+    Internet may use a different configuration to the same block running in a corporate
+    environment.
+
+    This function looks up a block configuration provider using the ``sier2.config`` entry point,
+    which has the form `module-name:function-name`.
+
+    If no config package is found, or more than one config package is found,
+    a warning will be produced (using `warnings.warn()`), and a default config will be returned,
+    with the ``'config'`` key having the value ``None``.
+
+    See the `sier2-blocks-config` package for an example.
+    """
+
+    eps = list(entry_points(group='sier2.config'))
+    if len(eps)==1:
+        ep = eps[0].value
+        config_func = _import_item(ep)
+        config = config_func()
+    else:
+        msg = 'No block configuration found' if not eps else 'Multiple configs found'
+        warnings.warn(f'{msg}: returning config None')
+        config = {'config': None}
+
+    if 'config' not in config:
+        raise BlockError('config dictionary does not contain "config" key')
+
+    return config
 
 ########
 # Documentation utilities

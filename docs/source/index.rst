@@ -104,6 +104,7 @@ The result is:
     dag
     library
     logging
+    util
 
 Indices and tables
 ==================

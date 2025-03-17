@@ -7,6 +7,7 @@ import warnings
 
 from sier2 import Block, Dag, Connection, BlockError
 from sier2.panel import PanelDag
+from ._util import _import_item
 
 # Store a mapping from a unique key to a Block class.
 # When plugins are initially scanned, the classes are not loaded.
@@ -23,29 +24,6 @@ def docstring(func) -> str:
     doc = func.__doc__.strip()
 
     return doc.split('\n')[0].strip()
-
-def _import_item(key):
-    """Look up an object by key.
-
-    The returned object may be a class (if a Block key) or a function (if a dag key).
-
-    See the Entry points specification at
-    https://packaging.python.org/en/latest/specifications/entry-points/#entry-points.
-    """
-
-    modname, qualname_separator, qualname = key.partition(':')
-    try:
-        obj = importlib.import_module(modname)
-        if qualname_separator:
-            for attr in qualname.split('.'):
-                obj = getattr(obj, attr)
-
-        return obj
-    except ModuleNotFoundError as e:
-        msg = str(e)
-        if not qualname_separator:
-            msg = f'{msg}. Is there a \':\' missing?'
-        raise BlockError(msg)
 
 def _find_blocks():
     yield from _find('blocks')
