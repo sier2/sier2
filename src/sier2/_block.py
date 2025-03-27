@@ -4,6 +4,7 @@ import param
 from typing import Any
 
 from . import _logger
+from ._config import Config
 
 class BlockError(Exception):
     """Raised if a Block configuration is invalid.
@@ -128,6 +129,39 @@ class Block(param.Parameterized):
             return getattr(cls, Block.SIER2_KEY)
 
         return f'{im.__name__}.{cls.__qualname__}'
+
+    def get_config(self, block: 'Block'=None):
+        """Return a dictionary containing keys and values from the sier2 config file.
+
+        The config file has the format described by the Python ``configparser`` module,
+        with the added feature that values are evaluated using ``ast.literal_eval()``,
+        and therefore must be syntactically correct Python literals.
+
+        They keys and values are read from the section ``[block.name]``, where ``name`` is
+        this block's unique key as specified by ``block_key()``.
+
+        The default config file is looked for at
+        (the default user config directory) / 'sier2sier2.ini'.
+        On Windows, the config directory is ``$ENV:APPDATA``; on Linux, ``$XDG_CONFIG_HOME``
+        or ``$HOME/.config``.
+
+        An alternative config file can be specified by setting ``Config.location`` before
+        any dag or block is executed.
+
+        Parameters
+        ----------
+        block: Block
+            The specified block's config section will be returned. Defaults to ``self``.
+
+        Returns
+        -------
+        A dictionary containing the section's keys and values.
+        """
+
+        b = block if block is not None else self
+        name = f'block.{b.block_key()}'
+
+        return Config[name]
 
     def prepare(self):
         """If blockpause_execution is True, called by a dag before calling ``execute()```.
