@@ -103,6 +103,7 @@ The result is:
     block
     dag
     library
+    config
     logging
     util
 

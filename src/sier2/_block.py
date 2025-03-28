@@ -130,15 +130,19 @@ class Block(param.Parameterized):
 
         return f'{im.__name__}.{cls.__qualname__}'
 
-    def get_config(self, block: 'Block'=None):
-        """Return a dictionary containing keys and values from the sier2 config file.
+    def get_config(self, *, block: 'Block'=None):
+        """Return a dictionary containing keys and values from the section specified by
+        the block in the sier2 config file.
 
         The config file has the format described by the Python ``configparser`` module,
-        with the added feature that values are evaluated using ``ast.literal_eval()``,
+        with the added feature that values are evaluated using :func:`ast.literal_eval`,
         and therefore must be syntactically correct Python literals.
 
         They keys and values are read from the section ``[block.name]``, where ``name`` is
-        this block's unique key as specified by ``block_key()``.
+        this block's unique key as specified by :func:`sier2.Block.block_key`.
+        If the ``block`` parameter is unspecified, the calling block is used by default.
+
+        If the section is not present in the config file, an empty dictionary is returned.
 
         The default config file is looked for at
         (the default user config directory) / 'sier2sier2.ini'.
@@ -146,7 +150,8 @@ class Block(param.Parameterized):
         or ``$HOME/.config``.
 
         An alternative config file can be specified by setting ``Config.location`` before
-        any dag or block is executed.
+        any dag or block is executed. THis can be done from a command line using
+        the ``--config`` option.
 
         Parameters
         ----------
@@ -162,6 +167,28 @@ class Block(param.Parameterized):
         name = f'block.{b.block_key()}'
 
         return Config[name]
+
+    def get_config_value(self, key: str, default: Any=None, *, block: 'Block'=None):
+        """Return an individual value from the section specified by
+        the block in the sier2 config file.
+
+        See :func:`sier2.Block.get_config` for more details.
+
+        Parameters
+        ----------
+        key: str
+            The key of the value to be returned.
+        default: Any
+            The default value to return if the section or key are not present in the config file.
+        block: Block
+            The specified block's config section will be returned. Defaults to ``self``.
+        """
+
+        b = block if block is not None else self
+        name = f'block.{b.block_key()}'
+        value = Config[name, key]
+
+        return value if value is not None else default
 
     def prepare(self):
         """If blockpause_execution is True, called by a dag before calling ``execute()```.
