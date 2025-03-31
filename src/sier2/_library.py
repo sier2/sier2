@@ -35,6 +35,10 @@ def _find_dags():
 def run_dag(dag_name):
     """Run the named dag."""
 
+    # TODO refactor this to allow specifying just the simple name when the re are no dups,
+    # but more of the qualified name where there are dups.
+    #
+
     ix = dag_name.rfind('.')
     if ix==-1:
         found_dag = None
