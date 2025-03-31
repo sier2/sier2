@@ -66,30 +66,18 @@ def dags_cmd(args):
             seen.add(gi.key)
 
 def run_cmd(args):
-    if args.config:
-        Config.location = args.config
-
     if args.update_config:
-        # A string of the form "block_name[,arg_string]".
-        # `block_name`` must be the name of a block that has an `out_config` param.
-        # The `out_config` param must contain a string that is the content of a sier2 ini file.
-        # If `arg_string` is specified and the block has an `in_arg` param,
-        # `in_arg` is set to `arg_string`.
-        #
-        # TODO after this works, move it to _config.py.
-        #
         args = args.update_config.split(',')
         block_name = args[0]
-        block = Library.get_block(block_name)
-        if not hasattr(block, 'out_config'):
-            raise ValueError('config block does not have out param "out_config"')
+        update_arg = ','.join(args[1:])
+        write_to_file = True
+    else:
+        block_name = None
+        update_arg = None
+        write_to_file = False
 
-        if hasattr(block, 'in_arg'):
-            in_arg = ','.join(args[1:])
-            block.in_arg = in_arg
-
-        block.execute()
-        Config._update(block.out_config)
+    if args.config or args.update_config:
+        Config.update(location=args.config, config_block=block_name, update_arg=update_arg, write_to_file=write_to_file)
 
     run_dag(args.dag)
 

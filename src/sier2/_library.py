@@ -2,6 +2,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 import importlib
 from importlib.metadata import entry_points, EntryPoint
+import re
 from typing import Any, cast
 import warnings
 
@@ -38,7 +39,7 @@ def run_dag(dag_name):
     if ix==-1:
         found_dag = None
         for _, d in _find_dags():
-            dparts = d.key.split('.')
+            dparts = re.split(r'[\.:]', d.key)
             if dparts[-1]==dag_name:
                 if found_dag:
                     raise BlockError(f'Found duplicate: {dag_name}, d')
@@ -51,10 +52,12 @@ def run_dag(dag_name):
         dag_name = found_dag.key
         ix = dag_name.rfind('.')
 
-    m = importlib.import_module(dag_name[:ix])
-    func = getattr(m, dag_name[ix+1:])
-    # if not issubclass(cls, Block):
-    #     raise BlockError(f'{key} is not a block')
+    # m = importlib.import_module(dag_name[:ix])
+    # func = getattr(m, dag_name[ix+1:])
+    # # if not issubclass(cls, Block):
+    # #     raise BlockError(f'{key} is not a block')
+
+    func = _import_item(found_dag.key)
 
     dag = func()
     if not hasattr(dag, 'show'):

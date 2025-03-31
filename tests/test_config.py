@@ -96,7 +96,7 @@ key4a = 'value4a-new'
         Config._clear()
         Config.location = tmp_config
 
-        Config._update(NEW_INI)
+        Config._update(NEW_INI, write_to_file=True)
 
         Config._clear()
         Config.location = tmp_config

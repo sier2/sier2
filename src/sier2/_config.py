@@ -38,6 +38,49 @@ class _Config:
     def __init__(self):
         self._clear()
 
+    @staticmethod
+    def update(*, location: Path|str|None=None, config_block: str|None=None, update_arg: str|None=None, write_to_file: bool=False):
+        """Update the config.
+
+        If ``location`` has a value, that config file will be used instead of the default.
+
+        If config_block has a value, it must be the name of a block that has
+        an ``out_config`` param. The ``out_config`` param must contain a string that is
+        the content of a sier2 ini file. If ``update_arg`` is specified and the block has
+        an ``in_arg`` param, ``in_arg`` is set to ``update_arg``.
+
+        Parameters
+        ----------
+        location: Path|str|None
+            The location of a config file that will be loaded when a config is read.
+        config_block: str|None
+            A sier2 block that returns the contents of a config file in ``out_config``.
+        update_arg: str|None
+            A string that is passed to the ``config_block`` block is it has an ``in_arg`` param.
+        write_to_file: bool
+            If True, the config file at ``location`` is overwritten with the merged config.
+        """
+
+        if location:
+            Config.location = location
+
+        if config_block:
+            # Import here, otherwise there's a circular dependency Library -> Config -> Library.
+            # Config blocks better not have any config.
+            #
+            from sier2 import Library
+
+            block = Library.get_block(config_block)()
+
+            if not hasattr(block, 'out_config'):
+                raise ValueError('config block does not have out param "out_config"')
+
+            if hasattr(block, 'in_arg'):
+                block.in_arg = update_arg
+
+            block.execute()
+            Config._update(block.out_config, write_to_file=write_to_file)
+
     def _clear(self):
         self._location = _default_config_file()
         self._config = {}
@@ -65,7 +108,7 @@ class _Config:
 
         self._location = config_file
 
-    def _update(self, ini: str):
+    def _update(self, ini: str, write_to_file: bool=False):
         """Update the config file using ini, which contains the contents of another config file.
 
         The current config is also updated.
@@ -84,8 +127,9 @@ class _Config:
             config.read(self._location)
 
         for section_name in new_config.sections():
-            if section_name not in config.sections():
-                config[section_name] = new_config[section_name]
+            if not config.has_section(section_name):
+                config.add_section(section_name)
+                config[section_name].update(new_config[section_name])
             else:
                 update_section = True
                 if CONFIG_UPDATE in config[section_name]:
@@ -94,13 +138,16 @@ class _Config:
                         raise ValueError(f'Value of [{section_name}].{CONFIG_UPDATE} is not a bool')
 
                 if update_section:
-                    for k, v in new_config[section_name].items():
-                        config[section_name][k] = new_config[section_name][k]
+                    config[section_name].update(new_config[section_name])
+                    # for k, v in new_config[section_name].items():
+                    #     config[section_name][k] = new_config[section_name][k]
 
-        with open(self._location, 'w', encoding='utf-8') as f:
-            config.write(f)
+        if write_to_file:
+            with open(self._location, 'w', encoding='utf-8') as f:
+                config.write(f)
 
         self._config = config
+        self._loaded = True
 
     def _load(self):
         """Load the config.
