@@ -2,7 +2,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 import importlib
 from importlib.metadata import entry_points, EntryPoint
-import re
 from typing import Any, cast
 import warnings
 
@@ -43,7 +42,7 @@ def run_dag(dag_name):
     if ix==-1:
         found_dag = None
         for _, d in _find_dags():
-            dparts = re.split(r'[\.:]', d.key)
+            dparts = d.key.replace(':', '.').split('.')
             if dparts[-1]==dag_name:
                 if found_dag:
                     raise BlockError(f'Found duplicate: {dag_name}, d')
@@ -144,7 +143,7 @@ class Library:
         block_class: type[Block]
             The Block's class.
         key: str
-            The Block's unique key string. By default, the block's block_key()
+            The Block's unique key string. By default, the block's :func:`sier2.Block.block_key`
             class method will be used to obtain the key.
         """
 
@@ -160,6 +159,22 @@ class Library:
 
     @staticmethod
     def get_block(key: str) -> type[Block]:
+        """Return the block class specified by the key.
+
+        Note that this is a ``Block`` sub-class, not an instance of a block.
+        The class can be used to instantiate one or more blocks.
+
+        Parameters
+        ----------
+        key: str
+            The unique name of the block class to be returned.
+
+        Returns
+        -------
+        type[Block]
+            A block class.
+        """
+
         if not _block_library:
             Library.collect_blocks()
 
@@ -184,7 +199,20 @@ class Library:
         return cast(type[Block], _block_library[key])
 
     @staticmethod
-    def get_dag(key: str) -> type[Dag]:
+    def get_dag(key: str) -> Dag:
+        """Return the dag specified by the key.
+
+        Parameters
+        ----------
+        key: str
+            The unique name of the dag to be returned.
+
+        Returns
+        -------
+        Dag
+            A dag.
+        """
+
         if not _dag_library:
             Library.collect_dags()
 

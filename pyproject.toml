@@ -1,6 +1,6 @@
 [project]
 name = "sier2"
-version = "0.32"
+version = "0.33"
 description = "Blocks of code that are executed in dags"
 authors = [
     {name="Algol60", email="algol60 <algol60@users.noreply.github.com>"}
