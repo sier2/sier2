@@ -1,7 +1,11 @@
 from ._block import Block, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
-import holoviews as hv
+from bokeh.plotting import figure
+from bokeh.models import (BoxSelectTool, Circle, EdgesAndLinkedNodes, HoverTool,
+                          MultiLine, NodesAndLinkedEdges, TapTool, GraphRenderer,
+                          StaticLayoutProvider, BoxZoomTool, ResetTool)
+from bokeh.palettes import Spectral4
 from importlib.metadata import entry_points
 import threading
 import sys
@@ -619,16 +623,65 @@ class Dag:
                 if len(layer)<max_width:
                     for x, (name, xy) in enumerate(layer.items(), 1):
                         gxy[name][0] = x/max_width
-
+            
             return gxy
 
         n_layers, ranks = build_layers()
-
+        
+        
         src_names = [g.name for g in src]
         dst_names = [g.name for g in dst]
-        g = hv.Graph(((src_names, dst_names),))
 
-        return hv.element.graphs.layout_nodes(g, layout=layout)
+        l = layout(ranks)
+
+        def create_graph(src, dst, l):
+            l_keys = list(l.keys())
+            plot = figure(title="Graph layout demonstration", x_range=(-1.1,1),
+                y_range=(-1.1,n_layers+1), tools="", toolbar_location=None)
+
+            plot.add_tools(HoverTool(tooltips=None), TapTool(), BoxSelectTool())
+
+            graph = GraphRenderer()
+
+            # assign a palette to ``fill_color`` and add it to the data source
+            graph.node_renderer.data_source.data = dict(
+                index=l_keys,
+                fill_color=Spectral4
+                )
+            graph.edge_renderer.data_source.data = dict(
+                index=l_keys,
+                start=src,
+                end=dst)
+
+            graph.layout_provider = StaticLayoutProvider(graph_layout=l)
+
+
+            graph.node_renderer.glyph = Circle(radius=.1, fill_color=Spectral4[0])
+            graph.node_renderer.selection_glyph = Circle(radius=.1, fill_color=Spectral4[2])
+            graph.node_renderer.hover_glyph = Circle(radius=.1, fill_color=Spectral4[1])
+
+            graph.edge_renderer.glyph = MultiLine(line_color="#CCCCCC", line_alpha=0.8, line_width=5)
+            graph.edge_renderer.selection_glyph = MultiLine(line_color=Spectral4[2], line_width=5)
+            graph.edge_renderer.hover_glyph = MultiLine(line_color=Spectral4[1], line_width=5)
+
+            graph.selection_policy = EdgesAndLinkedNodes()
+            graph.inspection_policy = NodesAndLinkedEdges()
+
+            node_hover_tool = HoverTool(tooltips=[("index", "@index")])
+            plot.add_tools(node_hover_tool, BoxZoomTool(), ResetTool())
+
+            plot.renderers.append(graph)
+            #plot.show
+            return plot
+        
+        g_bokeh = create_graph(src_names, dst_names, l)
+
+            
+        # g = hv.Graph(((src_names, dst_names),))
+
+        # return hv.element.graphs.layout_nodes(g, layout=layout)
+
+        return g_bokeh
 
 def topological_sort(pairs):
     """Implement a topological sort as described at
