@@ -1,7 +1,7 @@
 from ._block import Block, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
-from bokeh.models import Range1d, Circle, ColumnDataSource, MultiLine
+from bokeh.models import Range1d, Circle, ColumnDataSource, MultiLine, EdgesAndLinkedNodes, NodesAndLinkedEdges
 from bokeh.plotting import figure
 from bokeh.plotting import from_networkx
 import networkx
@@ -657,8 +657,23 @@ class Dag:
             #Set node size and color
             network_graph.node_renderer.glyph = Circle(radius=1, fill_color='skyblue')
 
+            #Set node highlight colors
+            node_highlight_color = 'white'
+            network_graph.node_renderer.hover_glyph = Circle(radius=1, fill_color=node_highlight_color, line_width=2)
+            network_graph.node_renderer.selection_glyph = Circle(radius=1, fill_color=node_highlight_color, line_width=2)
+
+            
             #Set edge opacity and width
             network_graph.edge_renderer.glyph = MultiLine(line_alpha=0.5, line_width=1)
+
+            #Set edge highlight colors
+            edge_highlight_color = 'black'
+            network_graph.edge_renderer.selection_glyph = MultiLine(line_color=edge_highlight_color, line_width=2)
+            network_graph.edge_renderer.hover_glyph = MultiLine(line_color=edge_highlight_color, line_width=2)
+
+            #Highlight nodes and edges
+            network_graph.selection_policy = NodesAndLinkedEdges()
+            network_graph.inspection_policy = NodesAndLinkedEdges()
 
             #Add network graph to the plot
             plot.renderers.append(network_graph)
