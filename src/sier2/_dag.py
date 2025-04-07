@@ -1,11 +1,11 @@
 from ._block import Block, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
+from bokeh.models import Range1d, Circle, ColumnDataSource, MultiLine
 from bokeh.plotting import figure
-from bokeh.models import (BoxSelectTool, Circle, EdgesAndLinkedNodes, HoverTool,
-                          MultiLine, NodesAndLinkedEdges, TapTool, GraphRenderer,
-                          StaticLayoutProvider, BoxZoomTool, ResetTool)
-from bokeh.palettes import Spectral4
+from bokeh.plotting import from_networkx
+import networkx
+import pandas as pd
 from importlib.metadata import entry_points
 import threading
 import sys
@@ -635,42 +635,33 @@ class Dag:
         l = layout(ranks)
 
         def create_graph(src, dst, l):
-            l_keys = list(l.keys())
-            plot = figure(title="Graph layout demonstration", x_range=(-1.1,1),
-                y_range=(-1.1,n_layers+1), tools="", toolbar_location=None)
+            data = {
+            "source":src,
+            "target":dst,
+            }
+            df = pd.DataFrame(data=data)
+            G = networkx.from_pandas_edgelist(df, 'source', 'target')
 
-            plot.add_tools(HoverTool(tooltips=None), TapTool(), BoxSelectTool())
+            title = 'Graph layout demonstration'
+            #Establish which categories will appear when hovering over each node
+            HOVER_TOOLTIPS = [("index", "@index")]
 
-            graph = GraphRenderer()
+            #Create a plot — set dimensions, toolbar, and title
+            plot = figure(tooltips = HOVER_TOOLTIPS,
+                        tools="pan,wheel_zoom,save,reset", active_scroll='wheel_zoom',
+                        x_range=Range1d(-10.1, 10.1), y_range=Range1d(-10.1, 10.1), title=title)
 
-            # assign a palette to ``fill_color`` and add it to the data source
-            graph.node_renderer.data_source.data = dict(
-                index=l_keys,
-                fill_color=Spectral4
-                )
-            graph.edge_renderer.data_source.data = dict(
-                index=l_keys,
-                start=src,
-                end=dst)
+            #Create a network graph object with spring layout
+            network_graph = from_networkx(G, networkx.spring_layout, scale=10, center=(0, 0))
 
-            graph.layout_provider = StaticLayoutProvider(graph_layout=l)
+            #Set node size and color
+            network_graph.node_renderer.glyph = Circle(radius=1, fill_color='skyblue')
 
+            #Set edge opacity and width
+            network_graph.edge_renderer.glyph = MultiLine(line_alpha=0.5, line_width=1)
 
-            graph.node_renderer.glyph = Circle(radius=.1, fill_color=Spectral4[0])
-            graph.node_renderer.selection_glyph = Circle(radius=.1, fill_color=Spectral4[2])
-            graph.node_renderer.hover_glyph = Circle(radius=.1, fill_color=Spectral4[1])
-
-            graph.edge_renderer.glyph = MultiLine(line_color="#CCCCCC", line_alpha=0.8, line_width=5)
-            graph.edge_renderer.selection_glyph = MultiLine(line_color=Spectral4[2], line_width=5)
-            graph.edge_renderer.hover_glyph = MultiLine(line_color=Spectral4[1], line_width=5)
-
-            graph.selection_policy = EdgesAndLinkedNodes()
-            graph.inspection_policy = NodesAndLinkedEdges()
-
-            node_hover_tool = HoverTool(tooltips=[("index", "@index")])
-            plot.add_tools(node_hover_tool, BoxZoomTool(), ResetTool())
-
-            plot.renderers.append(graph)
+            #Add network graph to the plot
+            plot.renderers.append(network_graph)
             #plot.show
             return plot
         
