@@ -16,7 +16,7 @@ def _default_config_file():
     if os.name=='nt':
         prdir = Path(os.environ['APPDATA']) / 'sier2'
     else:
-        prdir = os.environ['XDG_CONFIG_HOME']
+        prdir = os.environ.get('XDG_CONFIG_HOME', None)
         if prdir:
             prdir = Path(prdir)
         else:
