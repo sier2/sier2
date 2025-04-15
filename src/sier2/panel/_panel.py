@@ -8,6 +8,7 @@ from typing import Callable
 
 from sier2 import Block, BlockValidateError, BlockState, Dag, BlockError
 from .._dag import _InputValues
+from .._util import trim
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
 
@@ -54,7 +55,7 @@ class _PanelContext:
     """A context manager to wrap the execution of a block within a dag.
 
     This default context manager handles the block state, the stopper,
-    and converts block execution errors to GimzoError exceptions.
+    and converts block execution errors to BlockError exceptions.
 
     It also uses the panel UI to provide extra information to the user.
     """
@@ -225,11 +226,30 @@ def _prepare_to_show(dag: Dag):
     )
     dag_logger = getDagPanelLogger(log_feed)
 
-    template.main.append(
-        pn.Column(
-            *(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted())
+    cards = []
+    if dag.show_doc:
+        # The first line of the dag doc is the card header.
+        #
+        doc = dag.doc.strip()
+        ix = doc.find('\n')
+        if ix>=0:
+            header = doc[:ix]
+            doc = doc[ix:].strip()
+        else:
+            header = ''
+
+        name_text = pn.widgets.StaticText(
+            value=header,
+            css_classes=['card-title'],
+            styles={'font-size':'1.17em', 'font-weight':'bold'}
         )
-    )
+
+        card = pn.Card(pn.pane.Markdown(doc, sizing_mode='stretch_width'), header=pn.Row(name_text), sizing_mode='stretch_width')
+        cards.append(card)
+
+    cards.extend(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted())
+
+    template.main.append(pn.Column(*cards))
     template.sidebar.append(
         pn.Column(
             switch,

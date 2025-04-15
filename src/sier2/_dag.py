@@ -144,12 +144,29 @@ _RESTART = ':restart:'
 class Dag:
     """A directed acyclic graph of blocks."""
 
-    def __init__(self, *, site: str='Block', title: str, doc: str, author: dict[str, str]=None):
+    def __init__(self, *, site: str='Block', title: str, doc: str, author: dict[str, str]=None, show_doc: bool=True):
+        """A new dag.
+
+        Parameters
+        ----------
+        site: str
+            Name of the site.
+        title: str
+            A title to show in the header.
+        doc: str
+            Dag documentation.
+        author: str
+            The dag author.
+        show_doc: bool
+            Show the dag docstring if True.
+        """
+
         self._block_pairs: list[tuple[Block, Block]] = []
 
         self.site = site
         self.title = title
         self.doc = doc
+        self.show_doc = show_doc
 
         if author is not None:
             if 'name' in author and 'email' in author:
