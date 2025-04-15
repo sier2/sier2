@@ -71,7 +71,7 @@ class Block(param.Parameterized):
                 self.out_value = self.in_value.upper()
                 print(f'New value is {self.out_value}')
 
-    The block parameter ``block_pause_execution`` alows a block to act as an "input" block,
+    The block parameter ``block_pause_execution`` allows a block to act as an "input" block,
     particularly when the block hsa a GUI interface. When set to True and dag execution
     reaches this block, the block's ``prepare()`` method is called, then the dag stops executing.
     This allows the user to interact with a user interface.
@@ -87,13 +87,22 @@ class Block(param.Parameterized):
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, block_pause_execution=False, continue_label='Continue', **kwargs):
+    def __init__(self, *args, block_pause_execution: bool=False, block_doc: str|None=None, continue_label='Continue', **kwargs):
+        """
+        Parameters
+        ----------
+        block_pause_execution: bool
+            If True, ``prepare()`` is called and dag execution stops.
+        block_doc: str|None
+            Markdown documentation that may displayed in the user interface.
+        """
         super().__init__(*args, **kwargs)
 
         if not self.__doc__:
             raise BlockError(f'Class {self.__class__} must have a docstring')
 
         self.block_pause_execution = block_pause_execution
+        self.block_doc = block_doc
         self.continue_label = continue_label
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)

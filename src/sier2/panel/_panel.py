@@ -335,6 +335,10 @@ class BlockCard(pn.Card):
             )
         )
 
+        # Does this block have documentation to be displayed in the card?
+        #
+        doc = pn.pane.Markdown(w.block_doc, sizing_mode='scale_width') if w.block_doc else None
+
         # If a block has no __panel__() method, Panel will by default
         # inspect the class and display the param attributes.
         # This is obviously not what we want.
@@ -389,14 +393,17 @@ class BlockCard(pn.Card):
                         pn.state.notifications.error(notif, duration=0)
                 finally:
                     parent_template.main[0].loading = False
-            c_button = pn.widgets.Button(name=w.continue_label, button_type='primary')
+            c_button = pn.widgets.Button(name=w.continue_label, button_type='primary', align='end')
             c_button.on_click(on_continue)
 
+            row = [doc, c_button] if doc else [c_button]
             w_ = pn.Column(
                 w,
-                pn.Row(c_button, align='end'),
-               sizing_mode='scale_width'
+                pn.Row(*row),
+               sizing_mode='stretch_width'
             )
+        elif doc:
+            w_ = pn.Column(w, doc)
         else:
             w_ = w
 
