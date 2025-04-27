@@ -13,9 +13,37 @@ from typing import Any
 CONFIG_UPDATE = 'config_update'
 
 def _default_config_file():
+    """Determine the location of the config file sier2.ini.
+
+    If the environment variable ``SIER2_INI`` is set,
+    it specifies the path of the config file.
+
+    Otherwise, if Windows, use ``$env:APPDATA/sier2/sier2.ini``.
+
+    Otherwise, if ``XDG_CONFIG_HOME`` is set, use ``$XDG_CONFIG_HOME/sier2/sier2.ini``.
+
+    Otherwise, use ``$HOME/.config/sier2/sier2.ini``.
+
+    If not using ``SIER2_INI``, the ``sier2`` directory will be created
+    if it does not exist.
+
+    TODO don't create the sier2 directory until the ini file is written.
+    """
+
+    # If a config file has been explicitly set in an environment variable,
+    # use it.
+    #
+    ini = os.environ.get('SIER2_INI', None)
+    if ini:
+        return Path(ini)
+
     if os.name=='nt':
+        # Windows.
+        #
         prdir = Path(os.environ['APPDATA']) / 'sier2'
     else:
+        # Linux.
+        #
         prdir = os.environ.get('XDG_CONFIG_HOME', None)
         if prdir:
             prdir = Path(prdir)

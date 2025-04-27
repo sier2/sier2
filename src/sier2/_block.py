@@ -41,6 +41,20 @@ same input block be used immediately.) This causes the block's
 Dag execution then continues as normal.
 '''
 
+_VISIBLE_DOC = '''If True, the block will be visible in a GUI.
+
+A block may not need to be visible in a dag with a GUI. For example,
+it may be applying a pre-defined filter, or running an algorithm that
+takes an indeterminate amount of time. Setting this parameter to False
+tells the GUI not display this block. Dag execution will otherwise
+proceed as normal.
+
+This is also useful if a GUI application only requires a single block.
+A dag requires at least two blocks, because blocks can only be added
+by connecting them to another block. By making one block a "dummy"
+that is not visible, the GUI effectivly has a single block.
+'''
+
 class Block(param.Parameterized):
     """The base class for blocks.
 
@@ -82,17 +96,20 @@ class Block(param.Parameterized):
     """
 
     block_pause_execution = param.Boolean(default=False, label='Pause execution', doc=_PAUSE_EXECUTION_DOC)
+    block_visible = param.Boolean(default=True, label='Display block', doc=_VISIBLE_DOC)
 
     _block_state = param.String(default=BlockState.READY)
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, block_pause_execution: bool=False, block_doc: str|None=None, continue_label='Continue', **kwargs):
+    def __init__(self, *args, block_pause_execution: bool=False, block_visible: bool=True, block_doc: str|None=None, continue_label='Continue', **kwargs):
         """
         Parameters
         ----------
         block_pause_execution: bool
             If True, ``prepare()`` is called and dag execution stops.
+        block_visible: bool
+            If True (the default), the block will be visible in a GUI.
         block_doc: str|None
             Markdown documentation that may displayed in the user interface.
         """
@@ -102,6 +119,7 @@ class Block(param.Parameterized):
             raise BlockError(f'Class {self.__class__} must have a docstring')
 
         self.block_pause_execution = block_pause_execution
+        self.block_visible = block_visible
         self.block_doc = block_doc
         self.continue_label = continue_label
         # self._block_state = BlockState.READY
