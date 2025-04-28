@@ -1,7 +1,10 @@
 from ._block import Block, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
 from collections import defaultdict, deque
-import holoviews as hv
+from bokeh.models import Range1d, Circle, ColumnDataSource, MultiLine, EdgesAndLinkedNodes, NodesAndLinkedEdges
+from bokeh.plotting import figure
+from bokeh.plotting import from_networkx
+import networkx
 from importlib.metadata import entry_points
 import threading
 import sys
@@ -578,7 +581,7 @@ class Dag:
             'connections': connections
         }
 
-    def hv_graph(self):
+    def bokeh_graph(self):
         """Build a HoloViews Graph to visualise the block connections."""
 
         src: list[Block] = []
@@ -636,16 +639,65 @@ class Dag:
                 if len(layer)<max_width:
                     for x, (name, xy) in enumerate(layer.items(), 1):
                         gxy[name][0] = x/max_width
-
+            
             return gxy
 
         n_layers, ranks = build_layers()
-
+        
+        
         src_names = [g.name for g in src]
         dst_names = [g.name for g in dst]
-        g = hv.Graph(((src_names, dst_names),))
 
-        return hv.element.graphs.layout_nodes(g, layout=layout)
+        l = layout(ranks)
+
+        def create_graph(src, dst, l):
+            data = {
+            "source":src,
+            "target":dst,
+            }
+            df = pd.DataFrame(data=data)
+            G = networkx.from_pandas_edgelist(df, 'source', 'target')
+
+            title = 'Graph layout demonstration'
+            #Establish which categories will appear when hovering over each node
+            HOVER_TOOLTIPS = [("index", "@index")]
+
+            #Create a plot — set dimensions, toolbar, and title
+            plot = figure(tooltips = HOVER_TOOLTIPS,
+                        tools="pan,wheel_zoom,save,reset", active_scroll='wheel_zoom',
+                        x_range=Range1d(-10.1, 10.1), y_range=Range1d(-10.1, 10.1), title=title)
+
+            #Create a network graph object with spring layout
+            network_graph = from_networkx(G, networkx.spring_layout, scale=10, center=(0, 0))
+
+            #Set node size and color
+            network_graph.node_renderer.glyph = Circle(radius=1, fill_color='skyblue')
+
+            #Set node highlight colors
+            node_highlight_color = 'white'
+            network_graph.node_renderer.hover_glyph = Circle(radius=1, fill_color=node_highlight_color, line_width=2)
+            network_graph.node_renderer.selection_glyph = Circle(radius=1, fill_color=node_highlight_color, line_width=2)
+
+            
+            #Set edge opacity and width
+            network_graph.edge_renderer.glyph = MultiLine(line_alpha=1, line_width=2)
+
+            #Set edge highlight colors
+            edge_highlight_color = 'white'
+            network_graph.edge_renderer.selection_glyph = MultiLine(line_color=edge_highlight_color, line_width=4)
+            network_graph.edge_renderer.hover_glyph = MultiLine(line_color=edge_highlight_color, line_width=4)
+
+            #Highlight nodes and edges
+            network_graph.selection_policy = NodesAndLinkedEdges()
+            network_graph.inspection_policy = NodesAndLinkedEdges()
+
+            #Add network graph to the plot
+            plot.renderers.append(network_graph)
+            return plot
+        
+        g_bokeh = create_graph(src_names, dst_names, l)
+
+        return g_bokeh
 
 def topological_sort(pairs):
     """Implement a topological sort as described at
