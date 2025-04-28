@@ -21,13 +21,13 @@ classifiers = [
 [dependencies]
 python = "^3.11"
 
-holoviews = ">=1.19.0"
+bokeh = ">=3.6.3"
 panel = ">=1.4.4"
 param = ">=2.1.0"
 
 [[tool.mypy.overrides]]
 module = [
-    "holoviews",
+    "bokeh",
     "param",
     "networkx",
 ]
