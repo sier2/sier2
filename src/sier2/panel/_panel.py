@@ -249,7 +249,7 @@ def _prepare_to_show(dag: Dag):
 
     cards.extend(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw.block_visible)
 
-    template.main.append(pn.Column(*cards))
+    template.main.append(pn.panel(pn.Column(*cards)))
     template.sidebar.append(
         pn.Column(
             switch,
