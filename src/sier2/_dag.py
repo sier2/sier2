@@ -5,6 +5,7 @@ from bokeh.models import Range1d, Circle, ColumnDataSource, MultiLine, EdgesAndL
 from bokeh.plotting import figure
 from bokeh.plotting import from_networkx
 import networkx
+import pandas as pd
 from importlib.metadata import entry_points
 import threading
 import sys
@@ -666,7 +667,11 @@ class Dag:
             plot = figure(tooltips = HOVER_TOOLTIPS,
                         tools="pan,wheel_zoom,save,reset", active_scroll='wheel_zoom',
                         x_range=Range1d(-10.1, 10.1), y_range=Range1d(-10.1, 10.1), title=title)
-
+            plot.xgrid.grid_line_color = None
+            plot.xaxis.visible = False
+            plot.ygrid.grid_line_color = None
+            plot.yaxis.visible = False
+            
             #Create a network graph object with spring layout
             network_graph = from_networkx(G, networkx.spring_layout, scale=10, center=(0, 0))
 
