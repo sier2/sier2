@@ -253,7 +253,7 @@ def _prepare_to_show(dag: Dag):
     template.sidebar.append(
         pn.Column(
             switch,
-            pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
+            pn.Row(pn.panel(dag.bokeh_graph()), width=400),
             log_feed,
             info_fp_holder
         )
