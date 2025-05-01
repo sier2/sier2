@@ -1,6 +1,6 @@
 [project]
 name = "sier2"
-version = "0.36"
+version = "0.37"
 description = "Blocks of code that are executed in dags"
 authors = [
     {name="Algol60", email="algol60 <algol60@users.noreply.github.com>"}
@@ -21,15 +21,12 @@ classifiers = [
 [dependencies]
 python = "^3.11"
 
-holoviews = ">=1.19.0"
 panel = ">=1.4.4"
 param = ">=2.1.0"
 
 [[tool.mypy.overrides]]
 module = [
-    "holoviews",
-    "param",
-    "networkx",
+    "param"
 ]
 ignore_missing_imports = true
 

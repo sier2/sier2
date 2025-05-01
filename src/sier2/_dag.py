@@ -1,7 +1,6 @@
 from ._block import Block, BlockError, BlockValidateError, BlockState
 from dataclasses import dataclass, field #, KW_ONLY, field
-from collections import defaultdict, deque
-import holoviews as hv
+from collections import deque
 from importlib.metadata import entry_points
 import threading
 import sys
@@ -577,75 +576,6 @@ class Dag:
             'blocks': blocks,
             'connections': connections
         }
-
-    def hv_graph(self):
-        """Build a HoloViews Graph to visualise the block connections."""
-
-        src: list[Block] = []
-        dst: list[Block] = []
-
-        def build_layers():
-            """Traverse the block pairs and organise them into layers.
-
-            The first layer contains the root (no input) nodes.
-            """
-
-            ranks = {}
-            remaining = self._block_pairs[:]
-
-            # Find the root nodes and assign them a layer.
-            #
-            src[:], dst[:] = zip(*remaining)
-            S = list(set([s for s in src if s not in dst]))
-            for s in S:
-                ranks[s.name] = 0
-
-            n_layers = 1
-            while remaining:
-                for s, d in remaining:
-                    if s.name in ranks:
-                        # This destination could be from sources at different layers.
-                        # Make sure the deepest one is used.
-                        #
-                        ranks[d.name] = max(ranks.get(d.name, 0), ranks[s.name] + 1)
-                        n_layers = max(n_layers, ranks[d.name])
-
-                remaining = [(s,d) for s,d in remaining if d.name not in ranks]
-
-            return n_layers, ranks
-
-        def layout(_):
-            """Arrange the graph nodes."""
-
-            max_width = 0
-
-            # Arrange the graph y by layer from top to bottom.
-            # For x, for no we start at 0 and +1 in each layer.
-            #
-            yx = {y:0 for y in ranks.values()}
-            gxy = {}
-            for g, y in ranks.items():
-                gxy[g] = [yx[y], y]
-                yx[y] += 1
-                max_width = max(max_width, yx[y])
-
-            # Balance out the x in each layer.
-            #
-            for y in range(n_layers+1):
-                layer = {name: xy for name,xy in gxy.items() if xy[1]==y}
-                if len(layer)<max_width:
-                    for x, (name, xy) in enumerate(layer.items(), 1):
-                        gxy[name][0] = x/max_width
-
-            return gxy
-
-        n_layers, ranks = build_layers()
-
-        src_names = [g.name for g in src]
-        dst_names = [g.name for g in dst]
-        g = hv.Graph(((src_names, dst_names),))
-
-        return hv.element.graphs.layout_nodes(g, layout=layout)
 
 def topological_sort(pairs):
     """Implement a topological sort as described at
