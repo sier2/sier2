@@ -77,7 +77,6 @@ def bokeh_graph(dag: Dag):
     linexs = []
     lineys = []
     for s, d in dag._block_pairs:
-        print(s.name, d.name)
         linexs.append((ly[s.name][0], ly[d.name][0]))
         lineys.append((ly[s.name][1], ly[d.name][1]))
 

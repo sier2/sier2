@@ -6,7 +6,7 @@ a processing dag pipeline. Blocks are an improvement on libraries;
 if you have a library, you still need to build an application.
 Blocks are pieces of an application, you just have to connect them.
 
-See the ``examples`` directory for examples.
+See the ``examples`` directory in the ``sier2-tutorial``repository for examples.
 
 Description
 -----------
@@ -32,11 +32,11 @@ A typical block implementation looks like this.
     class Increment(Block):
         """A block that adds one to the input value."""
 
-        int_in = param.Integer(label='The input', doc='An integer')
-        int_out = param.Integer(label='The output', doc='The incremented value')
+        in_int = param.Integer(label='The input', doc='An integer')
+        out_int = param.Integer(label='The output', doc='The incremented value')
 
         def execute(self):
-            self.int_out = self.int_in + 1
+            self.out_int = self.in_int + 1
 
 See the examples in ``examples`` (Python scripts) and ``examples-panel`` (scripts that use `Panel <https://panel.holoviz.org/>`_ as a UI).
 

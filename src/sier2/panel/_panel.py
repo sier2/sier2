@@ -6,6 +6,8 @@ import sys
 import threading
 from typing import Callable
 
+import param.parameterized as paramp
+
 from sier2 import Block, BlockValidateError, BlockState, Dag, BlockError
 from .._dag import _InputValues
 from .._util import trim
@@ -430,9 +432,29 @@ class BlockCard(pn.Card):
 
         self.header[-1] = self._get_state_light(_get_state_color(_block_state))
 
+def _sier2_label_formatter(pname: str):
+    """Default formatter to turn parameter names into appropriate widget labels.
+
+    Make labels nicer for Panel.
+
+    Panel uses the label to display a caption for the corresponding input widgets.
+    The default label is taken from the name of the param, which means the default
+    caption starts with "In ".
+
+    Removes the "in_" prefix from input parameters, then passes the param name
+    to paramp.default_label_formatter.
+    """
+
+    if pname.startswith('in_'):
+        pname = pname[3:]
+
+    return paramp.default_label_formatter(pname)
+
 class PanelDag(Dag):
     def __init__(self, *, site: str='Panel Dag', title: str, doc: str):
         super().__init__(site=site, title=title, doc=doc)
+
+        paramp.label_formatter = _sier2_label_formatter
 
     def show(self):
         _show_dag(self)
