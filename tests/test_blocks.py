@@ -309,3 +309,17 @@ def test_call_block():
     result = a(in_a=5)
 
     assert result=={'out_a': 6}
+
+def test_init_called():
+    class A(Block):
+        in_a = param.Integer(doc='int a')
+        out_a = param.Integer(doc='int a')
+        def __init__(self):
+            pass
+            # Oops, didn't call super().__init__()
+
+    a = A()
+    p = PassThrough()
+    dag = Dag(title='Test', doc='Check for super().__init_()')
+    with pytest.raises(BlockError, match=r'super\(\)\.__init__\(\)'):
+        dag.connect(a, p, Connection('out_a', 'in_o'))
