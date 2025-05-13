@@ -137,10 +137,6 @@ class Block(param.Parameterized):
         #
         self._block_out_params = []
 
-        # self._block_context = _EmptyContext()
-
-        # self._progress = None
-
     @classmethod
     def block_key(cls):
         """The unique key of this block class.

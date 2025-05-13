@@ -219,6 +219,15 @@ class Dag:
         if any(not isinstance(c, Connection) for c in connections):
             raise BlockError('All arguments must be Connection instances')
 
+        # Because this is probably the first place that the Block instance is used,
+        # this is a convenient place to check that the block was correctly initialised.
+        #
+        # Pick an arbitrary attribute that should be present.
+        #
+        for b in src, dst:
+            if not hasattr(b, 'block_doc'):
+                raise BlockError(f'Did you call super().__init__() in {b}?')
+
         if _DISALLOW_CYCLES:
             if _has_cycle(self._block_pairs + [(src, dst)]):
                 raise BlockError('This connection would create a cycle')
