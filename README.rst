@@ -6,7 +6,7 @@ a processing dag pipeline. Blocks are an improvement on libraries;
 if you have a library, you still need to build an application.
 Blocks are pieces of an application, you just have to connect them.
 
-See the ``examples`` directory in the ``sier2-tutorial``repository for examples.
+See the ``examples`` directory in the ``sier2-tutorial`` repository for examples.
 
 Description
 -----------
