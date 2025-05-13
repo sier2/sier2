@@ -11,7 +11,7 @@ from .._dag import _InputValues
 from .._util import trim
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
-from ._chart import bokeh_graph
+from ._chart import html_graph
 
 NTHREADS = 2
 
@@ -255,7 +255,11 @@ def _prepare_to_show(dag: Dag):
         pn.Column(
             switch,
             # pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
-            pn.Row(pn.panel(bokeh_graph(dag)), max_width=400, max_height=200),
+            pn.Row(
+                pn.panel(html_graph(dag)), 
+                max_width=400, 
+                max_height=200,
+            ),
             log_feed,
             info_fp_holder
         )
