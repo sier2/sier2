@@ -70,7 +70,7 @@ class Block(param.Parameterized):
     There are three kinds of parameters:
     * Input parameters start with ``in_``. These parameters are set before a block is executed.
     * Output parameters start with ``out_``. The block sets these in its ``execute()`` method.
-    * Block parameters start with ``block_``. THese are reserved for use by blocks.
+    * Block parameters start with ``block_``. These are reserved for use by blocks.
 
     A typical block will have at least one input parameter, and an ``execute()``
     method that is called when an input parameter value changes.
