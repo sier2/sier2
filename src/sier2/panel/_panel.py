@@ -309,7 +309,13 @@ def _default_panel(self) -> Callable[[Block], pn.Param]:
 
     in_names = [name for name in self.param.values() if name.startswith('in_')]
 
-    return pn.Param(self, parameters=in_names, show_name=False)
+    param_pane = pn.Param(self, parameters=in_names, show_name=False)
+
+    # Check if any widgets are Tabulator-based
+    if any('tabulator' in str(type(widget)).lower() for widget in param_pane._widgets.values()):
+        pn.extension('tabulator')
+
+    return param_pane
 
 class BlockCard(pn.Card):
     """A custom card to wrap around a block.
