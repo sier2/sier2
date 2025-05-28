@@ -4,6 +4,7 @@ import html
 import panel as pn
 import sys
 import threading
+import warnings
 from typing import Callable
 
 import param.parameterized as paramp
@@ -311,9 +312,11 @@ def _default_panel(self) -> Callable[[Block], pn.Param]:
 
     param_pane = pn.Param(self, parameters=in_names, show_name=False)
 
-    # Check if any widgets are Tabulator-based
-    if any('tabulator' in str(type(widget)).lower() for widget in param_pane._widgets.values()):
-        pn.extension('tabulator')
+    # Check if any widgets are Tabulator-based and if we need to add extension.
+    if 'tabulator' not in pn.extension._loaded_extensions:
+        if any('tabulator' in str(type(widget)).lower() for widget in param_pane._widgets.values()):
+            warnings.warn(f'One of your blocks {self.__class__.__name__} requires Tabulator, a panel extension for showing data frames. You should explicitly load this with "pn.extension(\'tabulator\')" in your block')
+            pn.extension('tabulator')
 
     return param_pane
 
