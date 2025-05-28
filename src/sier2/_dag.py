@@ -38,9 +38,7 @@ class _InputValues:
     dst: Block
 
     # The values to be set before the block executes.
-    # For a normal block, values will be non-empty when execute() is called.
-    # For an input block, if values is non-empty, prepare()
-    # will be called, else execute() will be called
+    # Values will be non-empty when execute() is called.
     #
     values: dict[str, Any] = field(default_factory=dict)
 
@@ -304,7 +302,7 @@ class Dag:
                 self._block_queue.append(item)
 
     def execute_after_input(self, block: Block, *, dag_logger=None):
-        """Execute the dag after running ``prepare()`` in an input block.
+        """Execute the dag after running ``prepare()``.
 
         After prepare() executes, and the user has possibly
         provided input, the dag must continue with execute() in the
@@ -340,8 +338,8 @@ class Dag:
         that block's execute() method.
 
         If the current destination block's ``block_pause_execution` is True,
-        the loop will call ``block.prepare()` instead of ``block.execute()``,
-        then stop; execute() will return the block that is puased on.
+        the loop will call ``block.prepare()``, then stop; execute() 
+        will return the block that is puased on.
         The dag can then be restarted with ``dag.execute_after_input()``,
         using the paused block as the parameter.
 
@@ -403,17 +401,17 @@ class Dag:
                         'sier2_block_': f'{item.dst}'
                     }
 
-                    # If this is an input block, and there are input
-                    # values, call prepare() if it exists.
-                    #
-                    if is_input_block and not is_restart:# and item.values:
+                    # If we need to wait for a user, just run prepare().
+                    # If we are restarting, just run execute().
+                    # Otherwise, run both.
+                    if is_input_block and not is_restart:
                         self.logging(g.prepare, **logging_params)()
+                    elif is_restart:
+                        self.logging(g.execute, **logging_params)()
                     else:
+                        self.logging(g.prepare, **logging_params)()
                         self.logging(g.execute, **logging_params)()
 
-            # print(f'{is_input_block=}')
-            # print(f'{is_restart=}')
-            # print(f'{item.values=}')
             if is_input_block and not is_restart:# and item.values:
                 # If the current destination block requires user input,
                 # stop executing the dag immediately, because we don't
