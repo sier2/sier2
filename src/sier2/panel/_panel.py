@@ -4,9 +4,11 @@ import html
 import panel as pn
 import sys
 import threading
+import warnings
 from typing import Callable
 
 import param.parameterized as paramp
+from param.parameters import DataFrame
 
 from sier2 import Block, BlockValidateError, BlockState, Dag, BlockError
 from .._dag import _InputValues
@@ -302,14 +304,26 @@ def _serveable_dag(dag: Dag):
     template.servable()
 
 def _default_panel(self) -> Callable[[Block], pn.Param]:
-    """Provide a default __panel__() implementation for blocks that don't have one.
+    """Provide a default __panel__() implementation for blocks that don't have one.param.parameters.
 
     This default will display the in_ parameters.
     """
-
+    
     in_names = [name for name in self.param.values() if name.startswith('in_')]
 
-    return pn.Param(self, parameters=in_names, show_name=False)
+    # Check if we need tabulator installed.
+    # Ostensibly param uses the DataFrame widget if the tabulator extension isn't present,
+    # but this doesn't seem to work properly.
+    #
+    if any([isinstance(self.param[name], DataFrame) for name in in_names]):
+        if 'tabulator' not in pn.extension._loaded_extensions:
+            tabulator_warning = f'One of your blocks ({self.__class__.__name__}) requires Tabulator, a panel extension for showing data frames. You should explicitly load this with "pn.extension(\'tabulator\')" in your block'
+            warnings.warn(tabulator_warning)
+            pn.extension('tabulator')
+
+    param_pane = pn.Param(self, parameters=in_names, show_name=False)
+
+    return param_pane
 
 class BlockCard(pn.Card):
     """A custom card to wrap around a block.
