@@ -165,6 +165,8 @@ def _prepare_to_show(dag: Dag):
         site=dag.site,
         title=dag.title,
         theme='dark',
+        header_background='#1e2329',
+        header_color='#7dd3fc',
         sidebar=pn.Column(sidebar_title),
         collapsed_sidebar=True,
         sidebar_width=440
@@ -271,37 +273,37 @@ def _prepare_to_show(dag: Dag):
 
     return template
 
-def _show_dag(dag: Dag):
-    """Display the dag in a panel template."""
+# def _show_dag(dag: Dag):
+#     """Display the dag in a panel template."""
 
-    template = _prepare_to_show(dag)
+#     template = _prepare_to_show(dag)
 
-    pn.state.on_session_destroyed(_quit)
+#     pn.state.on_session_destroyed(_quit)
 
-    # Execute the dag.
-    # Since this is a panel dag, we expect the first block to be an input nlock.
-    # This ensures that the first block's prepare() method is called.
-    # If the first block is not an input block, it must be primed, just like a plain dag.
-    #
-    dag.execute()
+#     # Execute the dag.
+#     # Since this is a panel dag, we expect the first block to be an input nlock.
+#     # This ensures that the first block's prepare() method is called.
+#     # If the first block is not an input block, it must be primed, just like a plain dag.
+#     #
+#     dag.execute()
 
-    template.show(threaded=False)
+#     template.show(threaded=False)
 
-def _serveable_dag(dag: Dag):
-    """Serve the dag in a panel template."""
+# def _serveable_dag(dag: Dag):
+#     """Serve the dag in a panel template."""
 
-    template = _prepare_to_show(dag)
+#     template = _prepare_to_show(dag)
 
-    pn.state.on_session_destroyed(_quit)
+#     pn.state.on_session_destroyed(_quit)
 
-    # Execute the dag.
-    # Since this is a panel dag, we expect the first block to be an input nlock.
-    # This ensures that the first block's prepare() method is called.
-    # If the first block is not an input block, it must be primed, just like a plain dag.
-    #
-    dag.execute()
+#     # Execute the dag.
+#     # Since this is a panel dag, we expect the first block to be an input nlock.
+#     # This ensures that the first block's prepare() method is called.
+#     # If the first block is not an input block, it must be primed, just like a plain dag.
+#     #
+#     dag.execute()
 
-    template.servable()
+#     template.servable()
 
 def _default_panel(self) -> Callable[[Block], pn.Param]:
     """Provide a default __panel__() implementation for blocks that don't have one.param.parameters.
@@ -471,11 +473,33 @@ def _sier2_label_formatter(pname: str):
 class PanelDag(Dag):
     def __init__(self, *, site: str='Panel Dag', title: str, doc: str):
         super().__init__(site=site, title=title, doc=doc)
-
         paramp.label_formatter = _sier2_label_formatter
+        # self.template = _prepare_to_show(self)
+
+    @property
+    def template(self):
+        return _prepare_to_show(self)
 
     def show(self):
-        _show_dag(self)
+        pn.state.on_session_destroyed(_quit)
+
+        # Execute the dag.
+        # Since this is a panel dag, we expect the first block to be an input nlock.
+        # This ensures that the first block's prepare() method is called.
+        # If the first block is not an input block, it must be primed, just like a plain dag.
+        #
+        self.execute()
+
+        self.template.show(threaded=False)
 
     def servable(self):
-        _serveable_dag(self)
+        pn.state.on_session_destroyed(_quit)
+
+        # Execute the dag.
+        # Since this is a panel dag, we expect the first block to be an input nlock.
+        # This ensures that the first block's prepare() method is called.
+        # If the first block is not an input block, it must be primed, just like a plain dag.
+        #
+        self.execute()
+
+        self.template.servable()
