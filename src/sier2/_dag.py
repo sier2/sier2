@@ -214,6 +214,19 @@ class Dag:
             self._stopper.event.clear()
 
     def connect(self, src: Block, dst: Block, *connections: Connection):
+        """Connect two Blocks within this dag.
+
+        The source and destination :class:`~sier2.Block` instances are connected by providing
+        one or more :class:`~sier2.Connection` parameters, each of which defines a connection
+        between an output parameter (``out_``) in the source block, and an input parameter
+        (``in_``) in the destination block.
+
+        Various consistency checks are done to maintain the integrity of the dag.
+        In particular, the blocks must not form a cycle in the dag:
+        if block A is connected to block B, then block B cannot
+        subsequently be connected directly or indirectly to block A.
+        """
+
         if any(not isinstance(c, Connection) for c in connections):
             raise BlockError('All arguments must be Connection instances')
 
@@ -337,9 +350,9 @@ class Dag:
         update the destination block's input parameters and call
         that block's execute() method.
 
-        If the current destination block's ``block_pause_execution` is True,
-        the loop will call ``block.prepare()``, then stop; execute() 
-        will return the block that is puased on.
+        If the current destination block's ``block_pause_execution`` is True,
+        the loop will call ``block.prepare()``, then stop; ``execute()``
+        will return the destination block.
         The dag can then be restarted with ``dag.execute_after_input()``,
         using the paused block as the parameter.
 
@@ -354,11 +367,26 @@ class Dag:
             # If there aren't any blocks on the queue, find the first block in the dag.
             # If this block is an input block, put it on the queue.
             #
-            sorted_blocks = self.get_sorted()
-            if sorted_blocks:
-                first = sorted_blocks[0]
-                if first.block_pause_execution:
-                    self._block_queue.appendleft(_InputValues(first, {}))
+            # sorted_blocks = self.get_sorted()
+            # if sorted_blocks:
+            #     first = sorted_blocks[0]
+            #     if first.block_pause_execution:
+            #         self._block_queue.appendleft(_InputValues(first, {}))
+
+            # We can't just look at the sorted order - here may be more than one source block.
+            #
+            heads, _ = self.heads_and_tails()
+
+            # If there is only one head block with a pause, prime the dag with that.
+            # TODO Can we have a dag with multiple pause heads?
+            # TODO If there is only one non-pause head, should we run prepare+execute without priming?
+            #
+            bpes = [b for b in heads if b.block_pause_execution]
+            if len(bpes)>1:
+                raise BlockError('There is more than one head block with block_pause_execution==True - prime the dag')
+
+            if bpes:
+                self._block_queue.appendleft(_InputValues(bpes[0], {}))
 
         if not self._block_queue:
             # Attempting to execute a dag with no updates is probably a mistake.
@@ -487,6 +515,17 @@ class Dag:
 
     def has_cycle(self):
         return _has_cycle(self._block_pairs)
+
+    def heads_and_tails(self):
+        """A tuple of the heads (blocks with no source) and tails (blocks with no destination) of the dag."""
+
+        srcs = set()
+        dsts = set()
+        for src, dst in self._block_pairs:
+            srcs.add(src)
+            dsts.add(dst)
+
+        return srcs.difference(dsts), dsts.difference(srcs)
 
     def dump(self):
         """Dump the dag to a serialisable (eg to JSON) dictionary.

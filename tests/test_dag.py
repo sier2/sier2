@@ -332,3 +332,52 @@ def test_block_state(dag):
     assert inc2._block_state == BlockState.WAITING
     assert inc3._block_state == BlockState.SUCCESSFUL
     assert inc4._block_state == BlockState.SUCCESSFUL
+
+def test_multiple_heads_without_pause(dag):
+    class BlockA(Block):
+        """A test block."""
+
+        in_i = param.String()
+        out_o = param.String()
+
+    h1 = BlockA(name='h1')
+    h2 = BlockA(name='h2')
+    t = BlockA(name='t')
+    dag.connect(h1, t, Connection('out_o', 'in_i'))
+    dag.connect(h2, t, Connection('out_o', 'in_i'))
+
+    with pytest.raises(BlockError):
+        dag.execute()
+
+def test_multiple_heads_with_pause(dag):
+    class BlockA(Block):
+        """A test block."""
+
+        in_i = param.String()
+        out_o = param.String()
+
+        def __init__(self, name, pause=False):
+            super().__init__(name=name, block_pause_execution=pause)
+            self.has_prepared = False
+            self.has_executed = False
+
+        def prepare(self):
+            self.has_prepared = True
+
+        def execute(self):
+            self.out_o = self.in_i
+            self.has_executed = True
+
+    h1 = BlockA(name='h1', pause=True)
+    h2 = BlockA(name='h2')
+    t = BlockA(name='t')
+    dag.connect(h1, t, Connection('out_o', 'in_i'))
+    dag.connect(h2, t, Connection('out_o', 'in_i'))
+
+    dag.execute()
+
+    assert h1.has_prepared
+    assert not h1.has_executed
+
+    assert not h2.has_prepared
+    assert not h2.has_executed
