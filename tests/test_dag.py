@@ -81,7 +81,7 @@ def test_block_exception(dag):
         dag.execute()
 
 def test_first_no_input(dag):
-    """A dag where the first block is not an input block, and the dag isnot primed, will fail."""
+    """A dag where the first block is not an input block, and the dag is not primed, will fail."""
 
     class PassThrough(Block):
         """Pass a value through unchanged."""

@@ -12,7 +12,14 @@ _DISALLOW_CYCLES = True
 
 @dataclass
 class Connection:
-    """Define a connection between an output parameter and an input parameter."""
+    """Define a connection between an output parameter and an input parameter.
+
+    For example:
+
+    .. code-block:: python
+
+        dag.connect(b1, b2, Connection('out_x', 'in_x'), Connection('out_y', 'in_y'))
+    """
 
     src_param_name: str
     dst_param_name: str
@@ -23,6 +30,45 @@ class Connection:
 
         if not self.dst_param_name.startswith('in_'):
             raise BlockError('Input params must start with "in_"')
+
+@dataclass
+class Connections:
+    """Using a dictionary, define connections between pairs of output parameters and input parameters.
+
+    This is a convenience class to replace multiple :class:`~sier2.Connection`
+    parameters in :func:`~sier2.Dag.connect`. For example:
+
+    .. code-block:: python
+
+        dag.connect(b1, b2, Connections({
+            'out_x': 'in_x',
+            'out_y': 'in_y'
+        })
+
+    is equivalent to:
+
+    .. code-block:: python
+
+        dag.connect(b1, b2, Connection('out_x', 'in_x'), Connection('out_y', 'in_y'))
+    """
+
+    connections: dict[str, str]
+
+    def items(self):
+        return self.connections.items()
+
+    @staticmethod
+    def conns(connections):
+        """Handle a mixture of Connection and Connections parameters."""
+
+        for c in connections:
+            if isinstance(c, Connection):
+                yield c.src_param_name, c.dst_param_name
+            elif isinstance(c, Connections):
+                for src, dst in c.items():
+                    yield src, dst
+            else:
+                raise BlockError('Not a Connection or Connections')
 
 @dataclass
 class _InputValues:
@@ -193,15 +239,15 @@ class Dag:
     def _is_pyodide(self) -> bool:
         return '_pyodide' in sys.modules
 
-    def _for_each_once(self):
-        """Yield each connected block once."""
+    # def _for_each_once(self):
+    #     """Yield each connected block once."""
 
-        seen = set()
-        for s, d in self._block_pairs:
-            for g in s, d:
-                if g not in seen:
-                    seen.add(g)
-                    yield g
+    #     seen = set()
+    #     for s, d in self._block_pairs:
+    #         for g in s, d:
+    #             if g not in seen:
+    #                 seen.add(g)
+    #                 yield g
 
     def stop(self):
         """Stop further execution of Block instances in this dag."""
@@ -213,13 +259,20 @@ class Dag:
         if not self._is_pyodide:
             self._stopper.event.clear()
 
-    def connect(self, src: Block, dst: Block, *connections: Connection):
+    def connect(self, src: Block, dst: Block, *connections: Connection|Connections):
         """Connect two Blocks within this dag.
 
         The source and destination :class:`~sier2.Block` instances are connected by providing
-        one or more :class:`~sier2.Connection` parameters, each of which defines a connection
-        between an output parameter (``out_``) in the source block, and an input parameter
-        (``in_``) in the destination block.
+        one or more :class:`~sier2.Connections` or :class:`~sier2.Connection` parameters,
+        defining connections between an output parameter (``out_``) in the source block,
+        and an input parameter (``in_``) in the destination block. For example:
+
+        .. code-block:: python
+
+            dag.connect(srcb, dstb, Connections({
+                'out_x': 'in_x',
+                'out_y': 'in_y'
+            })
 
         Various consistency checks are done to maintain the integrity of the dag.
         In particular, the blocks must not form a cycle in the dag:
@@ -227,8 +280,8 @@ class Dag:
         subsequently be connected directly or indirectly to block A.
         """
 
-        if any(not isinstance(c, Connection) for c in connections):
-            raise BlockError('All arguments must be Connection instances')
+        # if any(not isinstance(c, Connection) for c in connections):
+        #     raise BlockError('All arguments must be Connection instances')
 
         # Because this is probably the first place that the Block instance is used,
         # this is a convenient place to check that the block was correctly initialised.
@@ -246,7 +299,8 @@ class Dag:
         if src.name==dst.name:
             raise BlockError('Cannot add two blocks with the same name')
 
-        for g in self._for_each_once():
+        # for g in self._for_each_once():
+        for g in _for_each_once(self._block_pairs):
             if (g is not src and g.name==src.name) or (g is not dst and g.name==dst.name):
                 raise BlockError('A block with this name already exists')
 
@@ -268,17 +322,18 @@ class Dag:
         # src_out_params = defaultdict(list)
         src_out_params = []
 
-        for conn in connections:
+        # for conn in connections:
+        for src_param_name, dst_param_name in Connections.conns(connections):
             # dst_param = getattr(dst.param, conn.dst_param_name)
             # if dst_param.allow_refs:
             #     raise BlockError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
 
-            src_param = getattr(src.param, conn.src_param_name)
+            src_param = getattr(src.param, src_param_name)
             if src_param.allow_refs:
-                raise BlockError(f'Source parameter {src}.{conn.src_param_name} must not be "allow_refs=True"')
+                raise BlockError(f'Source parameter {src}.{src_param_name} must not be "allow_refs=True"')
 
-            dst._block_name_map[src.name, conn.src_param_name] = conn.dst_param_name
-            src_out_params.append(conn.src_param_name)
+            dst._block_name_map[src.name, src_param_name] = dst_param_name
+            src_out_params.append(src_param_name)
 
         src.param.watch(lambda *events: self._param_event(dst, *events), src_out_params, onlychanged=False)
         src._block_out_params.extend(src_out_params)
@@ -454,15 +509,24 @@ class Dag:
         return None
 
     def disconnect(self, g: Block) -> None:
-        """Disconnect block g from other blocks.
+        """Disconnect block g from other blocks in the dag.
 
         All parameters (input and output) will be disconnected.
+
+        A :class:`~sier2.BlockError` will be raised if the disconnection would cause
+        a disconnected dag.
 
         Parameters
         ----------
         g: Block
             The block to be disconnected.
         """
+
+        # Check first to see if the dag would become disconnected.
+        #
+        maybe_pairs = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
+        if not _is_connected(maybe_pairs):
+            raise BlockError('Disconnecting this block would result in a disconnected dag')
 
         for p, watchers in g.param.watchers.items():
             for watcher in watchers['value']:
@@ -477,9 +541,9 @@ class Dag:
                         src.param.unwatch(watcher)
 
         # Remove this block from the dag.
-        # Check for sources and destinations.
         #
-        self._block_pairs[:] = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
+        # self._block_pairs[:] = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
+        self._block_pairs[:] = maybe_pairs
 
         # Because this block is no longer watching anything, the name map can be cleared.
         #
@@ -646,6 +710,9 @@ def topological_sort(pairs):
             return L   (a topologically sorted order)
     """
 
+    if not pairs:
+        return [], []
+
     def edge(pairs, n, m):
         for ix, pair in enumerate(pairs):
             if pair==(n, m):
@@ -685,3 +752,38 @@ def _get_sorted(block_pairs: list[tuple[Block, Block]]) -> list[Block]:
         raise BlockError('Dag contains a cycle')
 
     return ordered
+
+def _for_each_once(pairs):
+    """Yield each connected block once."""
+
+    seen = set()
+    for s, d in pairs:
+        for g in s, d:
+            if g not in seen:
+                seen.add(g)
+                yield g
+
+def _is_connected(pairs: list[Block]):
+    """Determine if the list of pairs forms a connected graph."""
+
+    if not pairs:
+        return True
+
+    n_blocks = sum( 1 for _ in _for_each_once(pairs))
+
+    visited = set()
+    start = pairs[0][0]
+
+    stack = [start]
+    visited.add(start)
+    while stack:
+        current = stack.pop()
+        for src, dst in pairs:
+            if src==current and dst not in visited:
+                visited.add(dst)
+                stack.append(dst)
+            elif dst==current and src not in visited:
+                visited.add(src)
+                stack.append(src)
+
+    return len(visited)==n_blocks

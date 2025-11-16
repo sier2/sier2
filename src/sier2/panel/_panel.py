@@ -262,8 +262,8 @@ def _prepare_to_show(dag: Dag):
             switch,
             # pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
             pn.Row(
-                pn.panel(html_graph(dag)), 
-                max_width=400, 
+                pn.panel(html_graph(dag)),
+                max_width=400,
                 max_height=200,
             ),
             log_feed,
@@ -310,7 +310,7 @@ def _default_panel(self) -> Callable[[Block], pn.Param]:
 
     This default will display the in_ parameters.
     """
-    
+
     in_names = [name for name in self.param.values() if name.startswith('in_')]
 
     # Check if we need tabulator installed.
@@ -440,7 +440,7 @@ class BlockCard(pn.Card):
             self._get_state_light(_get_state_color(w._block_state))
         )
 
-        # Watch the block state so we can update the staus light.
+        # Watch the block state so we can update the status light.
         #
         w.param.watch_values(self.state_change, '_block_state')
 
@@ -496,7 +496,7 @@ class PanelDag(Dag):
         pn.state.on_session_destroyed(_quit)
 
         # Execute the dag.
-        # Since this is a panel dag, we expect the first block to be an input nlock.
+        # Since this is a panel dag, we expect the first block to be an input block.
         # This ensures that the first block's prepare() method is called.
         # If the first block is not an input block, it must be primed, just like a plain dag.
         #

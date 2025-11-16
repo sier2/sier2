@@ -195,7 +195,7 @@ class Block(param.Parameterized):
         """Return an individual value from the section specified by
         the block in the sier2 config file.
 
-        See :func:`sier2.Block.get_config` for more details.
+        See :func:`~sier2.Block.get_config` for more details.
 
         Parameters
         ----------
@@ -214,12 +214,12 @@ class Block(param.Parameterized):
         return value if value is not None else default
 
     def prepare(self):
-        """If blockpause_execution is True, called by a dag before calling ``execute()```.
+        """If block_pause_execution is True, called by a dag before calling :func:`~sier2.Dag.execute`.
 
         This gives the block author an opportunity to validate the
         input params and set up a user inteface.
 
-        After the dag restarts on this block, ``execute()`` will be called.
+        After the dag restarts on this block, :func:`~sier2.Dag.execute` will be called.
         """
 
         pass
