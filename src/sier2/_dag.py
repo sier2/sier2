@@ -381,12 +381,19 @@ class Dag:
             # TODO Can we have a dag with multiple pause heads?
             # TODO If there is only one non-pause head, should we run prepare+execute without priming?
             #
-            bpes = [b for b in heads if b.block_pause_execution]
-            if len(bpes)>1:
-                raise BlockError('There is more than one head block with block_pause_execution==True - prime the dag')
+            # bpes = [b for b in heads if b.block_pause_execution]
 
-            if bpes:
-                self._block_queue.appendleft(_InputValues(bpes[0], {}))
+            # if len(bpes)>1:
+            #     raise BlockError('There is more than one head block with block_pause_execution==True - prime the dag')
+
+            # Blocks may have an execute method that generates some data for follow-on blocks, so we should try and 
+            # execute each head block. Downstream blocks may depend on outputs from one or more of the head
+            # blocks so we should execute all head blocks by default.  
+
+            heads, _ = self.heads_and_tails()
+
+            for head in heads:
+                self._block_queue.appendleft(_InputValues(head, {}))
 
         if not self._block_queue:
             # Attempting to execute a dag with no updates is probably a mistake.

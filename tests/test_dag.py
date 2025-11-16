@@ -2,6 +2,7 @@ import pytest
 
 from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
 import param
+import random
 
 @pytest.fixture
 def dag():
@@ -381,3 +382,103 @@ def test_multiple_heads_with_pause(dag):
 
     assert not h2.has_prepared
     assert not h2.has_executed
+
+def test_no_prime_run(dag):
+    """Test running dags with no priming 
+    
+    By default, dags should try and run without 
+    priming.
+    """
+
+    class RandInt(Block):
+        """Generat a random Integer"""
+        out_int = param.Integer()
+
+        def execute(self):
+            self.out_int = random.randint(0, 10)
+
+    class SquareInt(Block):
+        """Square an integer"""
+        in_int = param.Integer()
+        out_int = param.Integer()
+
+        def execute(self):
+            self.out_int = self.in_int * self.in_int
+
+    ri = RandInt()
+    si = SquareInt()
+
+    dag.connect(ri, si, Connection('out_int', 'in_int'))
+    dag.execute()
+
+    assert (ri.out_int * ri.out_int) == si.out_int 
+
+def test_no_prime_run_multiple_heads(dag):
+    """Test running dags with no priming 
+    
+    By default, dags should try and run without 
+    priming.
+    """
+
+    class RandInt(Block):
+        """Generat a random Integer"""
+        out_int = param.Integer()
+
+        def execute(self):
+            self.out_int = random.randint(0, 10)
+
+    class SumInts(Block):
+        """Square an integer"""
+        in_int0 = param.Integer()
+        in_int1 = param.Integer()
+        out_int = param.Integer()
+
+        def execute(self):
+            self.out_int = self.in_int0 + self.in_int1
+
+    ri0 = RandInt()
+    ri1 = RandInt()
+    si = SumInts()
+
+    dag.connect(ri0, si, Connection('out_int', 'in_int0'))
+    dag.connect(ri1, si, Connection('out_int', 'in_int1'))
+    dag.execute()
+
+    assert (ri0.out_int + ri1.out_int) == si.out_int 
+
+def test_no_prime_run_multiple_heads_with_pause(dag):
+    """Test running dags with no priming but with a pause
+    
+    By default, dags should try and run without 
+    priming.
+    """
+
+    class RandInt(Block):
+        """Generat a random Integer"""
+        out_int = param.Integer()
+
+        def execute(self):
+            self.out_int = random.randint(0, 10)
+
+    class SumInts(Block):
+        """Square an integer"""
+        in_int0 = param.Integer()
+        in_int1 = param.Integer()
+        out_int = param.Integer()
+
+        def execute(self):
+            self.out_int = self.in_int0 + self.in_int1
+
+    ri0 = RandInt()
+    ri1 = RandInt(block_pause_execution=True)
+    si = SumInts()
+
+    dag.connect(ri0, si, Connection('out_int', 'in_int0'))
+    dag.connect(ri1, si, Connection('out_int', 'in_int1'))
+    dag.execute()
+
+    ri1.out_int = 10
+
+    dag.execute()
+
+    assert (ri0.out_int + ri1.out_int) == si.out_int 
