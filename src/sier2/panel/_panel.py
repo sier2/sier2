@@ -306,10 +306,34 @@ def _prepare_to_show(dag: Dag):
 #     template.servable()
 
 def _default_panel(self) -> Callable[[Block], pn.Param]:
-    """Provide a default __panel__() implementation for blocks that don't have one.param.parameters.
+    """Provide a default __panel__() implementation for blocks that don't have one.
 
     This default will display the in_ parameters.
     """
+
+    if self.block_widgets is not None:
+        if isinstance(self.block_widgets, list):
+            # A list of strings of param names.
+            # Convert the list to a dictionary mapping the names
+            # to their default widget types.
+            #
+            parameters = self.block_widgets
+            widgets = {}
+            for pname in self.block_widgets:
+                if pname not in self.param:
+                    raise BlockError(f'Param {pname} not in this Block')
+
+                widgets[pname] = pn.Param.widget_type(self.param[pname])
+        elif not isinstance(self.block_widgets, dict):
+            raise BlockError('block_widgets must be a list or dict')
+        else:
+            parameters = list(self.block_widgets.keys())
+            widgets = self.block_widgets
+
+        # parameters is the allow list.
+        # widgets is the widget definition dictionary.
+        #
+        return pn.Param(self, parameters=parameters, widgets=widgets)
 
     in_names = [name for name in self.param.values() if name.startswith('in_')]
 
@@ -471,6 +495,8 @@ def _sier2_label_formatter(pname: str):
     return paramp.default_label_formatter(pname)
 
 class PanelDag(Dag):
+    """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
+
     def __init__(self, *, site: str='Panel Dag', title: str, doc: str):
         super().__init__(site=site, title=title, doc=doc)
         paramp.label_formatter = _sier2_label_formatter

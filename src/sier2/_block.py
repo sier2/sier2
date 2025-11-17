@@ -86,13 +86,37 @@ class Block(param.Parameterized):
                 print(f'New value is {self.out_value}')
 
     The block parameter ``block_pause_execution`` allows a block to act as an "input" block,
-    particularly when the block hsa a GUI interface. When set to True and dag execution
+    particularly when the block has a GUI interface. When set to True and dag execution
     reaches this block, the block's ``prepare()`` method is called, then the dag stops executing.
     This allows the user to interact with a user interface.
 
     The dag is then restarted using ``dag.execute_after_input(input_block)`` (typically by
     a "Continue" button in the GUI.) When the dag is continued at this block,
     the block's ``execute()`` method is called, and dag execution continues.
+
+    Displaying widgets
+    ~~~~~~~~~~~~~~~~~~
+
+    When the block is being used in a :class:`~sier2.panel.PanelDag`,
+    the block's ``__panel__()`` method is called to display the params.
+    The default ``__panel__()`` method supplied by displays the params that have names
+    starting with ``in_``, using the default Panel widgets for the param types.
+
+    This can be inconvenient - for example, a block that allows the user to select columns
+    in a dataframe will have an ``in_df`` param, but may not want to display the dataframe.
+
+    The ``block_widgets`` parameter can be used to modify this behaviour.
+
+    If ``block_widgets`` is a list of strings, only those params will be displayed.
+    The params need not be limited to those starting with ``in_``.
+
+    If ``block_widgets`` is a dictionary, it can take one of the forms described at
+    `Declare Custom Widgets <https://panel.holoviz.org/how_to/param/custom.html>`_;
+    either a dictionary mapping names to widget classes, or a dictionary mapping
+    names to dictionaries containing a ``widget_type`` key and other options keys and values.
+
+    To define your own custom display, override the ``__panel__()`` method. This will
+    override ``block_widgets``.
     """
 
     block_pause_execution = param.Boolean(default=False, label='Pause execution', doc=_PAUSE_EXECUTION_DOC)
@@ -102,7 +126,7 @@ class Block(param.Parameterized):
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, block_pause_execution: bool=False, block_visible: bool=True, block_doc: str|None=None, continue_label='Continue', **kwargs):
+    def __init__(self, *args, block_pause_execution: bool=False, block_visible: bool=True, block_doc: str|None=None, block_widgets: list[str]|dict[str, Any]|None=None, continue_label='Continue', **kwargs):
         """
         Parameters
         ----------
@@ -112,6 +136,9 @@ class Block(param.Parameterized):
             If True (the default), the block will be visible in a GUI.
         block_doc: str|None
             Markdown documentation that may displayed in the user interface.
+        block_widgets: list[str]|dict[str, Any]|None
+            The widgets to be displayed in a GUI.
+            See https://panel.holoviz.org/how_to/param/custom.html.
         """
         super().__init__(*args, **kwargs)
 
@@ -121,6 +148,7 @@ class Block(param.Parameterized):
         self.block_pause_execution = block_pause_execution
         self.block_visible = block_visible
         self.block_doc = block_doc
+        self.block_widgets = block_widgets
         self.continue_label = continue_label
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)
