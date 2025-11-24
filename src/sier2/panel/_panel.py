@@ -409,14 +409,15 @@ class BlockCard(pn.Card):
             # This is an input block, so add a 'Continue' button.
             #
             def on_continue(_event):
-                # The user may not have changed anything from the default values,
-                # so there won't be anything on the block queue.
-                # Therefore, we trigger the output params to put their
-                # current values on the queue.
-                # If their values are already there, it doesn't matter.
-                #
                 parent_template.main[0].loading = True
-                w.param.trigger(*w._block_out_params)
+
+                # # The user may not have changed anything from the default values,
+                # # so there won't be anything on the block queue.
+                # # Therefore, we trigger the output params to put their
+                # # current values on the queue.
+                # # If their values are already there, it doesn't matter.
+                # #
+                # w.param.trigger(*w._block_out_params)
 
                 try:
                     if dag_logger:
