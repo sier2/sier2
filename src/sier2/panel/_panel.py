@@ -15,7 +15,7 @@ from .._dag import _InputValues
 from .._util import trim
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
-from ._chart import html_graph
+from ._dag_chart import dag_pane
 
 NTHREADS = 2
 
@@ -260,9 +260,8 @@ def _prepare_to_show(dag: Dag):
     template.sidebar.append(
         pn.Column(
             switch,
-            # pn.panel(dag.hv_graph().opts(invert_yaxis=True, xaxis=None, yaxis=None)),
             pn.Row(
-                pn.panel(html_graph(dag)),
+                dag_pane(dag),
                 max_width=400,
                 max_height=200,
             ),
