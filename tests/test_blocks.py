@@ -36,6 +36,23 @@ class TwoIn(Block):
     in_t1 = param.Integer()
     in_t2 = param.Integer()
 
+def test_params():
+    class ParamBlock(Block):
+        """Test picked params."""
+
+        in_a = param.String()
+        in_b = param.String()
+        c = param.String()
+        d = param.String()
+        out_e = param.String()
+        out_f = param.String()
+
+    pb = ParamBlock(only_in=False)
+    assert pb.pick_params() == ['c', 'd', 'in_a', 'in_b']
+
+    pb = ParamBlock(only_in=True)
+    assert pb.pick_params() == ['in_a', 'in_b']
+
 @pytest.fixture
 def dag():
     """Ensure that each test starts with a clear dag."""

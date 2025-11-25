@@ -112,7 +112,7 @@ class _BlockContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.block._block_state = BlockState.WAITING if self.block.block_pause_execution else BlockState.SUCCESSFUL
+            self.block._block_state = BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
         elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
             if not self.dag._is_pyodide:
@@ -289,7 +289,7 @@ class Dag:
         # Pick an arbitrary attribute that should be present.
         #
         for b in src, dst:
-            if not hasattr(b, 'block_doc'):
+            if not hasattr(b, 'doc'):
                 raise BlockError(f'Did you call super().__init__() in {b}?')
 
         if _DISALLOW_CYCLES:
@@ -387,7 +387,7 @@ class Dag:
             A logger adapter that will accept log messages.
         """
 
-        if not block.block_pause_execution:
+        if not block._wait_for_input:
             raise BlockError(f'A dag can only restart a paused Block, not {block.name}')
 
         # Prime the block queue, using _RESTART
@@ -405,7 +405,7 @@ class Dag:
         update the destination block's input parameters and call
         that block's execute() method.
 
-        If the current destination block's ``block_pause_execution`` is True,
+        If the current destination block's ``wait_for_input`` is True,
         the loop will call ``block.prepare()``, then stop; ``execute()``
         will return the destination block.
         The dag can then be restarted with ``dag.execute_after_input()``,
@@ -413,7 +413,7 @@ class Dag:
 
         To start the dag, either:
         - there must be something in the event queue - the dag must be "primed". A block must have updated at least one output param before the dag's execute() is called;
-        - the first block in the dag must be an input block (block_pause_execution=True).
+        - the first block in the dag must be an input block (wait_for_input=True).
 
         Calling ``dag.execute()`` will then execute the dag starting with the relevant block.
         """
@@ -436,9 +436,9 @@ class Dag:
             # TODO Can we have a dag with multiple pause heads?
             # TODO If there is only one non-pause head, should we run prepare+execute without priming?
             #
-            bpes = [b for b in heads if b.block_pause_execution]
+            bpes = [b for b in heads if b._wait_for_input]
             if len(bpes)>1:
-                raise BlockError('There is more than one head block with block_pause_execution==True - prime the dag')
+                raise BlockError('There is more than one head block with wait_for_input==True - prime the dag')
 
             if bpes:
                 self._block_queue.appendleft(_InputValues(bpes[0], {}))
@@ -475,7 +475,7 @@ class Dag:
             # unless this is after the user has selected the "Continue"
             # button.
             #
-            is_input_block = item.dst.block_pause_execution
+            is_input_block = item.dst._wait_for_input
             if can_execute:
                 with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
 

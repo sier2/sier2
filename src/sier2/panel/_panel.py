@@ -92,7 +92,7 @@ class _PanelContext:
         #     self.block._progress.active = False
 
         if exc_type is None:
-            state = BlockState.WAITING if self.block.block_pause_execution else BlockState.SUCCESSFUL
+            state = BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
             self.block._block_state = state
             if self.dag_logger:
                 self.dag_logger.info(f'after {_hms(delta)}', block_name=self.block.name, block_state=state.value)
@@ -254,7 +254,7 @@ def _prepare_to_show(dag: Dag):
         card = pn.Card(pn.pane.Markdown(doc, sizing_mode='stretch_width'), header=pn.Row(name_text), sizing_mode='stretch_width')
         cards.append(card)
 
-    cards.extend(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw.block_visible)
+    cards.extend(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw._visible)
 
     template.main.append(pn.panel(pn.Column(*cards)))
     template.sidebar.append(
@@ -304,51 +304,63 @@ def _prepare_to_show(dag: Dag):
 
 #     template.servable()
 
-def _default_panel(self) -> Callable[[Block], pn.Param]:
+def _default_panel(self: Block) -> Callable[[Block], pn.Param]:
     """Provide a default __panel__() implementation for blocks that don't have one.
 
-    This default will display the in_ parameters.
+    This is injected into a block as "__panel__", so self is the Block instance.
     """
 
-    if self.block_widgets is not None:
-        if isinstance(self.block_widgets, list):
-            # A list of strings of param names.
-            # Convert the list to a dictionary mapping the names
-            # to their default widget types.
-            #
-            parameters = self.block_widgets
-            widgets = {}
-            for pname in self.block_widgets:
-                if pname not in self.param:
-                    raise BlockError(f'Param {pname} not in this Block')
+    display_options = self.display_options
+    if display_options is None:
+        display_options = self.pick_params()
 
-                widgets[pname] = pn.Param.widget_type(self.param[pname])
-        elif not isinstance(self.block_widgets, dict):
-            raise BlockError('block_widgets must be a list or dict')
-        else:
-            parameters = list(self.block_widgets.keys())
-            widgets = self.block_widgets
-
-        # parameters is the allow list.
-        # widgets is the widget definition dictionary.
+    if isinstance(display_options, list):
+        # A list of strings of param names.
+        # This is the simple way of saying "display these params using their
+        # default displays".
         #
-        return pn.Param(self, parameters=parameters, widgets=widgets)
 
-    in_names = [name for name in self.param.values() if name.startswith('in_')]
+        # Check if we need tabulator installed.
+        # Ostensibly param uses the DataFrame widget if the tabulator extension
+        # isn't present, but this doesn't seem to work properly.
+        #
+        if any([isinstance(self.param[name], DataFrame) for name in display_options]):
+            if 'tabulator' not in pn.extension._loaded_extensions:
+                tabulator_warning = f'One of your blocks ({self.__class__.__name__}) requires Tabulator, a panel extension for showing data frames. You should explicitly load this with "pn.extension(\'tabulator\')" in your block'
+                warnings.warn(tabulator_warning)
+                pn.extension('tabulator')
 
-    # Check if we need tabulator installed.
-    # Ostensibly param uses the DataFrame widget if the tabulator extension isn't present,
-    # but this doesn't seem to work properly.
-    #
-    if any([isinstance(self.param[name], DataFrame) for name in in_names]):
-        if 'tabulator' not in pn.extension._loaded_extensions:
-            tabulator_warning = f'One of your blocks ({self.__class__.__name__}) requires Tabulator, a panel extension for showing data frames. You should explicitly load this with "pn.extension(\'tabulator\')" in your block'
-            warnings.warn(tabulator_warning)
-            pn.extension('tabulator')
+        return pn.Param(self, parameters=display_options, show_name=False)
+    elif not isinstance(display_options, dict):
+        raise BlockError('display_options must be a list or dict')
+    else:
+        # A dict of kwargs that is passed to panel.Param().
+        # If the "parameters" parameter is not specified,
+        # pick the parameters and use those to only show sensible params.
+        #
+        kwargs = {'show_name': False}
+        kwargs.update(display_options)
+        if 'parameters' not in kwargs:
+            kwargs['parameters'] = self.pick_params()
 
-    param_pane = pn.Param(self, parameters=in_names, show_name=False)
+        return pn.Param(self, **kwargs)
 
-    return param_pane
+    # # names = [name for name in self.param.values() if name.startswith('in_')]
+    # names = self.pick_params()
+
+    # # # Check if we need tabulator installed.
+    # # # Ostensibly param uses the DataFrame widget if the tabulator extension isn't present,
+    # # # but this doesn't seem to work properly.
+    # # #
+    # # if any([isinstance(self.param[name], DataFrame) for name in names]):
+    # #     if 'tabulator' not in pn.extension._loaded_extensions:
+    # #         tabulator_warning = f'One of your blocks ({self.__class__.__name__}) requires Tabulator, a panel extension for showing data frames. You should explicitly load this with "pn.extension(\'tabulator\')" in your block'
+    # #         warnings.warn(tabulator_warning)
+    # #         pn.extension('tabulator')
+
+    # param_pane = pn.Param(self, parameters=names, show_name=False)
+
+    # return param_pane
 
 class BlockCard(pn.Card):
     """A custom card to wrap around a block.
@@ -384,7 +396,7 @@ class BlockCard(pn.Card):
 
         # Does this block have documentation to be displayed in the card?
         #
-        doc = pn.pane.Markdown(w.block_doc, sizing_mode='scale_width') if w.block_doc else None
+        doc = pn.pane.Markdown(w.doc, sizing_mode='scale_width') if w.doc else None
 
         # If a block has no __panel__() method, Panel will by default
         # inspect the class and display the param attributes.
@@ -405,7 +417,7 @@ class BlockCard(pn.Card):
             #
             w.__panel__ = _default_panel.__get__(w)
 
-        if w.block_pause_execution:
+        if w._wait_for_input:
             # This is an input block, so add a 'Continue' button.
             #
             def on_continue(_event):

@@ -34,7 +34,7 @@ class InputIncrement(Block):
     out_i = param.Integer()
 
     def __init__(self, incr, *args, **kwargs):
-        super().__init__(block_pause_execution=True, name=f'Increment (with input) by {incr}')
+        super().__init__(wait_for_input=True, name=f'Increment (with input) by {incr}')
         self.incr = incr
 
     def prepare(self):

@@ -28,7 +28,7 @@ class BlockState(StrEnum):
     INTERRUPTED = 'INTERRUPTED'
     ERROR = 'ERROR'
 
-_PAUSE_EXECUTION_DOC = '''If True, a block executes in two steps.
+_WAIT_FOR_INPUT_DOC = '''If True, a block executes in two steps.
 
 When the block is executed by a dag, the dag first sets the input
 params, then calls ``prepare()``. Execution of the dag then stops.
@@ -85,7 +85,7 @@ class Block(param.Parameterized):
                 self.out_value = self.in_value.upper()
                 print(f'New value is {self.out_value}')
 
-    The block parameter ``block_pause_execution`` allows a block to act as an "input" block,
+    The block parameter ``wait_for_input`` allows a block to act as an "input" block,
     particularly when the block has a GUI interface. When set to True and dag execution
     reaches this block, the block's ``prepare()`` method is called, then the dag stops executing.
     This allows the user to interact with a user interface.
@@ -105,50 +105,68 @@ class Block(param.Parameterized):
     This can be inconvenient - for example, a block that allows the user to select columns
     in a dataframe will have an ``in_df`` param, but may not want to display the dataframe.
 
-    The ``block_widgets`` parameter can be used to modify this behaviour.
+    The ``display_options`` parameter can be used to modify this behaviour.
 
-    If ``block_widgets`` is a list of strings, only those params will be displayed.
+    If ``display_options`` is a list of strings, only those params will be displayed.
     The params need not be limited to those starting with ``in_``.
+    The default ``__panel__()`` method will return
 
-    If ``block_widgets`` is a dictionary, it can take one of the forms described at
-    `Declare Custom Widgets <https://panel.holoviz.org/how_to/param/custom.html>`_;
-    either a dictionary mapping names to widget classes, or a dictionary mapping
-    names to dictionaries containing a ``widget_type`` key and other options keys and values.
+    .. code-block:: python
 
-    To define your own custom display, override the ``__panel__()`` method. This will
-    override ``block_widgets``.
+        panel.Param(parameters=display_options)
+
+    If ``display_options`` is a dictionary, it is treated as a ``kwargs`` dictionary and passed to ``panel.Param()``.
+
+    .. code-block:: python
+
+        panel.Param(**display_options)
+
+    See `Param <https://panel.holoviz.org/reference/panes/Param.html>` for a
+    description of ``panel.Param``.
+
+    To define your own custom display, override the ``__panel__()`` method in your block.
+    This will override any value of ``display_options``. You can use
+    ``self.display_options`` in your own ``__panel__()`` method if you like.
     """
 
-    block_pause_execution = param.Boolean(default=False, label='Pause execution', doc=_PAUSE_EXECUTION_DOC)
-    block_visible = param.Boolean(default=True, label='Display block', doc=_VISIBLE_DOC)
+    _wait_for_input = param.Boolean(default=False, label='Wait for input', doc=_WAIT_FOR_INPUT_DOC)
+    _visible = param.Boolean(default=True, label='Visible', doc=_VISIBLE_DOC)
 
     _block_state = param.String(default=BlockState.READY)
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, block_pause_execution: bool=False, block_visible: bool=True, block_doc: str|None=None, block_widgets: list[str]|dict[str, Any]|None=None, continue_label='Continue', **kwargs):
+    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', **kwargs):
         """
         Parameters
         ----------
-        block_pause_execution: bool
+        wait_for_input: bool
             If True, ``prepare()`` is called and dag execution stops.
-        block_visible: bool
+        visible: bool
             If True (the default), the block will be visible in a GUI.
-        block_doc: str|None
+        doc: str|None
             Markdown documentation that may displayed in the user interface.
-        block_widgets: list[str]|dict[str, Any]|None
-            The widgets to be displayed in a GUI.
-            See https://panel.holoviz.org/how_to/param/custom.html.
+        display_options: list[str]|dict[str, Any]|None
+            Display options to be used when displaying this block in a GUI.
+        only_in: bool
+            The default Panel display shows all params that begin with "in_"
+            or do not begin with "_". Setting only_in to True will cause only "in_"
+            parameters to be displayed.
+        continue_label: bool
+            If wait_fir_input is True, a "Continue" button is displayed.
+            This changes the label displayed on the button.
         """
+
         super().__init__(*args, **kwargs)
 
         if not self.__doc__:
             raise BlockError(f'Class {self.__class__} must have a docstring')
 
-        self.block_pause_execution = block_pause_execution
-        self.block_visible = block_visible
-        self.block_doc = block_doc
-        self.block_widgets = block_widgets
+        self._wait_for_input = wait_for_input
+        self._visible = visible
+        self.doc = doc
+        self.display_options = display_options
+        self.only_in = only_in
         self.continue_label = continue_label
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)
@@ -219,6 +237,18 @@ class Block(param.Parameterized):
 
         return Config[name]
 
+    def pick_params(self):
+        """Return a list of params to be displayed.
+
+        Return param names starting with 'in_'. If self.only_in is False,
+        include param names that do not start with 'out_' or '_' (internal params)
+        or is 'name'.
+        """
+
+        names = [name for name in self.param.values() if name.startswith('in_') or not (self.only_in or name.startswith(('out_', '_')) or name=='name')]
+
+        return names
+
     def get_config_value(self, key: str, default: Any=None, *, block: 'Block'=None):
         """Return an individual value from the section specified by
         the block in the sier2 config file.
@@ -242,12 +272,15 @@ class Block(param.Parameterized):
         return value if value is not None else default
 
     def prepare(self):
-        """If block_pause_execution is True, called by a dag before calling :func:`~sier2.Dag.execute`.
+        """Called by a dag before calling :func:`~sier2.Dag.execute`.
 
-        This gives the block author an opportunity to validate the
-        input params and set up a user inteface.
+        If ``self.wait_for_input`` is True, block execution stops after calling
+        ``prepare()``. This gives the block author an opportunity to perform
+         "pre-execute" actions, such as validating input params or setting up
+         a user interface.
 
-        After the dag restarts on this block, :func:`~sier2.Dag.execute` will be called.
+        After the dag restarts on this block, :func:`~sier2.Dag.execute` will be called
+        without calling ``prepare()``.
         """
 
         pass

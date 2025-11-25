@@ -110,7 +110,7 @@ def test_first_input(dag):
         out_p = param.Integer(default=0)
 
         def __init__(self):
-            super().__init__(block_pause_execution=True)
+            super().__init__(wait_for_input=True)
 
         def prepare(self):
             self.in_p = VALUE
@@ -156,7 +156,7 @@ def test_input_block(dag):
         out_p = param.Integer(default=0)
 
         def __init__(self):
-            super().__init__(block_pause_execution=True)
+            super().__init__(wait_for_input=True)
 
         def prepare(self):
             self.value = self.in_p
@@ -227,7 +227,7 @@ def test_input_block_validation(dag):
         out_p = param.Integer(default=0)
 
         def __init__(self):
-            super().__init__(block_pause_execution=True)
+            super().__init__(wait_for_input=True)
 
         def prepare(self):
             if self.in_p == 1:
@@ -288,7 +288,7 @@ def test_block_state(dag):
         out_p = param.Integer(default=0)
 
         def __init__(self, name):
-            super().__init__(name=name, block_pause_execution=True)
+            super().__init__(name=name, wait_for_input=True)
 
         def prepare(self):
             self.value = self.in_p
@@ -357,7 +357,7 @@ def test_multiple_heads_with_pause(dag):
         out_o = param.String()
 
         def __init__(self, name, pause=False):
-            super().__init__(name=name, block_pause_execution=pause)
+            super().__init__(name=name, wait_for_input=pause)
             self.has_prepared = False
             self.has_executed = False
 
