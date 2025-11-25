@@ -115,7 +115,10 @@ class Block(param.Parameterized):
 
         panel.Param(parameters=display_options)
 
-    If ``display_options`` is a dictionary, it is treated as a ``kwargs`` dictionary and passed to ``panel.Param()``.
+    If ``display_options`` is a dictionary, it is treated as a ``kwargs`` dictionary and
+    passed to ``panel.Param()``. In addition, if "parameters" is not one of the
+    dictionary keys, it is added with the result of calling
+    :func:`~sier2.Block.pick_params`.
 
     .. code-block:: python
 
@@ -240,9 +243,9 @@ class Block(param.Parameterized):
     def pick_params(self):
         """Return a list of params to be displayed.
 
-        Return param names starting with 'in_'. If self.only_in is False,
-        include param names that do not start with 'out_' or '_' (internal params)
-        or is 'name'.
+        Return param names starting with ``in_``. If ``self.only_in`` is False,
+        include param names that do not start with ``out_`` or ``_`` (internal params)
+        or is ``name``.
         """
 
         names = [name for name in self.param.values() if name.startswith('in_') or not (self.only_in or name.startswith(('out_', '_')) or name=='name')]
@@ -276,8 +279,8 @@ class Block(param.Parameterized):
 
         If ``self.wait_for_input`` is True, block execution stops after calling
         ``prepare()``. This gives the block author an opportunity to perform
-         "pre-execute" actions, such as validating input params or setting up
-         a user interface.
+        "pre-execute" actions, such as validating input params or setting up
+        a user interface.
 
         After the dag restarts on this block, :func:`~sier2.Dag.execute` will be called
         without calling ``prepare()``.
