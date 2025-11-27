@@ -79,7 +79,7 @@ def test_simple(dag):
     dag.connect(p, a, Connection('out_p', 'in_a'))
     dag.connect(a, o, Connection('out_a', 'in_o'))
 
-    p.out_p = 1
+    p.in_p = 1
     dag.execute()
     assert p.out_p == 1
     assert a.in_a == 1
@@ -125,7 +125,7 @@ def test_disconnect(dag):
 
     # Ensure that the dag is working.
     #
-    p.out_p = 1
+    p.in_p = 1
     dag.execute()
 
     assert a.in_a == 1 # p -> a
@@ -162,7 +162,7 @@ def test_disconnect(dag):
     # Block a is no longer watching b.b_out.
     # Block t is still watching b.b_out.
     #
-    p.out_p = 5
+    p.in_p = 5
     dag.execute()
 
     assert a.in_a == 1

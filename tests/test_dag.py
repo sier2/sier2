@@ -17,23 +17,49 @@ def test_load_doc(dag):
 
     assert dag2.doc == dag.doc
 
+def test_empty_dag(dag):
+    with pytest.raises(BlockError, match='Nothing to execute'):
+        dag.execute()
+
+def test_no_connections(dag):
+    class PassThrough(Block):
+        """Pass a value through unchanged."""
+
+        in_p = param.Integer(default=0)
+        out_p = param.Integer(default=0)
+
+        def execute(self):
+            self.out_p = self.in_p
+
+    b1 = PassThrough()
+    b2 = PassThrough()
+    with pytest.raises(BlockError):
+        dag.connect(b1, b2)
+
 def test_no_inputs(dag):
+    """Even though two blocks are connected, the first block is not required
+    to send data to the second block."""
+
     class OneOut(Block):
         """One output parameter."""
 
-        out_o = param.String()
+        out_o = param.Integer(default=1)
 
     class OneIn(Block):
         """One input parameter."""
 
-        in_p = param.String()
+        def execute(self):
+            self.in_p = 3
+
+        in_p = param.Integer(default=2)
 
     oo = OneOut()
     oi = OneIn()
     dag.connect(oo, oi, Connection('out_o', 'in_p'))
 
-    with pytest.raises(BlockError):
-        dag.execute()
+    dag.execute()
+    assert oo.out_o==1
+    assert oi.in_p==2
 
 def test_mismatched_types(dag):
     """Ensure that mismatched parameter values can't be assigned, and raise a BlockError."""
@@ -42,6 +68,9 @@ def test_mismatched_types(dag):
         """One output parameter."""
 
         out_o = param.String()
+
+        def execute(self):
+            self.out_o = 'out'
 
     class OneIn(Block):
         """One input parameter."""
@@ -53,7 +82,6 @@ def test_mismatched_types(dag):
     dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
     with pytest.raises(BlockError):
-        oo.out_o = 'plugh'
         dag.execute()
 
 def test_block_exception(dag):
@@ -63,6 +91,9 @@ def test_block_exception(dag):
         """One output parameter."""
 
         out_o = param.String()
+
+        def execute(self):
+            self.out_o = 'out'
 
     class OneIn(Block):
         """One input parameter."""
@@ -77,27 +108,26 @@ def test_block_exception(dag):
     dag.connect(oo, oi, Connection('out_o', 'in_o'))
 
     with pytest.raises(BlockError):
-        oo.out_o = 'plugh'
         dag.execute()
 
 def test_first_no_input(dag):
-    """A dag where the first block is not an input block, and the dag is not primed, will fail."""
+    """A dag with no input blocks will run all the way."""
 
-    class PassThrough(Block):
+    class Incr(Block):
         """Pass a value through unchanged."""
 
         in_p = param.Integer(default=0)
         out_p = param.Integer(default=0)
 
         def execute(self):
-            self.out_p = self.in_p
+            self.out_p = self.in_p+1
 
-    p0 = PassThrough()
-    p1 = PassThrough()
+    p0 = Incr()
+    p1 = Incr()
     dag.connect(p0, p1, Connection('out_p', 'in_p'))
 
-    with pytest.raises(BlockError):
-        dag.execute()
+    dag.execute()
+    assert p1.out_p==2
 
 def test_first_input(dag):
     """A dag where the first block is an input block does not need to be primed."""
@@ -106,17 +136,13 @@ def test_first_input(dag):
 
     class Initial(Block):
         """Initial input block, no in_ params required."""
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+        out_p = param.Integer()
 
         def __init__(self):
             super().__init__(wait_for_input=True)
 
-        def prepare(self):
-            self.in_p = VALUE
-
         def execute(self):
-            self.out_p = self.in_p
+            self.out_p = VALUE
             pass
 
     class PassThrough(Block):
@@ -143,17 +169,17 @@ def test_input_block(dag):
     class PassThrough(Block):
         """Pass a value through unchanged."""
 
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+        in_p = param.Integer()
+        out_p = param.Integer()
 
         def execute(self):
             self.out_p = self.in_p
 
     class PassThroughI(Block):
-        """Pass a value through unchanged."""
+        """Pass value+1 through."""
 
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+        in_p = param.Integer()
+        out_p = param.Integer()
 
         def __init__(self):
             super().__init__(wait_for_input=True)
@@ -177,7 +203,7 @@ def test_input_block(dag):
 
     # Emulate user input, and execute the dag up to the input block.
     #
-    p0.out_p = 5
+    p0.in_p = 5
     pinput = dag.execute()
     assert pinput is p2
 
@@ -205,8 +231,7 @@ def test_input_block(dag):
 
     # Executing without any pending events should raise.
     #
-    with pytest.raises(BlockError):
-        dag.execute()
+    assert len(dag._block_queue)==0
 
 def test_input_block_validation(dag):
     """Ensure that input validation works."""
@@ -244,7 +269,7 @@ def test_input_block_validation(dag):
 
     # Invalid input.
     #
-    p0.out_p = 1
+    p0.in_p = 1
     with pytest.raises(BlockValidateError):
         dag.execute()
 
@@ -252,7 +277,7 @@ def test_input_block_validation(dag):
 
     # Start a new execution with valid input.
     #
-    p0.out_p = 2
+    p0.in_p = 2
     dag.execute()
     assert p1.in_p == 2
 
@@ -275,17 +300,17 @@ def test_block_state(dag):
     class IncrementBlock(Block):
         """Increment the input."""
 
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+        in_p = param.Integer()
+        out_p = param.Integer()
 
         def execute(self):
             self.out_p = self.in_p + 1
 
     class InputIncrementBlock(Block):
-        """Increment the input."""
+        """Increment the input with input."""
 
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+        in_p = param.Integer()
+        out_p = param.Integer()
 
         def __init__(self, name):
             super().__init__(name=name, wait_for_input=True)
@@ -298,66 +323,76 @@ def test_block_state(dag):
 
     inc0 = IncrementBlock(name='inc0')
     inc1 = IncrementBlock(name='inc1')
-    inc2 = InputIncrementBlock(name='inc2')
+    iinc2 = InputIncrementBlock(name='iinc2')
     inc3 = IncrementBlock(name='inc3')
     inc4 = IncrementBlock(name='inc4')
 
     dag.connect(inc0, inc1, Connection('out_p', 'in_p'))
-    dag.connect(inc1, inc2, Connection('out_p', 'in_p'))
-    dag.connect(inc2, inc3, Connection('out_p', 'in_p'))
+    dag.connect(inc1, iinc2, Connection('out_p', 'in_p'))
+    dag.connect(iinc2, inc3, Connection('out_p', 'in_p'))
     dag.connect(inc3, inc4, Connection('out_p', 'in_p'))
 
-    inc0.out_p = 1
-    dag.execute()
+    inc0.in_p = 1
+    b = dag.execute()
+    assert b is iinc2
 
-    assert inc1.out_p == 2
-    assert inc2.in_p == 2
-    assert inc2.out_p == 0
+    assert inc1.out_p == 3
+    assert iinc2.in_p == 3
+    assert iinc2.out_p == 0
 
-    assert inc0._block_state == BlockState.READY
+    assert inc0._block_state == BlockState.SUCCESSFUL
     assert inc1._block_state == BlockState.SUCCESSFUL
-    assert inc2._block_state == BlockState.WAITING
+    assert iinc2._block_state == BlockState.WAITING
     assert inc3._block_state == BlockState.READY
     assert inc4._block_state == BlockState.READY
 
-    inc2.value = 5
-    dag.execute_after_input(inc2)
+    iinc2.value = 5
+    dag.execute_after_input(b)
 
     assert inc3.in_p == 6
     assert inc4.in_p == 7
     assert inc4.out_p == 8
 
-    assert inc0._block_state == BlockState.READY
+    assert inc0._block_state == BlockState.SUCCESSFUL
     assert inc1._block_state == BlockState.SUCCESSFUL
-    assert inc2._block_state == BlockState.WAITING
+    assert iinc2._block_state == BlockState.WAITING
     assert inc3._block_state == BlockState.SUCCESSFUL
     assert inc4._block_state == BlockState.SUCCESSFUL
 
 def test_multiple_heads_without_pause(dag):
-    class BlockA(Block):
-        """A test block."""
+    class Increment(Block):
+        """Increment the input."""
 
-        in_i = param.String()
-        out_o = param.String()
+        in_p = param.Integer()
+        out_p = param.Integer()
 
-    h1 = BlockA(name='h1')
-    h2 = BlockA(name='h2')
-    t = BlockA(name='t')
-    dag.connect(h1, t, Connection('out_o', 'in_i'))
-    dag.connect(h2, t, Connection('out_o', 'in_i'))
+        def execute(self):
+            self.out_p = self.in_p + 1
 
-    with pytest.raises(BlockError):
-        dag.execute()
+    h1 = Increment(name='h1')
+    h2 = Increment(name='h2')
+    t = Increment(name='t')
+    dag.connect(h1, t, Connection('out_p', 'in_p'))
+    dag.connect(h2, t, Connection('out_p', 'in_p'))
+
+    h1.in_p = 1
+    h2.in_p = 1
+    dag.execute()
+
+    assert h1.out_p==2
+    assert h2.out_p==2
+    assert t.in_p==2
+    assert t.out_p==3
 
 def test_multiple_heads_with_pause(dag):
-    class BlockA(Block):
-        """A test block."""
+    class Has(Block):
+        """An instrumented block."""
 
-        in_i = param.String()
+        in_i = param.String(default='str')
         out_o = param.String()
 
-        def __init__(self, name, pause=False):
-            super().__init__(name=name, wait_for_input=pause)
+        def __init__(self, name, wait=False):
+            super().__init__(name=name, wait_for_input=wait)
             self.has_prepared = False
             self.has_executed = False
 
@@ -368,16 +403,31 @@ def test_multiple_heads_with_pause(dag):
             self.out_o = self.in_i
             self.has_executed = True
 
-    h1 = BlockA(name='h1', pause=True)
-    h2 = BlockA(name='h2')
-    t = BlockA(name='t')
+    h1 = Has(name='h1', wait=True)
+    h2 = Has(name='h2')
+    t = Has(name='t')
     dag.connect(h1, t, Connection('out_o', 'in_i'))
     dag.connect(h2, t, Connection('out_o', 'in_i'))
 
-    dag.execute()
+    b = dag.execute()
+    assert b is h1
 
     assert h1.has_prepared
     assert not h1.has_executed
 
-    assert not h2.has_prepared
-    assert not h2.has_executed
+    assert h2.has_prepared
+    assert h2.has_executed
+
+    assert not t.has_prepared
+    assert not t.has_executed
+
+    dag.execute_after_input(b)
+
+    assert h1.has_prepared
+    assert h1.has_executed
+
+    assert h2.has_prepared
+    assert h2.has_executed
+
+    assert t.has_prepared
+    assert t.has_executed

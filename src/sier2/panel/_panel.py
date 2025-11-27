@@ -169,7 +169,8 @@ def _prepare_to_show(dag: Dag):
         header_color='#7dd3fc',
         sidebar=pn.Column(sidebar_title),
         collapsed_sidebar=True,
-        sidebar_width=440
+        sidebar_width=440,
+        logo=dag.logo
     )
 
     def display_info(_event):
@@ -509,9 +510,23 @@ def _sier2_label_formatter(pname: str):
 class PanelDag(Dag):
     """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
 
-    def __init__(self, *, site: str='Panel Dag', title: str, doc: str):
+    def __init__(self, *, site: str='', title: str, doc: str, logo: str|None=None):
+        """
+        Parameters
+        ----------
+        site: str
+            Name of the site. Will be shown in the header. Default is '', i.e. not shown.
+        title: str
+            A title to show in the header.
+        doc: str
+            Dag documentation.
+        logo: str
+            URI of logo to add to the header (if local file, logo is base64 encoded as URI).
+        """
+
         super().__init__(site=site, title=title, doc=doc)
         paramp.label_formatter = _sier2_label_formatter
+        self.logo = logo
         # self.template = _prepare_to_show(self)
 
     @property

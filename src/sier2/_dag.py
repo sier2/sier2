@@ -204,7 +204,15 @@ class Dag:
             Show the dag docstring if True.
         """
 
+        # The dag: a list of edges between blocks.
+        #
         self._block_pairs: list[tuple[Block, Block]] = []
+
+        # A bag of blocks.
+        # These are blocks that aren't connected to any other blocks.
+        # When the dag executes, these are executed first.
+        #
+        self._block_bag: list[Block] = []
 
         self.site = site
         self.title = title
@@ -322,6 +330,9 @@ class Dag:
         # src_out_params = defaultdict(list)
         src_out_params = []
 
+        if len(connections)==0:
+            raise BlockError('There must be at least one connection')
+
         # for conn in connections:
         for src_param_name, dst_param_name in Connections.conns(connections):
             # dst_param = getattr(dst.param, conn.dst_param_name)
@@ -339,6 +350,25 @@ class Dag:
         src._block_out_params.extend(src_out_params)
 
         self._block_pairs.append((src, dst))
+
+    def add_block(self, block: Block):
+        """Add a block to the block bag."""
+
+        is_in_dag = any(block is src or block is dst for src, dst in self._block_pairs)
+        if is_in_dag:
+            raise BlockError('This block is in the dag')
+
+        if block in self._block_bag:
+            raise BlockError('This block is in the bag')
+
+        self._block_bag.append(block)
+
+    def remove_block(self, block: Block):
+        """Remove a lock from the block bag."""
+
+        if block in self._block_bag:
+            ix = self._block_bag.find(block)
+            del self._block_bag[ix]
 
     def _param_event(self, dst: Block, *events):
         """The callback for a watch event."""
@@ -370,14 +400,14 @@ class Dag:
                 self._block_queue.append(item)
 
     def execute_after_input(self, block: Block, *, dag_logger=None):
-        """Execute the dag after running ``prepare()``.
+        """Restart dag execution at the specified block.
 
-        After prepare() executes, and the user has possibly
-        provided input, the dag must continue with execute() in the
-        same block.
+        When a block is run, its ``prepare()`` and ``execute()``
+        methods are called. However, if the block's ``wait_for_input`` is True,
+        ``prepare()`` is called, then dag execution stops.
 
-        This method will prime the block queue with the specified block's
-        output, and call execute().
+        When dag execution restarts via this method, the block's ``execute()``
+        method is called. Then dag execution continues with the next block.
 
         Parameters
         ----------
@@ -395,13 +425,13 @@ class Dag:
         # must be called.
         #
         self._block_queue.appendleft(_InputValues(block, {_RESTART: True}))
-        self.execute(dag_logger=dag_logger)
+        self._execute(dag_logger=dag_logger)
 
     def execute(self, *, dag_logger=None) -> Block|None:
         """Execute the dag.
 
-        The dag is executed by iterating through the block event queue
-        and popping events from the head of the queue. For each event,
+        The dag is executed by iterating through a block queue
+        and popping events from the head of the queue. For each popped block,
         update the destination block's input parameters and call
         that block's execute() method.
 
@@ -411,43 +441,48 @@ class Dag:
         The dag can then be restarted with ``dag.execute_after_input()``,
         using the paused block as the parameter.
 
-        To start the dag, either:
-        - there must be something in the event queue - the dag must be "primed". A block must have updated at least one output param before the dag's execute() is called;
-        - the first block in the dag must be an input block (wait_for_input=True).
+        To execute the dag, the block queue is first cleared.
+        Then blocks in the block bag are added to the queue in an arbitrary order,
+        with ``wait_for_input`` blocks before other blocks. Finally, the dag's
+        head blocks (blocks that have no incoming connections), are added to the
+        queue in an arbitrary order, with ``wait_for_input`` blocks before other blocks.
 
-        Calling ``dag.execute()`` will then execute the dag starting with the relevant block.
+        Calling ``dag.execute()`` will then execute the dag starting with
+        the first block in the queue.
+
+        Returns
+        -------
+        Block|None
+            If execution stops at a block with ``wait_for_input`` True,
+            returns that block.
+            Otherwise, if the dag executes to completion, returns ``None``.
         """
 
-        if not self._block_queue:
-            # If there aren't any blocks on the queue, find the first block in the dag.
-            # If this block is an input block, put it on the queue.
-            #
-            # sorted_blocks = self.get_sorted()
-            # if sorted_blocks:
-            #     first = sorted_blocks[0]
-            #     if first.block_pause_execution:
-            #         self._block_queue.appendleft(_InputValues(first, {}))
+        self._block_queue.clear()
 
-            # We can't just look at the sorted order - here may be more than one source block.
-            #
-            heads, _ = self.heads_and_tails()
+        # Execute blocks in the bag first.
+        # Non-waiting blocks go first, waiting blocks next.
+        #
+        if self._block_bag:
+            blocks = sorted(self._block_bag, key=lambda block: block._wait_for_input)
+            for block in blocks:
+                self._block_queue.append(_InputValues(block, {}))
 
-            # If there is only one head block with a pause, prime the dag with that.
-            # TODO Can we have a dag with multiple pause heads?
-            # TODO If there is only one non-pause head, should we run prepare+execute without priming?
-            #
-            bpes = [b for b in heads if b._wait_for_input]
-            if len(bpes)>1:
-                raise BlockError('There is more than one head block with wait_for_input==True - prime the dag')
-
-            if bpes:
-                self._block_queue.appendleft(_InputValues(bpes[0], {}))
+        # Do the same for the heads of the dag.
+        #
+        heads, _ = self.heads_and_tails()
+        blocks = sorted(heads, key=lambda block: block._wait_for_input)
+        for block in blocks:
+            self._block_queue.append(_InputValues(block, {}))
 
         if not self._block_queue:
             # Attempting to execute a dag with no updates is probably a mistake.
             #
             raise BlockError('Nothing to execute')
 
+        return self._execute(dag_logger=dag_logger)
+
+    def _execute(self, *, dag_logger=None) -> Block|None:
         self.logging(None, sier2_dag_=self)
 
         can_execute = True
@@ -730,6 +765,9 @@ def topological_sort(pairs):
     S = list(set([s for s in srcs if s not in dsts]))
 
     while S:
+        # A topological sort is non-unique; this is why.
+        # Nodes can be removed from S in arbitrary order.
+        #
         n = S.pop(0)
         L.append(n)
         for _, m in remaining[:]:
