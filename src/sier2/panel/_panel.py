@@ -98,7 +98,7 @@ class _PanelContext:
                 self.dag_logger.info(f'after {_hms(delta)}', block_name=self.block.name, block_state=state.value)
         elif isinstance(exc_type, KeyboardInterrupt):
             state = BlockState.INTERRUPTED
-            self.block_state._block_state = state
+            self.block._block_state = state
             if not self.dag._is_pyodide:
                 self.dag._stopper.event.set()
             if self.dag_logger:
@@ -255,7 +255,7 @@ def _prepare_to_show(dag: Dag):
         card = pn.Card(pn.pane.Markdown(doc, sizing_mode='stretch_width'), header=pn.Row(name_text), sizing_mode='stretch_width')
         cards.append(card)
 
-    cards.extend(BlockCard(parent_template=template, dag=dag, w=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw._visible)
+    cards.extend(BlockCard(parent_template=template, dag=dag, block=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw._visible)
 
     template.main.append(pn.panel(pn.Column(*cards)))
     template.sidebar.append(
@@ -381,11 +381,11 @@ class BlockCard(pn.Card):
     #     """TODO connect this to the template"""
     #     print(message)
 
-    def __init__(self, *args, parent_template, dag: Dag, w: Block, dag_logger=None, **kwargs):
+    def __init__(self, *args, parent_template, dag: Dag, block: Block, dag_logger=None, **kwargs):
         # Make this look like <h3> (the default Card header text).
         #
         name_text = pn.widgets.StaticText(
-            value=w.name,
+            value=block.name,
             css_classes=['card-title'],
             styles={'font-size':'1.17em', 'font-weight':'bold'}
         )
@@ -397,7 +397,7 @@ class BlockCard(pn.Card):
 
         # Does this block have documentation to be displayed in the card?
         #
-        doc = pn.pane.Markdown(w.doc, sizing_mode='scale_width') if w.doc else None
+        doc = pn.pane.Markdown(block.doc, sizing_mode='scale_width') if block.doc else None
 
         # If a block has no __panel__() method, Panel will by default
         # inspect the class and display the param attributes.
@@ -405,7 +405,7 @@ class BlockCard(pn.Card):
         #
         # We just want to display the in_ params.
         #
-        has_panel = '__panel__' in w.__class__.__dict__
+        has_panel = '__panel__' in block.__class__.__dict__
         if not has_panel:
             # w._progress = pn.indicators.Progress(
             #     name='Block progress',
@@ -416,9 +416,9 @@ class BlockCard(pn.Card):
 
             # Go go gadget descriptor protocol.
             #
-            w.__panel__ = _default_panel.__get__(w)
+            block.__panel__ = _default_panel.__get__(block)
 
-        if w._wait_for_input:
+        if block._wait_for_input:
             # This is an input block, so add a 'Continue' button.
             #
             def on_continue(_event):
@@ -444,7 +444,7 @@ class BlockCard(pn.Card):
                     # to trigger any param changes.
                     #
                     try:
-                        dag.execute_after_input(w, dag_logger=dag_logger)
+                        dag.execute_after_input(block, dag_logger=dag_logger)
                     except BlockValidateError as e:
                         # Display the error as a notification.
                         #
@@ -454,19 +454,30 @@ class BlockCard(pn.Card):
                         pn.state.notifications.error(notif, duration=0)
                 finally:
                     parent_template.main[0].loading = False
-            c_button = pn.widgets.Button(name=w.continue_label, button_type='primary', align='end')
+
+            # Add a "continue" button to restart the dag.
+            # The panel GUI is built after dag.execute() runs,
+            # so the initial button must reflect the current _has_prepared state.
+            #
+            c_button = pn.widgets.Button(name=block.continue_label, button_type='primary', align='end', disabled=not block._has_prepared)
             c_button.on_click(on_continue)
+
+            # Ensure that the button state reflects _has_prepared.
+            #
+            def on_prepared(_has_prepared):
+                c_button.disabled = not block._has_prepared
+            block.param.watch_values(on_prepared, '_has_prepared')
 
             row = [doc, c_button] if doc else [c_button]
             w_ = pn.Column(
-                w,
+                block,
                 pn.Row(*row),
                sizing_mode='stretch_width'
             )
         elif doc:
-            w_ = pn.Column(w, doc)
+            w_ = pn.Column(block, doc)
         else:
-            w_ = w
+            w_ = block
 
         super().__init__(w_, *args, sizing_mode='stretch_width', **kwargs)
 
@@ -474,12 +485,12 @@ class BlockCard(pn.Card):
             name_text,
             pn.VSpacer(),
             spacer,
-            self._get_state_light(_get_state_color(w._block_state))
+            self._get_state_light(_get_state_color(block._block_state))
         )
 
         # Watch the block state so we can update the status light.
         #
-        w.param.watch_values(self.state_change, '_block_state')
+        block.param.watch_values(self.state_change, '_block_state')
 
     def state_change(self, _block_state: BlockState):
         """Watcher for the block state.
@@ -510,7 +521,7 @@ def _sier2_label_formatter(pname: str):
 class PanelDag(Dag):
     """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
 
-    def __init__(self, *, site: str='', title: str, doc: str, logo: str|None=None):
+    def __init__(self, *, site: str='', title: str, doc: str, logo: str=''):
         """
         Parameters
         ----------

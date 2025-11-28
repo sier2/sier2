@@ -524,10 +524,12 @@ class Dag:
                     # Otherwise, run both.
                     if is_input_block and not is_restart:
                         self.logging(g.prepare, **logging_params)()
+                        g._has_prepared = True
                     elif is_restart:
                         self.logging(g.execute, **logging_params)()
                     else:
                         self.logging(g.prepare, **logging_params)()
+                        g._has_prepared = True
                         self.logging(g.execute, **logging_params)()
 
             if is_input_block and not is_restart:# and item.values:

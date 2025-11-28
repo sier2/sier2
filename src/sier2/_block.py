@@ -41,6 +41,11 @@ same input block be used immediately.) This causes the block's
 Dag execution then continues as normal.
 '''
 
+_HAS_PREPARED_DOC = '''Indicates that ``prepare()`` hsabeen called.
+
+This can be used in a GUI to enable a "Continue" button.
+'''
+
 _VISIBLE_DOC = '''If True, the block will be visible in a GUI.
 
 A block may not need to be visible in a dag with a GUI. For example,
@@ -133,6 +138,7 @@ class Block(param.Parameterized):
     """
 
     _wait_for_input = param.Boolean(default=False, label='Wait for input', doc=_WAIT_FOR_INPUT_DOC)
+    _has_prepared = param.Boolean(default=False, label='Has prepared', doc=_HAS_PREPARED_DOC)
     _visible = param.Boolean(default=True, label='Visible', doc=_VISIBLE_DOC)
 
     _block_state = param.String(default=BlockState.READY)
