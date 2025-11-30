@@ -731,7 +731,7 @@ def topological_sort(pairs):
     code-block:: python
 
         L ← Empty list that will contain the sorted elements
-        S ← Set of all nodes with no incoming edge
+        S ← Collection of all nodes with no incoming edge
 
         while S is not empty do
             remove a node n from S
@@ -764,13 +764,16 @@ def topological_sort(pairs):
     L = []
 
     srcs, dsts = zip(*remaining)
-    S = list(set([s for s in srcs if s not in dsts]))
+
+    # Sort the current heads by name so they have a consistent ordering.
+    #
+    S = deque(sorted(set([s for s in srcs if s not in dsts]), key=lambda block:block.name))
 
     while S:
         # A topological sort is non-unique; this is why.
         # Nodes can be removed from S in arbitrary order.
         #
-        n = S.pop(0)
+        n = S.popleft()
         L.append(n)
         for _, m in remaining[:]:
             if (e:=edge(remaining, n, m))is not None:
