@@ -48,8 +48,6 @@ else:
         notifications=True,
     )
 
-
-
 def _hms(sec):
     h, sec = divmod(int(sec), 3600)
     m, sec = divmod(sec, 60)
@@ -122,6 +120,10 @@ class _PanelContext:
                     # Convert the error in the block to a BlockError.
                     #
                     raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+
+        if self.dag._on_context_exit:
+            self.dag._on_context_exit()
+
         return False
 
 def _quit(session_context):
@@ -170,7 +172,8 @@ def _prepare_to_show(dag: Dag):
         sidebar=pn.Column(sidebar_title),
         collapsed_sidebar=True,
         sidebar_width=440,
-        logo=dag.logo
+        logo=dag.logo,
+        favicon=dag.favicon
     )
 
     def display_info(_event):
@@ -521,7 +524,7 @@ def _sier2_label_formatter(pname: str):
 class PanelDag(Dag):
     """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
 
-    def __init__(self, *, site: str='', title: str, doc: str, logo: str=''):
+    def __init__(self, *, site: str='', title: str, doc: str, logo: str='', favicon: str|None=None):
         """
         Parameters
         ----------
@@ -533,11 +536,15 @@ class PanelDag(Dag):
             Dag documentation.
         logo: str
             URI of logo to add to the header (if local file, logo is base64 encoded as URI).
+        favicon: str|None
+            URI of favicon to add to the document head (if local file, favicon is
+        base64 encoded as URI).
         """
 
         super().__init__(site=site, title=title, doc=doc)
         paramp.label_formatter = _sier2_label_formatter
         self.logo = logo
+        self.favicon = favicon
         # self.template = _prepare_to_show(self)
 
     @property
@@ -548,9 +555,6 @@ class PanelDag(Dag):
         pn.state.on_session_destroyed(_quit)
 
         # Execute the dag.
-        # Since this is a panel dag, we expect the first block to be an input nlock.
-        # This ensures that the first block's prepare() method is called.
-        # If the first block is not an input block, it must be primed, just like a plain dag.
         #
         self.execute()
 
@@ -560,9 +564,6 @@ class PanelDag(Dag):
         pn.state.on_session_destroyed(_quit)
 
         # Execute the dag.
-        # Since this is a panel dag, we expect the first block to be an input block.
-        # This ensures that the first block's prepare() method is called.
-        # If the first block is not an input block, it must be primed, just like a plain dag.
         #
         self.execute()
 

@@ -141,6 +141,9 @@ class _BlockContext:
                     #
                     raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
+        if self.dag._on_context_exit:
+            self.dag._on_context_exit()
+
         # Don't suppress the original exception.
         #
         return False
@@ -242,6 +245,11 @@ class Dag:
         # Set up the logging hook.
         #
         self.logging = _find_logging()
+
+        # Call out to a function to notify that status has been updated.
+        # Used by the Panel dag chart.
+        #
+        self._on_context_exit = None
 
     @property
     def _is_pyodide(self) -> bool:
@@ -347,7 +355,7 @@ class Dag:
             src_out_params.append(src_param_name)
 
         src.param.watch(lambda *events: self._param_event(dst, *events), src_out_params, onlychanged=False)
-        src._block_out_params.extend(src_out_params)
+        # src._block_out_params.extend(src_out_params)
 
         self._block_pairs.append((src, dst))
 
@@ -747,6 +755,8 @@ def topological_sort(pairs):
             return L   (a topologically sorted order)
     """
 
+    # TODO use a cache - the chart does los of sorting.
+    #
     if not pairs:
         return [], []
 
@@ -772,14 +782,21 @@ def topological_sort(pairs):
     while S:
         # A topological sort is non-unique; this is why.
         # Nodes can be removed from S in arbitrary order.
+        # We use .popleft() to maintain a consistent ordering.
         #
         n = S.popleft()
         L.append(n)
+        S_next = []
         for _, m in remaining[:]:
             if (e:=edge(remaining, n, m))is not None:
                 del remaining[e]
                 if not has_incoming(remaining, m):
-                    S.append(m)
+                    S_next.append(m)
+
+        # Also sort this next layer of blocks.
+        #
+        S_next.sort(key=lambda block:block.name)
+        S.extend(S_next)
 
     return L, remaining
 

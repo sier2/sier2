@@ -185,12 +185,12 @@ class Block(param.Parameterized):
         #
         self._block_name_map: dict[tuple[str, str], str] = {}
 
-        # Record this block's output parameters.
-        # If this is an input block, we need to trigger
-        # the output values before executing the next block,
-        # in case the user didn't change anything.
-        #
-        self._block_out_params = []
+        # # Record this block's output parameters.
+        # # If this is an input block, we need to trigger
+        # # the output values before executing the next block,
+        # # in case the user didn't change anything.
+        # #
+        # self._block_out_params = []
 
     @classmethod
     def block_key(cls):
