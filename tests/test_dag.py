@@ -431,3 +431,32 @@ def test_multiple_heads_with_pause(dag):
 
     assert t.has_prepared
     assert t.has_executed
+
+# def test_connect_after_execute(dag):
+#     class PassThrough(Block):
+#         """Pass a value through unchanged."""
+
+#         in_p = param.Integer(default=0)
+#         out_p = param.Integer(default=0)
+
+#         def __init__(self):
+#             super().__init__(wait_for_input=True)
+
+#         def execute(self):
+#             self.out_p = self.in_p
+
+#     cxn = Connection('out_p', 'in_p')
+
+#     a = PassThrough()
+#     b = PassThrough()
+#     dag.connect(a, b, cxn)
+
+#     paused = dag.execute()
+#     assert paused is a
+
+#     with pytest.raises(BlockError):
+#         c = PassThrough()
+#         dag.connect(b, c, cxn)
+
+#     with pytest.raises(BlockError):
+#         dag.disconnect(a)

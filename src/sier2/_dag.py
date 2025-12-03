@@ -246,6 +246,11 @@ class Dag:
         #
         self.logging = _find_logging()
 
+        # A cache of sorted blocks.
+        # This makes get_sorted() faster.
+        #
+        self._sort_cache = None
+
         # Call out to a function to notify that status has been updated.
         # Used by the Panel dag chart.
         #
@@ -295,6 +300,10 @@ class Dag:
         if block A is connected to block B, then block B cannot
         subsequently be connected directly or indirectly to block A.
         """
+
+        # Ensure that the sort cache is cleared.
+        #
+        self._sort_cache = None
 
         # if any(not isinstance(c, Connection) for c in connections):
         #     raise BlockError('All arguments must be Connection instances')
@@ -359,7 +368,7 @@ class Dag:
 
         self._block_pairs.append((src, dst))
 
-    def add_block(self, block: Block):
+    def add_to_bag(self, block: Block):
         """Add a block to the block bag."""
 
         is_in_dag = any(block is src or block is dst for src, dst in self._block_pairs)
@@ -371,7 +380,7 @@ class Dag:
 
         self._block_bag.append(block)
 
-    def remove_block(self, block: Block):
+    def remove_from_bag(self, block: Block):
         """Remove a lock from the block bag."""
 
         if block in self._block_bag:
@@ -567,11 +576,18 @@ class Dag:
             The block to be disconnected.
         """
 
+        # Ensure that the sort cache is cleared.
+        #
+        self._sort_cache = None
+
         # Check first to see if the dag would become disconnected.
         #
         maybe_pairs = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
         if not _is_connected(maybe_pairs):
             raise BlockError('Disconnecting this block would result in a disconnected dag')
+
+        if self._block_queue:
+            raise BlockError('Cannot disconnect blocks after executing the dag.')
 
         for p, watchers in g.param.watchers.items():
             for watcher in watchers['value']:
@@ -620,7 +636,10 @@ class Dag:
             A mapping of block to rank
         """
 
-        return _get_sorted(self._block_pairs)
+        if self._sort_cache is None:
+            self._sort_cache = _get_sorted(self._block_pairs)
+
+        return self._sort_cache
 
     def has_cycle(self):
         return _has_cycle(self._block_pairs)
