@@ -83,12 +83,13 @@ class Block(param.Parameterized):
     .. code-block:: python
 
         class MyBlock(Block):
+            \"""Convert strings to uppercase.\"""
+
             in_value = param.String(label='Input Value')
-            out_upper = param.String(label='Output value)
+            out_value = param.String(label='Output value')
 
             def execute(self):
                 self.out_value = self.in_value.upper()
-                print(f'New value is {self.out_value}')
 
     The block parameter ``wait_for_input`` allows a block to act as an "input" block,
     particularly when the block has a GUI interface. When set to True and dag execution
@@ -312,17 +313,43 @@ class Block(param.Parameterized):
         # print(f'** EXECUTE {self.__class__=}')
         pass
 
-    def __call__(self, **kwargs) -> dict[str, Any]:
-        """Allow a block to be called directly."""
+    def __call__(self, **kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Allow a block to be called directly and return the output params as a dictionary.
+
+        For example:
+
+        .. code-block:: python
+
+            >>> mb = MyBlock()
+            >>> r = ab(in_value='hello')
+            >>> print(r)
+            {'out_value': 'HELLO'}
+
+        The arguments passed in kwargs must match the block's input ("in\_") params. Not all input params need to be specified.
+
+        Calling the block calls :func:`~sier2.Block.prepare`, then :func:`~sier2.Block.execute`.
+
+        The result of the call is a dictionary that maps output ("out\_") names to their param values.
+
+        Parameters
+        ----------
+        kwargs: dict[str, Any]
+            A dictionary of input params and their values.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary that maps output ("out\_") names to their param values.
+        """
 
         in_names = [name for name in self.__class__.param if name.startswith('in_')]
-        if len(kwargs)!=len(in_names) or any(name not in in_names for name in kwargs):
-            names = ', '.join(in_names)
-            raise BlockError(f'All input params must be specified: {names}')
+        if any(name not in in_names for name in kwargs):
+            raise BlockError('Only input params can be specified')
 
         for name, value in kwargs.items():
             setattr(self, name, value)
 
+        self.prepare()
         self.execute()
 
         out_names = [name for name in self.__class__.param if name.startswith('out_')]
