@@ -105,8 +105,7 @@ class Block(param.Parameterized):
 
     When the block is being used in a :class:`~sier2.panel.PanelDag`,
     the block's ``__panel__()`` method is called to display the params.
-    The default ``__panel__()`` method supplied by displays the params that have names
-    starting with ``in_``, using the default Panel widgets for the param types.
+    The default ``__panel__()`` method supplied by the GUI displays the params returned by :func:`~sier2.Block.pick_params`, using the default Panel widgets for the param types.
 
     This can be inconvenient - for example, a block that allows the user to select columns
     in a dataframe will have an ``in_df`` param, but may not want to display the dataframe.
@@ -325,11 +324,11 @@ class Block(param.Parameterized):
             >>> print(r)
             {'out_value': 'HELLO'}
 
-        The arguments passed in kwargs must match the block's input ("in\_") params. Not all input params need to be specified.
+        The arguments passed in kwargs must match the block's input ("in\\_") params. Not all input params need to be specified.
 
         Calling the block calls :func:`~sier2.Block.prepare`, then :func:`~sier2.Block.execute`.
 
-        The result of the call is a dictionary that maps output ("out\_") names to their param values.
+        The result of the call is a dictionary that maps output ("out\\_") names to their param values.
 
         Parameters
         ----------
@@ -339,7 +338,7 @@ class Block(param.Parameterized):
         Returns
         -------
         dict[str, Any]
-            A dictionary that maps output ("out\_") names to their param values.
+            A dictionary that maps output ("out\\_") names to their param values.
         """
 
         in_names = [name for name in self.__class__.param if name.startswith('in_')]
@@ -357,8 +356,34 @@ class Block(param.Parameterized):
 
         return result
 
+    def __panel__(self):
+        """A default implementation of a Panel renderer.
+
+        This method can be overridden to provide a custom component.
+
+        :class:`~sier2.panel.PanelDag` provides a default renderer by injecting the method ``self.panel()`` into each displayed Block instance. By default, this method simply returns the value of ``self.panel()``. However, ``self.panel()`` can be used to customise the GUI.
+
+        For example, to add some instructions alongside the default render:
+
+        .. code-block:: python
+
+            def __panel__(self):
+                return pn.Row(
+                    self.panel(),
+                    pn.widgets.StaticText(
+                        name='Instructions',
+                        value='Please fill in the fields.'
+                    )
+                )
+        """
+
+        if hasattr(self, 'panel'):
+            return self.panel()
+        else:
+            raise BlockError('No self.panel() method defined')
+
 class BlockValidateError(BlockError):
-    """Raised if ``Block.prepare()`` or ``Block.execute()`` determines that input data is invalid.
+    """Raised if :func:`~sier2.Block.prepare` or :func:`~sier2.Block.execute` determines that input data is invalid.
 
     If this exception is raised, it will be caught by the executing dag.
     The dag will not set its stop flag, no stacktrace will be displayed,

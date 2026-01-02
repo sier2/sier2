@@ -3,7 +3,7 @@ Block
 
 .. autoclass:: sier2.Block
     :members:
-    :special-members: __call__
+    :special-members: __call__, __panel__
 
 .. autoclass:: sier2.BlockError
 

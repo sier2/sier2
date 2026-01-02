@@ -247,7 +247,8 @@ def _prepare_to_show(dag: Dag):
             header = doc[:ix]
             doc = doc[ix:].strip()
         else:
-            header = ''
+            header = doc
+            doc = ''
 
         name_text = pn.widgets.StaticText(
             value=header,
@@ -311,7 +312,7 @@ def _prepare_to_show(dag: Dag):
 def _default_panel(self: Block) -> Callable[[Block], pn.Param]:
     """Provide a default __panel__() implementation for blocks that don't have one.
 
-    This is injected into a block as "__panel__", so self is the Block instance.
+    This is injected into a block as "panel", so self is the Block instance.
     """
 
     display_options = self.display_options
@@ -402,24 +403,17 @@ class BlockCard(pn.Card):
         #
         doc = pn.pane.Markdown(block.doc, sizing_mode='scale_width') if block.doc else None
 
-        # If a block has no __panel__() method, Panel will by default
+        # If a block has no panel() method, Panel will by default
         # inspect the class and display the param attributes.
         # This is obviously not what we want.
         #
         # We just want to display the in_ params.
         #
-        has_panel = '__panel__' in block.__class__.__dict__
+        has_panel = 'panel' in block.__class__.__dict__
         if not has_panel:
-            # w._progress = pn.indicators.Progress(
-            #     name='Block progress',
-            #     bar_color='primary',
-            #     active=False,
-            #     value=-1
-            # )
-
             # Go go gadget descriptor protocol.
             #
-            block.__panel__ = _default_panel.__get__(block)
+            block.panel = _default_panel.__get__(block)
 
         if block._wait_for_input:
             # This is an input block, so add a 'Continue' button.
