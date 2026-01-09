@@ -1,6 +1,6 @@
 [project]
 name = "sier2"
-version = "2.0"
+version = "2.1"
 description = "Blocks of code that are executed in dags"
 authors = [
     {name="Sier2", email="sier2 <sier2@users.noreply.github.com>"}
@@ -10,6 +10,7 @@ packages = [{include = "sier2", from = "src"}]
 classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",

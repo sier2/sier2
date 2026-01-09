@@ -359,9 +359,19 @@ class Block(param.Parameterized):
     def __panel__(self):
         """A default implementation of a Panel renderer.
 
-        This method can be overridden to provide a custom component.
+        If Block is being used without a GUI (Panel), this method will
+        never be called, so it doesn't hurt to have it present.
 
-        :class:`~sier2.panel.PanelDag` provides a default renderer by injecting the method ``self.panel()`` into each displayed Block instance. By default, this method simply returns the value of ``self.panel()``. However, ``self.panel()`` can be used to customise the GUI.
+        If Panel is being used, then this method will inject a default
+        ``__panel__()`` implementation into self. THe default implementation
+        is not included because it needlessly imports Panel dependencies if
+        Panel is not being used.
+
+        A block implementer can therefore do one of these things to provide a Panel GUI.
+
+        - Do nothing (do not implement ``__panel__()``) and let the block display itself.
+        - Implement a ``__panel__()`` to provide a custom Panel GUI.
+        - Implement ``__panel__()`` and call ``super().__panel__()`` to get the default implementation, then build more Panel widgets around the default (for example, instructions) or modify the default widgets.
 
         For example, to add some instructions alongside the default render:
 
@@ -369,7 +379,7 @@ class Block(param.Parameterized):
 
             def __panel__(self):
                 return pn.Row(
-                    self.panel(),
+                    super().__panel__(),
                     pn.widgets.StaticText(
                         name='Instructions',
                         value='Please fill in the fields.'
@@ -377,10 +387,11 @@ class Block(param.Parameterized):
                 )
         """
 
-        if hasattr(self, 'panel'):
-            return self.panel()
-        else:
-            raise BlockError('No self.panel() method defined')
+        if not hasattr(self, '_panel'):
+            from ._panel._default import add_panel_def
+            add_panel_def(self)
+
+        return self._panel()
 
 class BlockValidateError(BlockError):
     """Raised if :func:`~sier2.Block.prepare` or :func:`~sier2.Block.execute` determines that input data is invalid.
