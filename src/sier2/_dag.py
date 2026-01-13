@@ -190,7 +190,7 @@ _RESTART = ':restart:'
 class Dag:
     """A directed acyclic graph of blocks."""
 
-    def __init__(self, *, site: str='Block', title: str, doc: str, author: dict[str, str]=None, show_doc: bool=True):
+    def __init__(self, *, site: str='Block', title: str, doc: str, style: dict[str, str]=None, author: dict[str, str]=None, show_doc: bool=True):
         """A new dag.
 
         Parameters
@@ -201,6 +201,8 @@ class Dag:
             A title to show in the header.
         doc: str
             Dag documentation.
+        style: dict
+            Dag documentation custom style.
         author: str
             The dag author.
         show_doc: bool
@@ -220,6 +222,7 @@ class Dag:
         self.site = site
         self.title = title
         self.doc = doc
+        self.style = style
         self.show_doc = show_doc
 
         if author is not None:

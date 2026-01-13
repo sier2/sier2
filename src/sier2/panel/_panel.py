@@ -257,6 +257,7 @@ def _prepare_to_show(dag: Dag):
         )
 
         card = pn.Card(pn.pane.Markdown(doc, sizing_mode='stretch_width'), header=pn.Row(name_text), sizing_mode='stretch_width')
+        card[0].styles = dag.style if dag.style else {}
         cards.append(card)
 
     cards.extend(BlockCard(parent_template=template, dag=dag, block=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw._visible)
@@ -313,6 +314,11 @@ class BlockCard(pn.Card):
         #
         doc = pn.pane.Markdown(block.doc, sizing_mode='scale_width') if block.doc else None
 
+        # if the block has documentation, has the user specified a style for the markdown?
+        # 
+        if doc is not None and w.doc_styles is not None:
+          doc.styles = w.doc_styles
+          
         if block._wait_for_input:
             # This is an input block, so add a 'Continue' button.
             #

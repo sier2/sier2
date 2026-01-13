@@ -145,7 +145,7 @@ class Block(param.Parameterized):
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', **kwargs):
+    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, doc_styles: dict|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', **kwargs):
         """
         Parameters
         ----------
@@ -155,6 +155,8 @@ class Block(param.Parameterized):
             If True (the default), the block will be visible in a GUI.
         doc: str|None
             Markdown documentation that may displayed in the user interface.
+        doc_styles: dict|None
+            Style for the markdown documentation
         display_options: list[str]|dict[str, Any]|None
             Display options to be used when displaying this block in a GUI.
         only_in: bool
@@ -174,6 +176,7 @@ class Block(param.Parameterized):
         self._wait_for_input = wait_for_input
         self._visible = visible
         self.doc = doc
+        self.doc_styles = doc_styles
         self.display_options = display_options
         self.only_in = only_in
         self.continue_label = continue_label
