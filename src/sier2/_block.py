@@ -41,10 +41,10 @@ same input block be used immediately.) This causes the block's
 Dag execution then continues as normal.
 '''
 
-_HAS_PREPARED_DOC = '''Indicates that ``prepare()`` hsabeen called.
+# _HAS_PREPARED_DOC = '''Indicates that ``prepare()`` hsabeen called.
 
-This can be used in a GUI to enable a "Continue" button.
-'''
+# This can be used in a GUI to enable a "Continue" button.
+# '''
 
 _VISIBLE_DOC = '''If True, the block will be visible in a GUI.
 
@@ -138,14 +138,17 @@ class Block(param.Parameterized):
     """
 
     _wait_for_input = param.Boolean(default=False, label='Wait for input', doc=_WAIT_FOR_INPUT_DOC)
-    _has_prepared = param.Boolean(default=False, label='Has prepared', doc=_HAS_PREPARED_DOC)
+    # _has_prepared = param.Boolean(default=False, label='Has prepared', doc=_HAS_PREPARED_DOC)
     _visible = param.Boolean(default=True, label='Visible', doc=_VISIBLE_DOC)
+    _is_card = param.Boolean(default=False, label='Is a card', doc='If True, the default __panel__() is wrapped by a panel.Card')
 
     _block_state = param.String(default=BlockState.READY)
 
+    _is_input_valid = param.Boolean(default=True, doc='If wait_for_input is true, indicates that user input is valid.')
+
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', **kwargs):
+    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', is_card: bool=False, **kwargs):
         """
         Parameters
         ----------
@@ -162,8 +165,10 @@ class Block(param.Parameterized):
             or do not begin with "_". Setting only_in to True will cause only "in_"
             parameters to be displayed.
         continue_label: bool
-            If wait_fir_input is True, a "Continue" button is displayed.
+            If wait_for_input is True, a "Continue" button is displayed.
             This changes the label displayed on the button.
+        is_card: bool
+            If True, the default Panel display is wrapped in a ``panel.Card``.
         """
 
         super().__init__(*args, **kwargs)
@@ -177,6 +182,7 @@ class Block(param.Parameterized):
         self.display_options = display_options
         self.only_in = only_in
         self.continue_label = continue_label
+        self._is_card = is_card
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)
 
@@ -312,6 +318,23 @@ class Block(param.Parameterized):
         # print(f'** EXECUTE {self.__class__=}')
         pass
 
+    def _on_continue(self, event):
+        """The event handler for the "Continue" button.
+
+        If this block is being run by a dag, the dag has injected a
+        dag_continue() method, so just call that - the dag will handle
+        the execution of the block.
+
+        Otherwise, execute the block, then call `on_continue()` if it exists.
+        """
+
+        if hasattr(self, '_dag_continue'):
+            self._dag_continue(event)
+        else:
+            self.execute()
+            if hasattr(self, 'on_continue'):
+                self.on_continue(event)
+
     def __call__(self, **kwargs: dict[str, Any]) -> dict[str, Any]:
         """Allow a block to be called directly and return the output params as a dictionary.
 
@@ -401,6 +424,15 @@ class BlockValidateError(BlockError):
     and the error message will be displayed.
     """
 
-    def __init__(self, *, block_name: str, error: str):
-        super().__init__(error)
+    def __init__(self, *, block_name: str, message: str):
+        """
+        Parameters
+        ----------
+        block_name: str
+            The name of the block where the error occured.
+        message: str
+            A message describing the error.
+        """
+
+        super().__init__(message)
         self.block_name = block_name

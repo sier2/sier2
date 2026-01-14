@@ -16,6 +16,7 @@ from .._util import trim
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
 from ._dag_chart import dag_pane
+from .._panel._default import _card_for_block
 
 NTHREADS = 2
 
@@ -259,7 +260,39 @@ def _prepare_to_show(dag: Dag):
         card = pn.Card(pn.pane.Markdown(doc, sizing_mode='stretch_width'), header=pn.Row(name_text), sizing_mode='stretch_width')
         cards.append(card)
 
-    cards.extend(BlockCard(parent_template=template, dag=dag, block=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw._visible)
+    # cards.extend(BlockCard(parent_template=template, dag=dag, block=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw._visible)
+
+    def dag_continue(self, _event):
+        template.main[0].loading = True
+
+        try:
+            if dag_logger:
+                dag_logger.info('', block_name=None, block_state=None)
+                dag_logger.info('Execute dag', block_name='', block_state=BlockState.DAG)
+
+            # We want this block's execute() method to run first
+            # after the user clicks the "Continue" button.
+            # We make this happen by pushing this block on the head
+            # of the queue, but without any values - we don't want
+            # to trigger any param changes.
+            #
+            try:
+                dag.execute_after_input(self, dag_logger=dag_logger)
+            except BlockValidateError as e:
+                # Display the error as a notification.
+                #
+                block_name = html.escape(e.block_name)
+                error = html.escape(str(e))
+                notif = f'<b>{block_name}</b>:<br>{error}'
+                pn.state.notifications.error(notif, duration=0)
+        finally:
+            template.main[0].loading = False
+
+    for block in dag.get_sorted():
+        if block._visible:
+            card = _card_for_block(block, block.__panel__(), _with_light=True)
+            block._dag_continue = dag_continue.__get__(block)
+            cards.append(card)
 
     template.main.append(pn.panel(pn.Column(*cards)))
     template.sidebar.append(
@@ -277,123 +310,129 @@ def _prepare_to_show(dag: Dag):
 
     return template
 
-class BlockCard(pn.Card):
-    """A custom card to wrap around a block.
+# class BlockCard(pn.Card):
+#     """A custom card to wrap around a block.
 
-    This adds the block title and a status light to the card header.
-    The light updates to match the block state.
-    """
+#     This adds the block title and a status light to the card header.
+#     The light updates to match the block state.
+#     """
 
-    @staticmethod
-    def _get_state_light(color: str) -> pn.Spacer:
-        return pn.Spacer(
-            margin=(8, 0, 0, 0),
-            styles={'width':'20px', 'height':'20px', 'background':color, 'border-radius': '10px'}
-        )
+#     @staticmethod
+#     def _get_state_light(color: str) -> pn.Spacer:
+#         return pn.Spacer(
+#             margin=(8, 0, 0, 0),
+#             styles={'width':'20px', 'height':'20px', 'background':color, 'border-radius': '10px'}
+#         )
 
-    # def ui(self, message):
-    #     """TODO connect this to the template"""
-    #     print(message)
+#     # def ui(self, message):
+#     #     """TODO connect this to the template"""
+#     #     print(message)
 
-    def __init__(self, *args, parent_template, dag: Dag, block: Block, dag_logger=None, **kwargs):
-        # Make this look like <h3> (the default Card header text).
-        #
-        name_text = pn.widgets.StaticText(
-            value=block.name,
-            css_classes=['card-title'],
-            styles={'font-size':'1.17em', 'font-weight':'bold'}
-        )
-        spacer = pn.HSpacer(
-            styles=dict(
-                min_width='1px', min_height='1px'
-            )
-        )
+#     def __init__(self, *args, parent_template, dag: Dag, block: Block, dag_logger=None, **kwargs):
+#         # Make this look like <h3> (the default Card header text).
+#         #
+#         name_text = pn.widgets.StaticText(
+#             value=block.name,
+#             css_classes=['card-title'],
+#             styles={'font-size':'1.17em', 'font-weight':'bold'}
+#         )
+#         spacer = pn.HSpacer(
+#             styles=dict(
+#                 min_width='1px', min_height='1px'
+#             )
+#         )
 
-        # Does this block have documentation to be displayed in the card?
-        #
-        doc = pn.pane.Markdown(block.doc, sizing_mode='scale_width') if block.doc else None
+#         # Does this block have documentation to be displayed in the card?
+#         #
+#         doc = pn.pane.Markdown(block.doc, sizing_mode='scale_width') if block.doc else None
 
-        if block._wait_for_input:
-            # This is an input block, so add a 'Continue' button.
-            #
-            def on_continue(_event):
-                parent_template.main[0].loading = True
+#         if block._wait_for_input:
+#             # This is an input block, so add a 'Continue' button.
+#             #
+#             def on_continue(_event):
+#                 parent_template.main[0].loading = True
 
-                # # The user may not have changed anything from the default values,
-                # # so there won't be anything on the block queue.
-                # # Therefore, we trigger the output params to put their
-                # # current values on the queue.
-                # # If their values are already there, it doesn't matter.
-                # #
-                # w.param.trigger(*w._block_out_params)
+#                 # # The user may not have changed anything from the default values,
+#                 # # so there won't be anything on the block queue.
+#                 # # Therefore, we trigger the output params to put their
+#                 # # current values on the queue.
+#                 # # If their values are already there, it doesn't matter.
+#                 # #
+#                 # w.param.trigger(*w._block_out_params)
 
-                try:
-                    if dag_logger:
-                        dag_logger.info('', block_name=None, block_state=None)
-                        dag_logger.info('Execute dag', block_name='', block_state=BlockState.DAG)
+#                 try:
+#                     if dag_logger:
+#                         dag_logger.info('', block_name=None, block_state=None)
+#                         dag_logger.info('Execute dag', block_name='', block_state=BlockState.DAG)
 
-                    # We want this block's execute() method to run first
-                    # after the user clicks the "Continue" button.
-                    # We make this happen by pushing this block on the head
-                    # of the queue, but without any values - we don't want
-                    # to trigger any param changes.
-                    #
-                    try:
-                        dag.execute_after_input(block, dag_logger=dag_logger)
-                    except BlockValidateError as e:
-                        # Display the error as a notification.
-                        #
-                        block_name = html.escape(e.block_name)
-                        error = html.escape(str(e))
-                        notif = f'<b>{block_name}</b>:<br>{error}'
-                        pn.state.notifications.error(notif, duration=0)
-                finally:
-                    parent_template.main[0].loading = False
+#                     # We want this block's execute() method to run first
+#                     # after the user clicks the "Continue" button.
+#                     # We make this happen by pushing this block on the head
+#                     # of the queue, but without any values - we don't want
+#                     # to trigger any param changes.
+#                     #
+#                     try:
+#                         dag.execute_after_input(block, dag_logger=dag_logger)
+#                     except BlockValidateError as e:
+#                         # Display the error as a notification.
+#                         #
+#                         block_name = html.escape(e.block_name)
+#                         error = html.escape(str(e))
+#                         notif = f'<b>{block_name}</b>:<br>{error}'
+#                         pn.state.notifications.error(notif, duration=0)
+#                 finally:
+#                     parent_template.main[0].loading = False
 
-            # Add a "continue" button to restart the dag.
-            # The panel GUI is built after dag.execute() runs,
-            # so the initial button must reflect the current _has_prepared state.
-            #
-            c_button = pn.widgets.Button(name=block.continue_label, button_type='primary', align='end', disabled=not block._has_prepared)
-            c_button.on_click(on_continue)
+#             # Add a "continue" button to restart the dag.
+#             # The panel GUI is built after dag.execute() runs,
+#             # so the initial button must reflect the current _has_prepared state.
+#             #
+#             c_button = pn.widgets.Button(name=block.continue_label, button_type='primary', align='end', disabled=not block._has_prepared)
+#             c_button.on_click(on_continue)
 
-            # Ensure that the button state reflects _has_prepared.
-            #
-            def on_prepared(_has_prepared):
-                c_button.disabled = not block._has_prepared
-            block.param.watch_values(on_prepared, '_has_prepared')
+#             # # Ensure that the button state reflects _has_prepared.
+#             # #
+#             # def on_prepared(_has_prepared):
+#             #     c_button.disabled = not block._has_prepared
+#             # block.param.watch_values(on_prepared, '_has_prepared')
 
-            row = [doc, c_button] if doc else [c_button]
-            w_ = pn.Column(
-                block,
-                pn.Row(*row),
-               sizing_mode='stretch_width'
-            )
-        elif doc:
-            w_ = pn.Column(block, doc)
-        else:
-            w_ = block
+#             # Ensure that the button state reflects _is_input_valid.
+#             #
+#             def on_valid(_is_input_valid):
+#                 c_button.disabled = not block._is_input_valid
+#             block.param.watch_values(on_valid, '_is_input_valid')
 
-        super().__init__(w_, *args, sizing_mode='stretch_width', **kwargs)
+#             row = [doc, c_button] if doc else [c_button]
+#             w_ = pn.Column(
+#                 block,
+#                 pn.Row(*row),
+#                sizing_mode='stretch_width'
+#             )
+#         elif doc:
+#             w_ = pn.Column(block, doc)
+#         else:
+#             w_ = block
 
-        self.header = pn.Row(
-            name_text,
-            pn.VSpacer(),
-            spacer,
-            self._get_state_light(_get_state_color(block._block_state))
-        )
+#         super().__init__(w_, *args, sizing_mode='stretch_width', **kwargs)
 
-        # Watch the block state so we can update the status light.
-        #
-        block.param.watch_values(self.state_change, '_block_state')
+#         self.header = pn.Row(
+#             name_text,
+#             pn.VSpacer(),
+#             spacer,
+#             self._get_state_light(_get_state_color(block._block_state))
+#         )
 
-    def state_change(self, _block_state: BlockState):
-        """Watcher for the block state.
+#         # Watch the block state so we can update the status light.
+#         #
+#         block.param.watch_values(self.state_change, '_block_state')
 
-        Updates the state light.
-        """
+#     def state_change(self, _block_state: BlockState):
+#         """Watcher for the block state.
 
-        self.header[-1] = self._get_state_light(_get_state_color(_block_state))
+#         Updates the state light.
+#         """
+
+#         self.header[-1] = self._get_state_light(_get_state_color(_block_state))
 
 def _sier2_label_formatter(pname: str):
     """Default formatter to turn parameter names into appropriate widget labels.
