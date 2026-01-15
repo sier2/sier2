@@ -399,11 +399,11 @@ def _prepare_to_show(dag: Dag):
 #             #     c_button.disabled = not block._has_prepared
 #             # block.param.watch_values(on_prepared, '_has_prepared')
 
-#             # Ensure that the button state reflects _is_input_valid.
+#             # Ensure that the button state reflects is_input_valid_.
 #             #
-#             def on_valid(_is_input_valid):
-#                 c_button.disabled = not block._is_input_valid
-#             block.param.watch_values(on_valid, '_is_input_valid')
+#             def on_valid(is_input_valid_):
+#                 c_button.disabled = not block.is_input_valid_
+#             block.param.watch_values(on_valid, 'is_input_valid_')
 
 #             row = [doc, c_button] if doc else [c_button]
 #             w_ = pn.Column(

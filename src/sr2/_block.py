@@ -144,7 +144,7 @@ class Block(param.Parameterized):
 
     _block_state = param.String(default=BlockState.READY)
 
-    _is_input_valid = param.Boolean(default=True, doc='If wait_for_input is true, indicates that user input is valid.')
+    is_input_valid_ = param.Boolean(default=False, doc='If wait_for_input is true, indicates that user input is valid.')
 
     SIER2_KEY = '_sier2__key'
 
@@ -260,7 +260,7 @@ class Block(param.Parameterized):
         or is ``name``.
         """
 
-        names = [name for name in self.param.values() if name.startswith('in_') or not (self.only_in or name.startswith(('out_', '_')) or name=='name')]
+        names = [name for name in self.param.values() if name.startswith('in_') or not (self.only_in or name.startswith(('out_', '_')) or name.endswith('_') or name=='name')]
 
         return names
 
@@ -298,7 +298,7 @@ class Block(param.Parameterized):
         without calling ``prepare()``.
         """
 
-        pass
+        self.is_input_valid_ = True
 
     def execute(self, *_, **__):
         """This method is called when one or more of the input parameters causes an event.
