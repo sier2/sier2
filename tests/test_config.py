@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from sier2 import Config
+from sr2 import Config
 
 CONFIG_NAME = 'test.ini'
 

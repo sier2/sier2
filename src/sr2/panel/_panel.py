@@ -10,13 +10,13 @@ from typing import Callable
 import param.parameterized as paramp
 from param.parameters import DataFrame
 
-from sier2 import Block, BlockValidateError, BlockState, Dag, BlockError
+from .. import Block, BlockValidateError, BlockState, Dag, BlockError
 from .._dag import _InputValues
 from .._util import trim
 from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
 from ._panel_util import _get_state_color, dag_doc
 from ._dag_chart import dag_pane
-from .._panel._default import _card_for_block
+# from .._panel._default import _card_for_block
 
 NTHREADS = 2
 
@@ -288,6 +288,9 @@ def _prepare_to_show(dag: Dag):
         finally:
             template.main[0].loading = False
 
+    # Be lazy to avoid a circular import.
+    #
+    from .._panel._default import _card_for_block
     for block in dag.get_sorted():
         if block._visible:
             card = _card_for_block(block, block.__panel__(), _with_light=True)

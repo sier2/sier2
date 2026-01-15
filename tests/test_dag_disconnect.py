@@ -1,7 +1,7 @@
 import pytest
 
-from sier2 import Block, BlockState, Dag, Connections, BlockError, Library, BlockValidateError
-from sier2._dag import _is_connected
+from sr2 import Block, BlockState, Dag, Connections, BlockError, Library, BlockValidateError
+from sr2._dag import _is_connected
 import param
 
 @pytest.fixture

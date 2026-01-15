@@ -103,9 +103,9 @@ class Block(param.Parameterized):
     Displaying widgets
     ~~~~~~~~~~~~~~~~~~
 
-    When the block is being used in a :class:`~sier2.panel.PanelDag`,
+    When the block is being used in a :class:`~sr2.panel.PanelDag`,
     the block's ``__panel__()`` method is called to display the params.
-    The default ``__panel__()`` method supplied by the GUI displays the params returned by :func:`~sier2.Block.pick_params`, using the default Panel widgets for the param types.
+    The default ``__panel__()`` method supplied by the GUI displays the params returned by :func:`~sr2.Block.pick_params`, using the default Panel widgets for the param types.
 
     This can be inconvenient - for example, a block that allows the user to select columns
     in a dataframe will have an ``in_df`` param, but may not want to display the dataframe.
@@ -123,7 +123,7 @@ class Block(param.Parameterized):
     If ``display_options`` is a dictionary, it is treated as a ``kwargs`` dictionary and
     passed to ``panel.Param()``. In addition, if "parameters" is not one of the
     dictionary keys, it is added with the result of calling
-    :func:`~sier2.Block.pick_params`.
+    :func:`~sr2.Block.pick_params`.
 
     .. code-block:: python
 
@@ -223,13 +223,13 @@ class Block(param.Parameterized):
         and therefore must be syntactically correct Python literals.
 
         They keys and values are read from the section ``[block.name]``, where ``name`` is
-        this block's unique key as specified by :func:`sier2.Block.block_key`.
+        this block's unique key as specified by :func:`sr2.Block.block_key`.
         If the ``block`` parameter is unspecified, the calling block is used by default.
 
         If the section is not present in the config file, an empty dictionary is returned.
 
         The default config file is looked for at
-        (the default user config directory) / 'sier2sier2.ini'.
+        (the default user config directory) / 'sier2.ini'.
         On Windows, the config directory is ``$ENV:APPDATA``; on Linux, ``$XDG_CONFIG_HOME``
         or ``$HOME/.config``.
 
@@ -268,7 +268,7 @@ class Block(param.Parameterized):
         """Return an individual value from the section specified by
         the block in the sier2 config file.
 
-        See :func:`~sier2.Block.get_config` for more details.
+        See :func:`~sr2.Block.get_config` for more details.
 
         Parameters
         ----------
@@ -287,14 +287,14 @@ class Block(param.Parameterized):
         return value if value is not None else default
 
     def prepare(self):
-        """Called by a dag before calling :func:`~sier2.Dag.execute`.
+        """Called by a dag before calling :func:`~sr2.Dag.execute`.
 
         If ``self.wait_for_input`` is True, block execution stops after calling
         ``prepare()``. This gives the block author an opportunity to perform
         "pre-execute" actions, such as validating input params or setting up
         a user interface.
 
-        After the dag restarts on this block, :func:`~sier2.Dag.execute` will be called
+        After the dag restarts on this block, :func:`~sr2.Dag.execute` will be called
         without calling ``prepare()``.
         """
 
@@ -349,7 +349,7 @@ class Block(param.Parameterized):
 
         The arguments passed in kwargs must match the block's input ("in\\_") params. Not all input params need to be specified.
 
-        Calling the block calls :func:`~sier2.Block.prepare`, then :func:`~sier2.Block.execute`.
+        Calling the block calls :func:`~sr2.Block.prepare`, then :func:`~sr2.Block.execute`.
 
         The result of the call is a dictionary that maps output ("out\\_") names to their param values.
 
@@ -417,7 +417,7 @@ class Block(param.Parameterized):
         return self._panel()
 
 class BlockValidateError(BlockError):
-    """Raised if :func:`~sier2.Block.prepare` or :func:`~sier2.Block.execute` determines that input data is invalid.
+    """Raised if :func:`~sr2.Block.prepare` or :func:`~sr2.Block.execute` determines that input data is invalid.
 
     If this exception is raised, it will be caught by the executing dag.
     The dag will not set its stop flag, no stacktrace will be displayed,

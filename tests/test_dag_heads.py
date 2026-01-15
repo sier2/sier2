@@ -1,6 +1,6 @@
 import pytest
 
-from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
+from sr2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
 import param
 
 class BlockA(Block):

@@ -5,8 +5,7 @@ from importlib.metadata import entry_points, EntryPoint
 from typing import Any, cast
 import warnings
 
-from sier2 import Block, Dag, Connection, BlockError
-from sier2.panel import PanelDag
+from . import Block, Dag, Connection, BlockError
 from ._util import _import_item
 
 # Store a mapping from a unique key to a Block class.
@@ -245,7 +244,15 @@ class Library:
 
         # Connect the blocks.
         #
-        DagType = PanelDag if dump['dag']['type']=='PanelDag' else Dag
+        # DagType = PanelDag if dump['dag']['type']=='PanelDag' else Dag
+        if dump['dag']['type']=='PanelDag':
+            # Lazy import, because we only want to import panel when required.
+            #
+            from .panel import PanelDag
+            DagType = PanelDag
+        else:
+            DagType = Dag
+
         dag = DagType(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
         for conn in dump['connections']:
             conns = [Connection(**kwargs) for kwargs in conn['conn_args']]

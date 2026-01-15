@@ -1,7 +1,7 @@
 import argparse
 from importlib.metadata import version
 
-from sier2 import Library, Config
+from . import Library, Config
 from ._library import _find_blocks, _find_dags, run_dag
 from ._util import block_doc_text, dag_doc_text
 

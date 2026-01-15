@@ -4,7 +4,7 @@ from importlib.metadata import entry_points
 import sys
 import warnings
 
-from sier2 import BlockError
+from . import BlockError
 
 def _import_item(key):
     """Look up an object by key.
@@ -37,7 +37,7 @@ def get_block_config():
     Internet may use a different configuration to the same block running in a corporate
     environment.
 
-    This function looks up a block configuration provider using the ``sier2.config`` entry point,
+    This function looks up a block configuration provider using the ``sr2.config`` entry point,
     which has the form `module-name:function-name`.
 
     If no config package is found, or more than one config package is found,

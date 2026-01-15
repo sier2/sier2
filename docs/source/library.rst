@@ -1,5 +1,5 @@
 Library
 =======
 
-.. autoclass:: sier2.Library
+.. autoclass:: sr2.Library
     :members:

@@ -96,7 +96,7 @@ class _Config:
             # Import here, otherwise there's a circular dependency Library -> Config -> Library.
             # Config blocks better not have any config.
             #
-            from sier2 import Library
+            from . import Library
 
             block = Library.get_block(config_block)()
 

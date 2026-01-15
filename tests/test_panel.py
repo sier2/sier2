@@ -5,7 +5,7 @@
 
 import pytest
 
-from sier2 import Block
+from sr2 import Block
 import param
 
 class SimpleBlock(Block):

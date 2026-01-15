@@ -35,8 +35,8 @@ class Connection:
 class Connections:
     """Using a dictionary, define connections between pairs of output parameters and input parameters.
 
-    This is a convenience class to replace multiple :class:`~sier2.Connection`
-    parameters in :func:`~sier2.Dag.connect`. For example:
+    This is a convenience class to replace multiple :class:`~sr2.Connection`
+    parameters in :func:`~sr2.Dag.connect`. For example:
 
     .. code-block:: python
 
@@ -283,8 +283,8 @@ class Dag:
     def connect(self, src: Block, dst: Block, *connections: Connection|Connections):
         """Connect two Blocks within this dag.
 
-        The source and destination :class:`~sier2.Block` instances are connected by providing
-        one or more :class:`~sier2.Connections` or :class:`~sier2.Connection` parameters,
+        The source and destination :class:`~sr2.Block` instances are connected by providing
+        one or more :class:`~sr2.Connections` or :class:`~sr2.Connection` parameters,
         defining connections between an output parameter (``out_``) in the source block,
         and an input parameter (``in_``) in the destination block. For example:
 
@@ -567,7 +567,7 @@ class Dag:
 
         All parameters (input and output) will be disconnected.
 
-        A :class:`~sier2.BlockError` will be raised if the disconnection would cause
+        A :class:`~sr2.BlockError` will be raised if the disconnection would cause
         a disconnected dag.
 
         Parameters

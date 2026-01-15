@@ -27,7 +27,7 @@ A typical block implementation looks like this.
 
 .. code-block:: python
 
-    from sier2 import Block
+    from sr2 import Block
 
     class Increment(Block):
         """A block that adds one to the input value."""

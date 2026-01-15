@@ -24,7 +24,7 @@ Simple Block implementations look like this.
 
 .. code-block:: python
 
-    from sier2 import Block, Dag, Connection
+    from sr2 import Block, Dag, Connection
     import param
 
     class Assign(Block):
@@ -50,14 +50,14 @@ The ``execute()`` method in each block is called automatically when an input par
 Creating a dag
 --------------
 
-A dag is created using an instance of :class:`sier2.Dag`.
+A dag is created using an instance of :class:`sr2.Dag`.
 
 .. code-block:: python
 
     dag = Dag(doc='Increment and display')
 
 The dag is used to connect block instances using the
-:func:`sier2.Dag.connect` method.
+:func:`sr2.Dag.connect` method.
 
 .. code-block:: python
 
