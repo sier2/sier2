@@ -22,8 +22,8 @@ copyright = '2024, algol60'
 author = 'algol60'
 
 # The full version, including alpha/beta/rc tags
-import sr2
-release = sr2.__version__
+import sier2
+release = sier2.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -52,7 +52,7 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinxdoc'
+html_theme = 'bizstyle'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

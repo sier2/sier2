@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.rst"
 requires-python = ">=3.11"
-#packages = [{include = "sr2", from = "src"}]
+packages = [{include = "sier2", from = "src"}]
 classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -19,9 +19,6 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries"
 ]
-
-[tool.poetry]
-packages = [{include = "sr2", from = "src"}]
 
 [dependencies]
 python = "^3.11"

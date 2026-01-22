@@ -5,7 +5,7 @@
 
 import pytest
 
-from sr2 import Block, Dag, Connection, Library
+from sier2 import Block, Dag, Connection, Library
 import param
 
 class PassThrough(Block):

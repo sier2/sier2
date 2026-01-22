@@ -1,4 +1,4 @@
 Utility functions
 =================
 
-.. autofunction:: sr2.get_block_config
+.. autofunction:: sier2.get_block_config

@@ -1,12 +1,12 @@
 Dag
 ===
 
-.. autoclass:: sr2.Dag
+.. autoclass:: sier2.Dag
     :members:
 
-.. autoclass:: sr2.panel.PanelDag
+.. autoclass:: sier2.panel.PanelDag
     :members:
 
-.. autoclass:: sr2.Connection
+.. autoclass:: sier2.Connection
 
-.. autoclass:: sr2.Connections
+.. autoclass:: sier2.Connections
