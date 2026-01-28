@@ -1,7 +1,17 @@
 import pytest
 
 from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
+from sier2._dag import _set_downstream_state
 import param
+
+class PassThrough(Block):
+    """Pass a value through unchanged."""
+
+    in_p = param.Integer(default=0)
+    out_p = param.Integer(default=0)
+
+    def execute(self):
+        self.out_p = self.in_p
 
 @pytest.fixture
 def dag():
@@ -22,14 +32,14 @@ def test_empty_dag(dag):
         dag.execute()
 
 def test_no_connections(dag):
-    class PassThrough(Block):
-        """Pass a value through unchanged."""
+    # class PassThrough(Block):
+    #     """Pass a value through unchanged."""
 
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+    #     in_p = param.Integer(default=0)
+    #     out_p = param.Integer(default=0)
 
-        def execute(self):
-            self.out_p = self.in_p
+    #     def execute(self):
+    #         self.out_p = self.in_p
 
     b1 = PassThrough()
     b2 = PassThrough()
@@ -145,14 +155,14 @@ def test_first_input(dag):
             self.out_p = VALUE
             pass
 
-    class PassThrough(Block):
-        """Pass a value through unchanged."""
+    # class PassThrough(Block):
+    #     """Pass a value through unchanged."""
 
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+    #     in_p = param.Integer(default=0)
+    #     out_p = param.Integer(default=0)
 
-        def execute(self):
-            self.out_p = self.in_p
+    #     def execute(self):
+    #         self.out_p = self.in_p
 
     p0 = Initial()
     p1 = PassThrough()
@@ -166,14 +176,14 @@ def test_first_input(dag):
 def test_input_block(dag):
     """Ensure that dag execution stops at a user-input block."""
 
-    class PassThrough(Block):
-        """Pass a value through unchanged."""
+    # class PassThrough(Block):
+    #     """Pass a value through unchanged."""
 
-        in_p = param.Integer()
-        out_p = param.Integer()
+    #     in_p = param.Integer()
+    #     out_p = param.Integer()
 
-        def execute(self):
-            self.out_p = self.in_p
+    #     def execute(self):
+    #         self.out_p = self.in_p
 
     class PassThroughI(Block):
         """Pass value+1 through."""
@@ -236,14 +246,14 @@ def test_input_block(dag):
 def test_input_block_validation(dag):
     """Ensure that input validation works."""
 
-    class PassThrough(Block):
-        """Pass a value through unchanged."""
+    # class PassThrough(Block):
+    #     """Pass a value through unchanged."""
 
-        in_p = param.Integer(default=0)
-        out_p = param.Integer(default=0)
+    #     in_p = param.Integer(default=0)
+    #     out_p = param.Integer(default=0)
 
-        def execute(self):
-            self.out_p = self.in_p
+    #     def execute(self):
+    #         self.out_p = self.in_p
 
     class ValidateInput(Block):
         """Pass a value through unchanged."""
@@ -431,6 +441,111 @@ def test_multiple_heads_with_pause(dag):
 
     assert t.has_prepared
     assert t.has_executed
+
+def _triangle_dag(dag):
+    """Create a triangular dag.
+
+    a -> b -> c -> d.
+    a -> e -> f -> g.
+    """
+
+    a = PassThrough(name='a')
+    b = PassThrough(name='b')
+    c = PassThrough(name='c')
+    d = PassThrough(name='d')
+    e = PassThrough(name='e')
+    f = PassThrough(name='f')
+    g = PassThrough(name='g')
+
+    conn = Connection('out_p', 'in_p')
+    dag.connect(a, b, conn)
+    dag.connect(b, c, conn)
+    dag.connect(c, d, conn)
+    dag.connect(a, e, conn)
+    dag.connect(e, f, conn)
+    dag.connect(f, g, conn)
+
+    return a, b, c, d, e, f, g
+
+def _reset_blocks(dag: Dag):
+    """Set all block states to READY.
+
+    Do this via the dag block pairs, so some get set twice. Nobody cares.
+    """
+
+    for src, dst in dag._block_pairs:
+        src._block_state = BlockState.READY
+        dst._block_state = BlockState.READY
+
+def test_downstream_blocks1(dag):
+    a, b, c, d, e, f, g = _triangle_dag(dag)
+    _reset_blocks(dag)
+    downstream = _set_downstream_state(dag, a, BlockState.SUCCESSFUL)
+    assert downstream==set([b, c, d, e, f, g])
+    assert all(i._block_state==BlockState.READY for i in [a])
+    assert all(i._block_state==BlockState.SUCCESSFUL for i in [b, c, d, e, f, g])
+
+def test_downstream_blocks2(dag):
+    a, b, c, d, e, f, g = _triangle_dag(dag)
+    _reset_blocks(dag)
+    downstream = _set_downstream_state(dag, b, BlockState.SUCCESSFUL)
+    assert downstream==set([c, d])
+    assert all(i._block_state==BlockState.READY for i in [a, b, e, f, g])
+    assert all(i._block_state==BlockState.SUCCESSFUL for i in [c, d])
+
+def test_downstream_blocks3(dag):
+    a, b, c, d, e, f, g = _triangle_dag(dag)
+    _reset_blocks(dag)
+    downstream = _set_downstream_state(dag, c, BlockState.SUCCESSFUL)
+    assert downstream==set([d])
+    assert all(i._block_state==BlockState.READY for i in [a, b, c, e, f, g])
+    assert all(i._block_state==BlockState.SUCCESSFUL for i in [d])
+
+def test_downstream_blocks4(dag):
+    a, b, c, d, e, f, g = _triangle_dag(dag)
+    _reset_blocks(dag)
+    downstream = _set_downstream_state(dag, e, BlockState.SUCCESSFUL)
+    assert downstream==set([f, g])
+    assert all(i._block_state==BlockState.READY for i in [a, b, c, d, e])
+    assert all(i._block_state==BlockState.SUCCESSFUL for i in [f, g])
+
+def test_downstream_blocks5(dag):
+    a, b, c, d, e, f, g = _triangle_dag(dag)
+    _reset_blocks(dag)
+    downstream = _set_downstream_state(dag, f, BlockState.SUCCESSFUL)
+    assert downstream==set([g])
+    assert all(i._block_state==BlockState.READY for i in [a, b, c, d, e, f])
+    assert all(i._block_state==BlockState.SUCCESSFUL for i in [g])
+
+def test_downstream_blocks6(dag):
+    a, b, c, d, e, f, g = _triangle_dag(dag)
+
+    # Join the base corners of the triangle to a final block.
+    #
+    h = PassThrough(name='h')
+    conn = Connection('out_p', 'in_p')
+    dag.connect(d, h, conn)
+    dag.connect(g, h, conn)
+    _reset_blocks(dag)
+    downstream = _set_downstream_state(dag, a, BlockState.SUCCESSFUL)
+    assert downstream==set([b, c, d, e, f, g, h])
+    assert all(i._block_state==BlockState.READY for i in [a])
+    assert all(i._block_state==BlockState.SUCCESSFUL for i in [b, c, d, e, f, g, h])
+
+def test_downstream_blocks7(dag):
+    a, b, c, d, e, f, g = _triangle_dag(dag)
+
+    # Join the base corners of the triangle to a final block.
+    #
+    h = PassThrough(name='h')
+    conn = Connection('out_p', 'in_p')
+    dag.connect(d, h, conn)
+    dag.connect(g, h, conn)
+    _reset_blocks(dag)
+    downstream = _set_downstream_state(dag, b, BlockState.SUCCESSFUL)
+    assert downstream==set([c, d, h])
+    assert all(i._block_state==BlockState.READY for i in [a, b, e, f, g])
+    assert all(i._block_state==BlockState.SUCCESSFUL for i in [c, d, h])
 
 # def test_connect_after_execute(dag):
 #     class PassThrough(Block):

@@ -541,12 +541,17 @@ class Dag:
                     # Otherwise, run both.
                     if is_input_block and not is_restart:
                         self.logging(g.prepare, **logging_params)()
-                        g._has_prepared = True
+                        # g._has_prepared = True
                     elif is_restart:
                         self.logging(g.execute, **logging_params)()
+
+                        # If we've restarted after input,
+                        # set the state of the downstream blocks to READY.
+                        #
+                        _set_downstream_state(self, g, BlockState.READY)
                     else:
                         self.logging(g.prepare, **logging_params)()
-                        g._has_prepared = True
+                        # g._has_prepared = True
                         self.logging(g.execute, **logging_params)()
 
             if is_input_block and not is_restart:# and item.values:
@@ -866,3 +871,48 @@ def _is_connected(pairs: list[Block]):
                 stack.append(src)
 
     return len(visited)==n_blocks
+
+def _set_downstream_state(dag: Dag, block: Block, state: BlockState) -> set[Block]:
+    """Starting at (but not including) the given block, set the state of the downstream blocks.
+
+    For example, when the dag is paused at a given block, we want to
+    set the state of the downstream blocks to READY.
+
+    Parameters
+    ----------
+    dag: Dag
+        The dag.
+    block: Block
+        The starting block.
+    state: BlockState
+        The state to set the downstream blocks to.
+
+    Returns
+    -------
+    set[Block]
+        The blocks that had their state changed.
+    """
+
+    # Build a mapping from source blocks to their destination blocks.
+    #
+    block_dict = {}
+    for src, dst in dag._block_pairs:
+        block_dict[src] = block_dict.get(src, [])
+        block_dict[src].append(dst)
+
+    # for k, v in block_dict.items():
+    #     print('*', k.name, [i.name for i in v])
+
+    downstream = set()
+    next_block = [block]
+    while next_block:
+        block = next_block.pop()
+        if block in block_dict:
+            down = block_dict[block]
+            downstream.update(down)
+            next_block.extend(down)
+
+    for block in downstream:
+        block._block_state = state
+
+    return downstream

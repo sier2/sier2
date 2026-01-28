@@ -33,16 +33,15 @@ def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool=False) -
 
     c_button = None
     if block._wait_for_input:
-        # Add a "continue" button.
-
         # Add a "continue" button to restart the dag.
         # The panel GUI is built after dag.execute() runs,
-        # so the initial button must reflect the current _has_prepared state.
+        # so the initial button must reflect the current
+        # (negated) is_input_valid_ state.
         #
         c_button = pn.widgets.Button(name=block.continue_label, button_type='primary', align='end', disabled=not block.is_input_valid_)
         c_button.on_click(block._on_continue)
 
-        # Ensure that the button state reflects is_input_valid_.
+        # Ensure that the button state reflects not is_input_valid_.
         #
         def on_valid(is_input_valid_):
             c_button.disabled = not block.is_input_valid_

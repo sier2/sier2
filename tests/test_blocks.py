@@ -301,6 +301,33 @@ def test_sorted2(dag):
 
     assert tsorted == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']
 
+def test_sorted_not_depth_first(dag):
+    """The current topological sort algorithm does not sort depth-first.
+
+    If the sort algorithm changes, change this test.
+    """
+
+    a = PassThrough(name='a')
+    b = PassThrough(name='b')
+    c = PassThrough(name='c')
+    d = PassThrough(name='d')
+    e = PassThrough(name='e')
+    f = PassThrough(name='f')
+    g = PassThrough(name='g')
+
+    conn = Connection('out_p', 'in_p')
+    dag.connect(a, b, conn)
+    dag.connect(b, c, conn)
+    dag.connect(c, d, conn)
+    dag.connect(a, e, conn)
+    dag.connect(e, f, conn)
+    dag.connect(f, g, conn)
+
+    tsorted = [g.name for g in dag.get_sorted()]
+
+    assert tsorted != ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+    assert tsorted != ['a', 'e', 'f', 'g', 'b', 'c', 'd']
+
 def test_onlychanged(dag):
     """Ensure that params are triggered when set with the same value."""
 
