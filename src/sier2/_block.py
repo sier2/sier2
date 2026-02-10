@@ -100,6 +100,17 @@ class Block(param.Parameterized):
     a "Continue" button in the GUI.) When the dag is continued at this block,
     the block's ``execute()`` method is called, and dag execution continues.
 
+    Input validation
+    ~~~~~~~~~~~~~~~~
+
+    The ``self.is_input_valid_`` param controls the "Continue" button - the button is enabled when ``self.is_input_valid_`` is True. Although it is initialised
+    to False, it is set to True in the default ``prepare()`` method. This allows
+    simple GUIs to function as expected.
+
+    If the ``prepare()`` method is overridden, and ````self.is_input_valid_`` is
+    not set to True, the "Continue" button will not be enabled; the block must set
+    the value appropriately.
+
     Displaying widgets
     ~~~~~~~~~~~~~~~~~~
 
