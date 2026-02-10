@@ -539,6 +539,7 @@ class Dag:
                     # If we need to wait for a user, just run prepare().
                     # If we are restarting, just run execute().
                     # Otherwise, run both.
+                    #
                     if is_input_block and not is_restart:
                         self.logging(g.prepare, **logging_params)()
                         # g._has_prepared = True

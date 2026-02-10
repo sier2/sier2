@@ -252,12 +252,18 @@ class Block(param.Parameterized):
 
         return Config[name]
 
-    def pick_params(self):
-        """Return a list of params to be displayed.
+    def pick_params(self) -> list[str]:
+        """Return the names of params to be displayed in a GUI.
 
-        Return param names starting with ``in_``. If ``self.only_in`` is False,
-        include param names that do not start with ``out_`` or ``_`` (internal params)
-        or is ``name``.
+        If ``self.only_in`` is True, only param names starting with
+        ``in_`` are displayed. If ``self.only_in`` is False (the default),
+        also include param names that do not start with
+        ``out_`` or ``_`` (internal params), end with ``_``, or is not ``name``.
+
+        Returns
+        -------
+        list[str]
+            The names of params to be displayed in a GUI.
         """
 
         names = [name for name in self.param.values() if name.startswith('in_') or not (self.only_in or name.startswith(('out_', '_')) or name.endswith('_') or name=='name')]
