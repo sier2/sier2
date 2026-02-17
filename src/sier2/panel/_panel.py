@@ -239,6 +239,9 @@ def _prepare_to_show(dag: Dag):
     dag_logger = getDagPanelLogger(log_feed)
 
     cards = []
+    if dag.banner and dag.banner[0]:
+        cards.append(pn.pane.HTML(dag.banner[0], sizing_mode='stretch_width'))
+
     if dag.show_doc:
         # The first line of the dag doc is the card header.
         #
@@ -296,6 +299,9 @@ def _prepare_to_show(dag: Dag):
             card = _card_for_block(block, block.__panel__(), _with_light=True)
             block._dag_continue = dag_continue.__get__(block)
             cards.append(card)
+
+    if dag.banner and dag.banner[1]:
+        cards.append(pn.pane.HTML(dag.banner[1], sizing_mode='stretch_width'))
 
     template.main.append(pn.panel(pn.Column(*cards)))
     template.sidebar.append(
@@ -458,7 +464,7 @@ def _sier2_label_formatter(pname: str):
 class PanelDag(Dag):
     """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
 
-    def __init__(self, *, site: str='', title: str, doc: str, logo: str='', favicon: str|None=None):
+    def __init__(self, *, site: str='', title: str, doc: str, logo: str='', favicon: str|None=None, banner: tuple[str|None, str|None]|None=None):
         """
         Parameters
         ----------
@@ -473,12 +479,15 @@ class PanelDag(Dag):
         favicon: str|None
             URI of favicon to add to the document head (if local file, favicon is
         base64 encoded as URI).
+        banner: tuple[str, str]|None
+            If specified, a ``panel.pane.HTML`` will be added to the top and bottom of the main area display using the first and second elements of the tuple. If either string is None, a banner will not be displayed for that string. For a centered string, use ``<span style="display: flex; justify-content: center;> ... </span>``.
         """
 
         super().__init__(site=site, title=title, doc=doc)
         paramp.label_formatter = _sier2_label_formatter
         self.logo = logo
         self.favicon = favicon
+        self.banner = banner
         # self.template = _prepare_to_show(self)
 
     @property

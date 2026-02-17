@@ -28,22 +28,30 @@ Simple Block implementations look like this.
     import param
 
     class Assign(Block):
-        initial = param.Integer(label='Initial value')
+        """Assign an initial value."""
+
+        in_value = param.Integer(label='Initial value in')
+        out_value = param.Integer(label='Initial value out')
+
+        def execute(self):
+            self.out_value = self.in_value
 
     class Increment(Block):
         """A block that adds one to the input value."""
 
-        initial = param.Integer(label='The input', doc='An integer')
-        int_out = param.Integer(label='The output', doc='The incremented value')
+        in_val = param.Integer(label='The input', doc='An integer')
+        out_val = param.Integer(label='The output', doc='The incremented value')
 
         def execute(self):
-            self.int_out = self.initial + 1
+            self.out_val = self.in_val + 1
 
     class Display(Block):
-        result = param.Integer(label='Result', doc='to be displayed')
+        """Display the result."""
+
+        in_result = param.Integer(label='Result', doc='to be displayed')
 
         def execute(self):
-            print(f'Result is {self.result}.')
+            print(f'Result is {self.in_result}.')
 
 The ``execute()`` method in each block is called automatically when an input parameter is assigned a value.
 
@@ -54,7 +62,7 @@ A dag is created using an instance of :class:`sier2.Dag`.
 
 .. code-block:: python
 
-    dag = Dag(doc='Increment and display')
+    dag = Dag(doc='Increment and display', title='Example')
 
 The dag is used to connect block instances using the
 :func:`sier2.Dag.connect` method.
@@ -64,31 +72,25 @@ The dag is used to connect block instances using the
     assign = Assign()
     incr = Increment()
     disp = Display()
-    dag.connect(assign, incr, Connection('initial'))
-    dag.connect(incr, disp, Connection('int_out', 'result'))
+    dag.connect(assign, incr, Connection('out_value', 'in_val'))
+    dag.connect(incr, disp, Connection('out_val', 'in_result'))
 
 This creates instances of the ``Assign``,  ``Increment``, and ``Display`` blocks,
-and connects them.
+and connects them. A ``Connection`` specifies a pair of output (from the first block)
+and input (to the second block) parameters.
 
-A ``Connection`` specifies a pair of output and input parameters.
-Because the output parameter of ``Assign`` and the input parameter of
-``Increment`` have the same name, the parameter name only needs to be
-specified once. The output parameter of ``Increment`` and the input parameter
-of ``Display`` have different names, so each name must be specified.
+After creating the connections, the dag is watching the output parameters.
+Whenever an output parameter's value changes, the dag looks up the block that
+the connection goes to, and adds that block to an execution queue.
+After one block finishes executing, the next block on the execution queue is
+selected, it's input values are set, and the block is executed.
 
-After creating the connections, block ``incr`` is watching parameter
-``assign.initial`` and block ``disp`` is watching parameter ``incr.int_out``.
-
-When a value is assigned to ``assign.initial``, ``incr.initial``
-is set to that value and ``incr.execute()`` is called.
-Likewise, when a value is assigned to block ``incr.in_out``, ``disp.result``
-is set to that value and ``disp.execute()`` is called.
-
-To run the dag, assign a value to ``assign.initial``.
+To run the dag, assign a value to ``assign.in_value`` and call ``dag.execute()``.
 
 .. code-block:: python
 
-    assign.initial = 1
+    assign.in_value = 1
+    dag.execute()
 
 The result is:
 
