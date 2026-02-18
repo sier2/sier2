@@ -73,6 +73,7 @@ class Block(param.Parameterized):
     The ``Block`` class inherits from ``param.Parameterized``, and uses parameters
     as described at https://param.holoviz.org/user_guide/Parameters.html.
     There are three kinds of parameters:
+
     * Input parameters start with ``in_``. These parameters are set before a block is executed.
     * Output parameters start with ``out_``. The block sets these in its ``execute()`` method.
     * Block parameters start with ``block_``. These are reserved for use by blocks.
@@ -105,7 +106,7 @@ class Block(param.Parameterized):
 
     The ``self.is_input_valid_`` param controls the "Continue" button - the button is enabled when ``self.is_input_valid_`` is True. Although it is initialised
     to False, it is set to True in the default ``prepare()`` method. This allows
-    simple GUIs to function as expected.
+    simple GUIs to function as expected (albeit without input validation).
 
     If the ``prepare()`` method is overridden, and ````self.is_input_valid_`` is
     not set to True, the "Continue" button will not be enabled; the block must set
@@ -114,9 +115,9 @@ class Block(param.Parameterized):
     Displaying widgets
     ~~~~~~~~~~~~~~~~~~
 
-    When the block is being used in a :class:`~sr2.panel.PanelDag`,
+    When the block is being used in a :class:`~sier2.panel.PanelDag`,
     the block's ``__panel__()`` method is called to display the params.
-    The default ``__panel__()`` method supplied by the GUI displays the params returned by :func:`~sr2.Block.pick_params`, using the default Panel widgets for the param types.
+    The default ``__panel__()`` method supplied by the GUI displays the params returned by :func:`~sier2.Block.pick_params`, using the default Panel widgets for the param types.
 
     This can be inconvenient - for example, a block that allows the user to select columns
     in a dataframe will have an ``in_df`` param, but may not want to display the dataframe.
@@ -134,7 +135,7 @@ class Block(param.Parameterized):
     If ``display_options`` is a dictionary, it is treated as a ``kwargs`` dictionary and
     passed to ``panel.Param()``. In addition, if "parameters" is not one of the
     dictionary keys, it is added with the result of calling
-    :func:`~sr2.Block.pick_params`.
+    :func:`~sier2.Block.pick_params`.
 
     .. code-block:: python
 
@@ -172,8 +173,14 @@ class Block(param.Parameterized):
         display_options: list[str]|dict[str, Any]|None
             Display options to be used when displaying this block in a GUI.
         only_in: bool
-            The default Panel display shows all params that begin with "in_"
-            or do not begin with "_". Setting only_in to True will cause only "in_"
+            The default Panel display shows all params that:
+
+            * begin with "in\\_"
+            * do not begin with "out\\_"
+            * do not begin or end with "_"
+            * are not "name"
+
+            Setting ``only_in`` to True will cause only "in\\_"
             parameters to be displayed.
         continue_label: bool
             If wait_for_input is True, a "Continue" button is displayed.
@@ -234,7 +241,7 @@ class Block(param.Parameterized):
         and therefore must be syntactically correct Python literals.
 
         They keys and values are read from the section ``[block.name]``, where ``name`` is
-        this block's unique key as specified by :func:`sr2.Block.block_key`.
+        this block's unique key as specified by :func:`sier2.Block.block_key`.
         If the ``block`` parameter is unspecified, the calling block is used by default.
 
         If the section is not present in the config file, an empty dictionary is returned.
@@ -285,7 +292,7 @@ class Block(param.Parameterized):
         """Return an individual value from the section specified by
         the block in the sier2 config file.
 
-        See :func:`~sr2.Block.get_config` for more details.
+        See :func:`~sier2.Block.get_config` for more details.
 
         Parameters
         ----------
@@ -304,14 +311,14 @@ class Block(param.Parameterized):
         return value if value is not None else default
 
     def prepare(self):
-        """Called by a dag before calling :func:`~sr2.Dag.execute`.
+        """Called by a dag before calling :func:`~sier2.Dag.execute`.
 
         If ``self.wait_for_input`` is True, block execution stops after calling
         ``prepare()``. This gives the block author an opportunity to perform
         "pre-execute" actions, such as validating input params or setting up
         a user interface.
 
-        After the dag restarts on this block, :func:`~sr2.Dag.execute` will be called
+        After the dag restarts on this block, :func:`~sier2.Dag.execute` will be called
         without calling ``prepare()``.
         """
 
@@ -366,7 +373,7 @@ class Block(param.Parameterized):
 
         The arguments passed in kwargs must match the block's input ("in\\_") params. Not all input params need to be specified.
 
-        Calling the block calls :func:`~sr2.Block.prepare`, then :func:`~sr2.Block.execute`.
+        Calling the block calls :func:`~sier2.Block.prepare`, then :func:`~sier2.Block.execute`.
 
         The result of the call is a dictionary that maps output ("out\\_") names to their param values.
 
@@ -434,7 +441,7 @@ class Block(param.Parameterized):
         return self._panel()
 
 class BlockValidateError(BlockError):
-    """Raised if :func:`~sr2.Block.prepare` or :func:`~sr2.Block.execute` determines that input data is invalid.
+    """Raised if :func:`~sier2.Block.prepare` or :func:`~sier2.Block.execute` determines that input data is invalid.
 
     If this exception is raised, it will be caught by the executing dag.
     The dag will not set its stop flag, no stacktrace will be displayed,
