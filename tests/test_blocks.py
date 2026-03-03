@@ -367,3 +367,20 @@ def test_init_called():
     dag = Dag(title='Test', doc='Check for super().__init_()')
     with pytest.raises(BlockError, match=r'super\(\)\.__init__\(\)'):
         dag.connect(a, p, Connection('out_a', 'in_o'))
+
+def test_banners():
+    class B(Block):
+        """Test banners."""
+
+        def __init__(self, top, bot):
+            super().__init__(banners=(top, bot))
+
+    b = B('top', None)
+    assert b.banner_top_.rx.value=='top'
+    assert b.banner_bot_ is None
+
+    b.banners(('top2', None))
+    assert b.banner_top_.rx.value=='top2'
+
+    with pytest.raises(BlockError, match='uninitialised'):
+        b.banners((None, 'bot'))

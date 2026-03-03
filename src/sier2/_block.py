@@ -160,7 +160,7 @@ class Block(param.Parameterized):
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', is_card: bool=False, **kwargs):
+    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', banners: tuple[str|None, str|None]|None=None, is_card: bool=False, **kwargs):
         """
         Parameters
         ----------
@@ -185,6 +185,15 @@ class Block(param.Parameterized):
         continue_label: bool
             If wait_for_input is True, a "Continue" button is displayed.
             This changes the label displayed on the button.
+        banners: tuple[str|None, str|None]|None
+            If specified, a ``panel.pane.HTML`` will be added to the top and bottom of
+            the main area display using the first and second elements of the tuple. If
+            either string is None, a banner will not be displayed for that string.
+
+            Banners can be changed using :func:`sier2.Block.banners`, but only if
+            the banner to be changed was initially not None.
+
+            For a centered string, use ``<span style="display: flex; justify-content: center;> ... </span>``.
         is_card: bool
             If True, the default Panel display is wrapped in a ``panel.Card``.
         """
@@ -203,6 +212,9 @@ class Block(param.Parameterized):
         self._is_card = is_card
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)
+
+        self.banner_top_ = param.rx(banners[0]) if banners and banners[0] else None
+        self.banner_bot_ = param.rx(banners[1]) if banners and banners[1] else None
 
         # Maintain a map of "block+output parameter being watched" -> "input parameter".
         # This is used by _block_event() to set the correct input parameter.
@@ -341,6 +353,32 @@ class Block(param.Parameterized):
 
         # print(f'** EXECUTE {self.__class__=}')
         pass
+
+    def banners(self, banners: tuple[str|None, str|None]):
+        """Change one or both banners for this block.
+
+        Banners can only be changed if the banner to be changed was initially not None.
+
+        For a centered string, use ``<span style="display: flex; justify-content: center;> ... </span>``.
+
+        Parameters
+        ----------
+        banners: tuple[str|None, str|None]
+            The banners to be changed. The 2-tuple specifies the top and bottom banners.
+            None means that this banner is not to be changed.
+        """
+
+        if banners is None or len(banners)!=2:
+            raise BlockError('The banners parameter must be a 2-tuple of strings')
+
+        if (banners[0] is not None and self.banner_top_ is None) or (banners[1] is not None and self.banner_bot_ is None):
+            raise BlockError('Cannot change an uninitialised banner')
+
+        if banners[0] is not None:
+            self.banner_top_.rx.value = banners[0]
+
+        if banners[1] is not None:
+            self.banner_bot_.rx.value = banners[1]
 
     def _on_continue(self, event):
         """The event handler for the "Continue" button.

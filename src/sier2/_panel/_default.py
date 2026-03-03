@@ -136,6 +136,20 @@ def _default_panel(self: Block) -> Callable[[Block], pn.Param]:
 
         pane = pn.Param(self, **kwargs)
 
+    # Set the top and bottom banners in this block.
+    # The self.banner* objects are param.rx values; since they're reactive,
+    # we don't need to keep track of the panel widgets containing them.
+    #
+    if self.banner_top_ is not None or self.banner_bot_ is not None:
+        rows = []
+        if self.banner_top_ is not None:
+            rows.append(pn.pane.HTML(self.banner_top_, sizing_mode='stretch_width'))
+        rows.append(pane)
+        if self.banner_bot_ is not None:
+            rows.append(pn.pane.HTML(self.banner_bot_, sizing_mode='stretch_width'))
+
+        pane = pn.Column(*rows)
+
     if self._is_card:
         pane = _card_for_block(self, pane, True)
 
