@@ -1,14 +1,16 @@
-from ._block import Block, BlockError, BlockValidateError, BlockState
-from dataclasses import dataclass, field #, KW_ONLY, field
-from collections import deque
-from importlib.metadata import entry_points
-import threading
 import sys
+import threading
+from collections import deque
+from dataclasses import dataclass, field  # , KW_ONLY, field
+from importlib.metadata import entry_points
 from typing import Any
+
+from ._block import Block, BlockError, BlockState, BlockValidateError
 
 # By default, loops in a dag aren't allowed.
 #
 _DISALLOW_CYCLES = True
+
 
 @dataclass
 class Connection:
@@ -30,6 +32,7 @@ class Connection:
 
         if not self.dst_param_name.startswith('in_'):
             raise BlockError('Input params must start with "in_"')
+
 
 @dataclass
 class Connections:
@@ -70,6 +73,7 @@ class Connections:
             else:
                 raise BlockError('Not a Connection or Connections')
 
+
 @dataclass
 class _InputValues:
     """Record a param value change.
@@ -87,6 +91,7 @@ class _InputValues:
     # Values will be non-empty when execute() is called.
     #
     values: dict[str, Any] = field(default_factory=dict)
+
 
 class _BlockContext:
     """A context manager to wrap the execution of a block within a dag.
@@ -112,7 +117,11 @@ class _BlockContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.block._block_state = BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
+            self.block._block_state = (
+                BlockState.WAITING
+                if self.block._wait_for_input
+                else BlockState.SUCCESSFUL
+            )
         elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
             if not self.dag._is_pyodide:
@@ -127,8 +136,7 @@ class _BlockContext:
                 #
                 if self.dag_logger:
                     self.dag_logger.exception(
-                        block_name=self.block.name,
-                        block_state=state
+                        block_name=self.block.name, block_state=state
                     )
 
                 # msg = f'While in {self.block.name}.execute(): {exc_val}'
@@ -139,7 +147,9 @@ class _BlockContext:
                 if not issubclass(exc_type, BlockError):
                     # Convert non-BlockErrors in the block to a BlockError.
                     #
-                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+                    raise BlockError(
+                        f'Block {self.block.name}: {str(exc_val)}'
+                    ) from exc_val
 
         if self.dag._on_context_exit:
             self.dag._on_context_exit()
@@ -147,6 +157,7 @@ class _BlockContext:
         # Don't suppress the original exception.
         #
         return False
+
 
 class _Stopper:
     def __init__(self):
@@ -163,14 +174,15 @@ class _Stopper:
     def __repr__(self):
         return f'stopped={self.is_stopped}'
 
+
 def _find_logging():
     PLUGIN_GROUP = 'sier2.logging'
     library = entry_points(group=PLUGIN_GROUP)
-    if (liblen:=len(library))==0:
+    if (liblen := len(library)) == 0:
         # There is no logging plugin, so return a dummy.
         #
         return lambda f, *args, **kwargs: f
-    elif liblen>1:
+    elif liblen > 1:
         raise BlockError(f'More than one plugin for {PLUGIN_GROUP}')
 
     ep = next(iter(library))
@@ -182,15 +194,25 @@ def _find_logging():
         e.add_note(f'While attempting to load logging function {ep.value}')
         raise BlockError(e)
 
+
 # A marker from Dag.execute_after_input() to tell Dag.execute()
 # that this a restart.
 #
 _RESTART = ':restart:'
 
+
 class Dag:
     """A directed acyclic graph of blocks."""
 
-    def __init__(self, *, site: str='Block', title: str, doc: str, author: dict[str, str]=None, show_doc: bool=True):
+    def __init__(
+        self,
+        *,
+        site: str = 'Block',
+        title: str,
+        doc: str,
+        author: dict[str, str] = None,
+        show_doc: bool = True,
+    ):
         """A new dag.
 
         Parameters
@@ -224,7 +246,7 @@ class Dag:
 
         if author is not None:
             if 'name' in author and 'email' in author:
-                self.author = {'name': author['name', 'email': author: 'email']}
+                self.author = {'name': author['name'], 'email': author['email']}
             else:
                 raise ValueError('Author must contain name and email keys')
         else:
@@ -280,7 +302,7 @@ class Dag:
         if not self._is_pyodide:
             self._stopper.event.clear()
 
-    def connect(self, src: Block, dst: Block, *connections: Connection|Connections):
+    def connect(self, src: Block, dst: Block, *connections: Connection | Connections):
         """Connect two Blocks within this dag.
 
         The source and destination :class:`~sier2.Block` instances are connected by providing
@@ -321,12 +343,14 @@ class Dag:
             if _has_cycle(self._block_pairs + [(src, dst)]):
                 raise BlockError('This connection would create a cycle')
 
-        if src.name==dst.name:
+        if src.name == dst.name:
             raise BlockError('Cannot add two blocks with the same name')
 
         # for g in self._for_each_once():
         for g in _for_each_once(self._block_pairs):
-            if (g is not src and g.name==src.name) or (g is not dst and g.name==dst.name):
+            if (g is not src and g.name == src.name) or (
+                g is not dst and g.name == dst.name
+            ):
                 raise BlockError('A block with this name already exists')
 
         for s, d in self._block_pairs:
@@ -334,7 +358,10 @@ class Dag:
                 raise BlockError('These blocks are already connected')
 
         if self._block_pairs:
-            connected = any(src is s or src is d or dst is s or dst is d for s, d in self._block_pairs)
+            connected = any(
+                src is s or src is d or dst is s or dst is d
+                for s, d in self._block_pairs
+            )
             if not connected:
                 raise BlockError('A new block must connect to existing block')
 
@@ -347,7 +374,7 @@ class Dag:
         # src_out_params = defaultdict(list)
         src_out_params = []
 
-        if len(connections)==0:
+        if len(connections) == 0:
             raise BlockError('There must be at least one connection')
 
         # for conn in connections:
@@ -358,12 +385,18 @@ class Dag:
 
             src_param = getattr(src.param, src_param_name)
             if src_param.allow_refs:
-                raise BlockError(f'Source parameter {src}.{src_param_name} must not be "allow_refs=True"')
+                raise BlockError(
+                    f'Source parameter {src}.{src_param_name} must not be "allow_refs=True"'
+                )
 
             dst._block_name_map[src.name, src_param_name] = dst_param_name
             src_out_params.append(src_param_name)
 
-        src.param.watch(lambda *events: self._param_event(dst, *events), src_out_params, onlychanged=False)
+        src.param.watch(
+            lambda *events: self._param_event(dst, *events),
+            src_out_params,
+            onlychanged=False,
+        )
         # src._block_out_params.extend(src_out_params)
 
         self._block_pairs.append((src, dst))
@@ -444,7 +477,7 @@ class Dag:
         self._block_queue.appendleft(_InputValues(block, {_RESTART: True}))
         self._execute(dag_logger=dag_logger)
 
-    def execute(self, *, dag_logger=None) -> Block|None:
+    def execute(self, *, dag_logger=None) -> Block | None:
         """Execute the dag.
 
         The dag is executed by iterating through a block queue
@@ -499,7 +532,7 @@ class Dag:
 
         return self._execute(dag_logger=dag_logger)
 
-    def _execute(self, *, dag_logger=None) -> Block|None:
+    def _execute(self, *, dag_logger=None) -> Block | None:
         self.logging(None, sier2_dag_=self)
 
         can_execute = True
@@ -529,12 +562,10 @@ class Dag:
             #
             is_input_block = item.dst._wait_for_input
             if can_execute:
-                with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
-
-                    logging_params = {
-                        'sier2_dag_': self,
-                        'sier2_block_': f'{item.dst}'
-                    }
+                with self._block_context(
+                    block=item.dst, dag=self, dag_logger=dag_logger
+                ) as g:
+                    logging_params = {'sier2_dag_': self, 'sier2_block_': f'{item.dst}'}
 
                     # If we need to wait for a user, just run prepare().
                     # If we are restarting, just run execute().
@@ -555,7 +586,7 @@ class Dag:
                         # g._has_prepared = True
                         self.logging(g.execute, **logging_params)()
 
-            if is_input_block and not is_restart:# and item.values:
+            if is_input_block and not is_restart:  # and item.values:
                 # If the current destination block requires user input,
                 # stop executing the dag immediately, because we don't
                 # want to be setting the input params of further blocks
@@ -588,9 +619,15 @@ class Dag:
 
         # Check first to see if the dag would become disconnected.
         #
-        maybe_pairs = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
+        maybe_pairs = [
+            (src, dst)
+            for src, dst in self._block_pairs
+            if src is not g and dst is not g
+        ]
         if not _is_connected(maybe_pairs):
-            raise BlockError('Disconnecting this block would result in a disconnected dag')
+            raise BlockError(
+                'Disconnecting this block would result in a disconnected dag'
+            )
 
         if self._block_queue:
             raise BlockError('Cannot disconnect blocks after executing the dag.')
@@ -620,7 +657,7 @@ class Dag:
         """Get a specific block by name."""
 
         for s, d in self._block_pairs:
-            if s.name==name:
+            if s.name == name:
                 return s
 
             if d.name == name:
@@ -704,16 +741,12 @@ class Dag:
             # What are __init__'s plain Python parameters?
             # The first parameter is always self - skip that.
             #
-            vars = g.__init__.__code__.co_varnames[1:g.__init__.__code__.co_argcount] # type: ignore[misc]
+            vars = g.__init__.__code__.co_varnames[1 : g.__init__.__code__.co_argcount]  # type: ignore[misc]
             for var in vars:
                 if hasattr(g, var):
                     args[var] = getattr(g, var)
 
-            block = {
-                'block': g.block_key(),
-                'instance': i,
-                'args': args
-            }
+            block = {'block': g.block_key(), 'instance': i, 'args': args}
             blocks.append(block)
 
         connections = []
@@ -721,18 +754,19 @@ class Dag:
             connection: dict[str, Any] = {
                 'src': block_instances[s],
                 'dst': block_instances[d],
-                'conn_args': []
+                'conn_args': [],
             }
 
             # Get src params that have been connected to dst params.
             #
-            nmap = {(gname, sname): dname for (gname, sname), dname in d._block_name_map.items() if gname==s.name}
+            nmap = {
+                (gname, sname): dname
+                for (gname, sname), dname in d._block_name_map.items()
+                if gname == s.name
+            }
 
             for (gname, sname), dname in nmap.items():
-                args = {
-                    'src_param_name': sname,
-                    'dst_param_name': dname
-                }
+                args = {'src_param_name': sname, 'dst_param_name': dname}
 
                 # for pname, data in s.param.watchers.items():
                 #     if pname==sname:
@@ -740,7 +774,6 @@ class Dag:
                 #             args['onlychanged'] = watcher.onlychanged
                 #             args['queued'] = watcher.queued
                 #             args['precedence'] = watcher.precedence
-
 
                 connection['conn_args'].append(args)
 
@@ -751,11 +784,12 @@ class Dag:
                 'type': self.__class__.__name__,
                 'doc': self.doc,
                 'site': self.site,
-                'title': self.title
+                'title': self.title,
             },
             'blocks': blocks,
-            'connections': connections
+            'connections': connections,
         }
+
 
 def topological_sort(pairs):
     """Implement a topological sort as described at
@@ -787,13 +821,13 @@ def topological_sort(pairs):
 
     def edge(pairs, n, m):
         for ix, pair in enumerate(pairs):
-            if pair==(n, m):
+            if pair == (n, m):
                 return ix
 
         return None
 
     def has_incoming(pairs, m):
-        return any(d is m for _,d in pairs)
+        return any(d is m for _, d in pairs)
 
     remaining = pairs[:]
     L = []
@@ -802,7 +836,9 @@ def topological_sort(pairs):
 
     # Sort the current heads by name so they have a consistent ordering.
     #
-    S = deque(sorted(set([s for s in srcs if s not in dsts]), key=lambda block:block.name))
+    S = deque(
+        sorted(set([s for s in srcs if s not in dsts]), key=lambda block: block.name)
+    )
 
     while S:
         # A topological sort is non-unique; this is why.
@@ -813,22 +849,24 @@ def topological_sort(pairs):
         L.append(n)
         S_next = []
         for _, m in remaining[:]:
-            if (e:=edge(remaining, n, m))is not None:
+            if (e := edge(remaining, n, m)) is not None:
                 del remaining[e]
                 if not has_incoming(remaining, m):
                     S_next.append(m)
 
         # Also sort this next layer of blocks.
         #
-        S_next.sort(key=lambda block:block.name)
+        S_next.sort(key=lambda block: block.name)
         S.extend(S_next)
 
     return L, remaining
 
+
 def _has_cycle(block_pairs: list[tuple[Block, Block]]):
     _, remaining = topological_sort(block_pairs)
 
-    return len(remaining)>0
+    return len(remaining) > 0
+
 
 def _get_sorted(block_pairs: list[tuple[Block, Block]]) -> list[Block]:
     ordered, remaining = topological_sort(block_pairs)
@@ -837,6 +875,7 @@ def _get_sorted(block_pairs: list[tuple[Block, Block]]) -> list[Block]:
         raise BlockError('Dag contains a cycle')
 
     return ordered
+
 
 def _for_each_once(pairs):
     """Yield each connected block once."""
@@ -848,13 +887,14 @@ def _for_each_once(pairs):
                 seen.add(g)
                 yield g
 
+
 def _is_connected(pairs: list[Block]):
     """Determine if the list of pairs forms a connected graph."""
 
     if not pairs:
         return True
 
-    n_blocks = sum( 1 for _ in _for_each_once(pairs))
+    n_blocks = sum(1 for _ in _for_each_once(pairs))
 
     visited = set()
     start = pairs[0][0]
@@ -864,14 +904,15 @@ def _is_connected(pairs: list[Block]):
     while stack:
         current = stack.pop()
         for src, dst in pairs:
-            if src==current and dst not in visited:
+            if src == current and dst not in visited:
                 visited.add(dst)
                 stack.append(dst)
-            elif dst==current and src not in visited:
+            elif dst == current and src not in visited:
                 visited.add(src)
                 stack.append(src)
 
-    return len(visited)==n_blocks
+    return len(visited) == n_blocks
+
 
 def _set_downstream_state(dag: Dag, block: Block, state: BlockState) -> set[Block]:
     """Starting at (but not including) the given block, set the state of the downstream blocks.

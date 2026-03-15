@@ -1,31 +1,36 @@
+import warnings
+from typing import Callable
+
 import panel as pn
 from param.parameters import DataFrame
 
 from .._block import Block, BlockError
 from ..panel._panel_util import _get_state_color
 
-from typing import Callable
-import warnings
 
 def _get_state_light(color: str) -> pn.Spacer:
     return pn.Spacer(
         margin=(8, 0, 0, 0),
-        styles={'width':'20px', 'height':'20px', 'background':color, 'border-radius': '10px'}
+        styles={
+            'width': '20px',
+            'height': '20px',
+            'background': color,
+            'border-radius': '10px',
+        },
     )
 
-def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool=False) -> pn.Card:
+
+def _card_for_block(
+    block: Block, pane: pn.pane.Pane, _with_light: bool = False
+) -> pn.Card:
     """Wrap a block's __panel__() GUI in a panel.Card."""
 
     name_text = pn.widgets.StaticText(
         value=block.name,
         css_classes=['card-title'],
-        styles={'font-size':'1.17em', 'font-weight':'bold'}
+        styles={'font-size': '1.17em', 'font-weight': 'bold'},
     )
-    spacer = pn.HSpacer(
-        styles=dict(
-            min_width='1px', min_height='1px'
-        )
-    )
+    spacer = pn.HSpacer(styles=dict(min_width='1px', min_height='1px'))
 
     # Does this block have documentation to be displayed in the card?
     #
@@ -38,21 +43,23 @@ def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool=False) -
         # so the initial button must reflect the current
         # (negated) is_input_valid_ state.
         #
-        c_button = pn.widgets.Button(name=block.continue_label, button_type='primary', align='end', disabled=not block.is_input_valid_)
+        c_button = pn.widgets.Button(
+            name=block.continue_label,
+            button_type='primary',
+            align='end',
+            disabled=not block.is_input_valid_,
+        )
         c_button.on_click(block._on_continue)
 
         # Ensure that the button state reflects not is_input_valid_.
         #
         def on_valid(is_input_valid_):
             c_button.disabled = not block.is_input_valid_
+
         block.param.watch_values(on_valid, 'is_input_valid_')
 
         row = [doc, c_button] if doc else [c_button]
-        w_ = pn.Column(
-            pane,
-            pn.Row(*row),
-            sizing_mode='stretch_width'
-        )
+        w_ = pn.Column(pane, pn.Row(*row), sizing_mode='stretch_width')
     elif doc:
         w_ = pn.Column(block, doc)
     else:
@@ -65,7 +72,8 @@ def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool=False) -
     header = pn.Row(*row)
 
     if _with_light:
-        def state_change(_block_state):#: BlockState):
+
+        def state_change(_block_state):
             """Watcher for the block state.
 
             Updates the state light.
@@ -89,11 +97,13 @@ def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool=False) -
 
     return card
 
+
 # A default definition of __panel__().
 # This exists in its own package so it can be used without dragging in
 # everything else in the ``panel`` package. This is useful if using
 # standalone blocks without a dag.
 #
+
 
 def _default_panel(self: Block) -> Callable[[Block], pn.Param]:
     """Provide a default __panel__() implementation for blocks that don't have one.
@@ -155,26 +165,27 @@ def _default_panel(self: Block) -> Callable[[Block], pn.Param]:
 
     return pane
 
+
 def add_panel_def(block: Block):
-        """Add the _default_panel function to a block as "_panel".
+    """Add the _default_panel function to a block as "_panel".
 
-        Blocks have a default __panel__() method that is called by Panel to provide
-        a GUI. The default calls ``self._panel()`` and returns the result.
+    Blocks have a default __panel__() method that is called by Panel to provide
+    a GUI. The default calls ``self._panel()`` and returns the result.
 
-        Parameters
-        ----------
-        block: Block
-            A block.
-        """
+    Parameters
+    ----------
+    block: Block
+        A block.
+    """
 
-        # If a block has no __panel__() method, Panel will by default
-        # inspect the class and display the param attributes.
-        # This is obviously not what we want.
+    # If a block has no __panel__() method, Panel will by default
+    # inspect the class and display the param attributes.
+    # This is obviously not what we want.
+    #
+    # We just want to display the in_ params.
+    #
+    has_panel = 'panel' in block.__class__.__dict__
+    if not has_panel:
+        # Go go gadget descriptor protocol.
         #
-        # We just want to display the in_ params.
-        #
-        has_panel = 'panel' in block.__class__.__dict__
-        if not has_panel:
-            # Go go gadget descriptor protocol.
-            #
-            block._panel = _default_panel.__get__(block)
+        block._panel = _default_panel.__get__(block)

@@ -1,10 +1,11 @@
-from functools import cache
 import importlib
-from importlib.metadata import entry_points
 import sys
 import warnings
+from functools import cache
+from importlib.metadata import entry_points
 
 from . import BlockError
+
 
 def _import_item(key):
     """Look up an object by key.
@@ -29,6 +30,7 @@ def _import_item(key):
             msg = f'{msg}. Is there a \':\' missing?'
         raise BlockError(msg)
 
+
 @cache
 def get_block_config():
     """A convenience function to get block configuration data.
@@ -48,7 +50,7 @@ def get_block_config():
     """
 
     eps = list(entry_points(group='sier2.config'))
-    if len(eps)==1:
+    if len(eps) == 1:
         ep = eps[0].value
         config_func = _import_item(ep)
         config = config_func()
@@ -62,9 +64,11 @@ def get_block_config():
 
     return config
 
+
 ########
 # Documentation utilities
 ########
+
 
 def trim(docstring):
     """From PEP-257: Fix docstring indentation"""
@@ -93,6 +97,7 @@ def trim(docstring):
     # Return a single string:
     return '\n'.join(trimmed)
 
+
 def block_doc_text(block):
     """Generate text documentation for a block.
 
@@ -117,11 +122,12 @@ def block_doc_text(block):
 
     return '---\n' + b_doc + '\n### Params\n' + '\n'.join(text)
 
+
 def dag_doc_text(dag):
     """Generate text documentation for a dag."""
 
     # Force the first line of the dag doc to have a level 1 header.
     #
-    dag_text =f'# {dag.site} - {dag.title}\n\n# ' + trim(dag.doc).lstrip(' #')
+    dag_text = f'# {dag.site} - {dag.title}\n\n# ' + trim(dag.doc).lstrip(' #')
 
     return dag_text

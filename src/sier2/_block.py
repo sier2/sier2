@@ -1,10 +1,14 @@
-from enum import StrEnum
+#
+
 import inspect
-import param
+from enum import StrEnum
 from typing import Any
+
+import param
 
 from . import _logger
 from ._config import Config
+
 
 class BlockError(Exception):
     """Raised if a Block configuration is invalid.
@@ -15,11 +19,12 @@ class BlockError(Exception):
 
     pass
 
+
 class BlockState(StrEnum):
     """The current state of a block; also used for logging."""
 
-    DAG = 'DAG'                 # Dag logging.
-    BLOCK = 'BLOCK'             # Block logging.
+    DAG = 'DAG'  # Dag logging.
+    BLOCK = 'BLOCK'  # Block logging.
     INPUT = 'INPUT'
     READY = 'READY'
     EXECUTING = 'EXECUTING'
@@ -27,6 +32,7 @@ class BlockState(StrEnum):
     SUCCESSFUL = 'SUCCESSFUL'
     INTERRUPTED = 'INTERRUPTED'
     ERROR = 'ERROR'
+
 
 _WAIT_FOR_INPUT_DOC = '''If True, a block executes in two steps.
 
@@ -59,6 +65,7 @@ A dag requires at least two blocks, because blocks can only be added
 by connecting them to another block. By making one block a "dummy"
 that is not visible, the GUI effectivly has a single block.
 '''
+
 
 class Block(param.Parameterized):
     """The base class for blocks.
@@ -149,18 +156,39 @@ class Block(param.Parameterized):
     ``self.display_options`` in your own ``__panel__()`` method if you like.
     """
 
-    _wait_for_input = param.Boolean(default=False, label='Wait for input', doc=_WAIT_FOR_INPUT_DOC)
+    _wait_for_input = param.Boolean(
+        default=False, label='Wait for input', doc=_WAIT_FOR_INPUT_DOC
+    )
     # _has_prepared = param.Boolean(default=False, label='Has prepared', doc=_HAS_PREPARED_DOC)
     _visible = param.Boolean(default=True, label='Visible', doc=_VISIBLE_DOC)
-    _is_card = param.Boolean(default=False, label='Is a card', doc='If True, the default __panel__() is wrapped by a panel.Card')
+    _is_card = param.Boolean(
+        default=False,
+        label='Is a card',
+        doc='If True, the default __panel__() is wrapped by a panel.Card',
+    )
 
     _block_state = param.String(default=BlockState.READY)
 
-    is_input_valid_ = param.Boolean(default=False, doc='If wait_for_input is true, indicates that user input is valid.')
+    is_input_valid_ = param.Boolean(
+        default=False,
+        doc='If wait_for_input is true, indicates that user input is valid.',
+    )
 
     SIER2_KEY = '_sier2__key'
 
-    def __init__(self, *args, wait_for_input: bool=False, visible: bool=True, doc: str|None=None, display_options: list[str]|dict[str, Any]|None=None, only_in=False, continue_label='Continue', banners: tuple[str|None, str|None]|None=None, is_card: bool=False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        wait_for_input: bool = False,
+        visible: bool = True,
+        doc: str | None = None,
+        display_options: list[str] | dict[str, Any] | None = None,
+        only_in=False,
+        continue_label='Continue',
+        banners: tuple[str | None, str | None] | None = None,
+        is_card: bool = False,
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -244,7 +272,7 @@ class Block(param.Parameterized):
 
         return f'{im.__name__}.{cls.__qualname__}'
 
-    def get_config(self, *, block: 'Block'=None):
+    def get_config(self, *, block: 'Block' = None):
         """Return a dictionary containing keys and values from the section specified by
         the block in the sier2 config file.
 
@@ -296,11 +324,21 @@ class Block(param.Parameterized):
             The names of params to be displayed in a GUI.
         """
 
-        names = [name for name in self.param.values() if name.startswith('in_') or not (self.only_in or name.startswith(('out_', '_')) or name.endswith('_') or name=='name')]
+        names = [
+            name
+            for name in self.param.values()
+            if name.startswith('in_')
+            or not (
+                self.only_in
+                or name.startswith(('out_', '_'))
+                or name.endswith('_')
+                or name == 'name'
+            )
+        ]
 
         return names
 
-    def get_config_value(self, key: str, default: Any=None, *, block: 'Block'=None):
+    def get_config_value(self, key: str, default: Any = None, *, block: 'Block' = None):
         """Return an individual value from the section specified by
         the block in the sier2 config file.
 
@@ -354,7 +392,7 @@ class Block(param.Parameterized):
         # print(f'** EXECUTE {self.__class__=}')
         pass
 
-    def banners(self, banners: tuple[str|None, str|None]):
+    def banners(self, banners: tuple[str | None, str | None]):
         """Change one or both banners for this block.
 
         Banners can only be changed if the banner to be changed was initially not None.
@@ -368,10 +406,12 @@ class Block(param.Parameterized):
             None means that this banner is not to be changed.
         """
 
-        if banners is None or len(banners)!=2:
+        if banners is None or len(banners) != 2:
             raise BlockError('The banners parameter must be a 2-tuple of strings')
 
-        if (banners[0] is not None and self.banner_top_ is None) or (banners[1] is not None and self.banner_bot_ is None):
+        if (banners[0] is not None and self.banner_top_ is None) or (
+            banners[1] is not None and self.banner_bot_ is None
+        ):
             raise BlockError('Cannot change an uninitialised banner')
 
         if banners[0] is not None:
@@ -474,9 +514,11 @@ class Block(param.Parameterized):
 
         if not hasattr(self, '_panel'):
             from ._panel._default import add_panel_def
+
             add_panel_def(self)
 
         return self._panel()
+
 
 class BlockValidateError(BlockError):
     """Raised if :func:`~sier2.Block.prepare` or :func:`~sier2.Block.execute` determines that input data is invalid.

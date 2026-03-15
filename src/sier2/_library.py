@@ -1,34 +1,38 @@
+import warnings
 from collections.abc import Iterable
 from dataclasses import dataclass
-import importlib
-from importlib.metadata import entry_points, EntryPoint
+from importlib.metadata import EntryPoint, entry_points
 from typing import Any, cast
-import warnings
 
-from . import Block, Dag, Connection, BlockError
+from . import Block, BlockError, Connection, Dag
 from ._util import _import_item
 
 # Store a mapping from a unique key to a Block class.
 # When plugins are initially scanned, the classes are not loaded.
 #
-_block_library: dict[str, type[Block]|None] = {}
+_block_library: dict[str, type[Block] | None] = {}
 _dag_library: set[str] = set()
+
 
 @dataclass
 class Info:
     key: str
     doc: str
 
+
 def docstring(func) -> str:
     doc = func.__doc__.strip()
 
     return doc.split('\n')[0].strip()
 
+
 def _find_blocks():
     yield from _find('blocks')
 
+
 def _find_dags():
     yield from _find('dags')
+
 
 def run_dag(dag_name):
     """Run the named dag."""
@@ -38,11 +42,11 @@ def run_dag(dag_name):
     #
 
     ix = dag_name.rfind('.')
-    if ix==-1:
+    if ix == -1:
         found_dag = None
         for _, d in _find_dags():
             dparts = d.key.replace(':', '.').split('.')
-            if dparts[-1]==dag_name:
+            if dparts[-1] == dag_name:
                 if found_dag:
                     raise BlockError(f'Found duplicate: {dag_name}, d')
 
@@ -66,6 +70,7 @@ def run_dag(dag_name):
         raise BlockError(f'Dag {dag_name} does not have a user interface')
 
     dag.show()
+
 
 def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
     """Use ``importlib.metadata.entry_points`` to look up entry points named ``sier2.library``.
@@ -92,13 +97,18 @@ def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
                     warnings.warn(f'In {entry_point.module}, {func} is not a function')
                 else:
                     info_list: list[Info] = func()
-                    if not isinstance(info_list, list) or any(not isinstance(s, Info) for s in info_list):
-                        warnings.warn(f'In {entry_point.module}, {func} does not return a list of {Info.__name__} instances')
+                    if not isinstance(info_list, list) or any(
+                        not isinstance(s, Info) for s in info_list
+                    ):
+                        warnings.warn(
+                            f'In {entry_point.module}, {func} does not return a list of {Info.__name__} instances'
+                        )
                     else:
                         for gi in info_list:
                             yield entry_point, gi
         except Exception as e:
             raise BlockError(f'While loading {entry_point}: {e}') from e
+
 
 class Library:
     @staticmethod
@@ -116,7 +126,9 @@ class Library:
 
         for entry_point, gi in _find_blocks():
             if gi.key in _block_library:
-                warnings.warn(f'Block plugin {entry_point}: key {gi.key} already in library')
+                warnings.warn(
+                    f'Block plugin {entry_point}: key {gi.key} already in library'
+                )
             else:
                 _block_library[gi.key] = None
 
@@ -124,12 +136,14 @@ class Library:
     def collect_dags():
         for entry_point, gi in _find_dags():
             if gi.key in _dag_library:
-                warnings.warn(f'Dag plugin {entry_point}: key {gi.key} already in library')
+                warnings.warn(
+                    f'Dag plugin {entry_point}: key {gi.key} already in library'
+                )
             else:
                 _dag_library.add(gi.key)
 
     @staticmethod
-    def add_block(block_class: type[Block], key: str|None=None):
+    def add_block(block_class: type[Block], key: str | None = None):
         """Add a local block class to the library.
 
         The library initially loads block classes using Python's entry_points() mechanism.
@@ -245,19 +259,23 @@ class Library:
         # Connect the blocks.
         #
         # DagType = PanelDag if dump['dag']['type']=='PanelDag' else Dag
-        if dump['dag']['type']=='PanelDag':
+        if dump['dag']['type'] == 'PanelDag':
             # Lazy import, because we only want to import panel when required.
             #
             from .panel import PanelDag
+
             DagType = PanelDag
         else:
             DagType = Dag
 
-        dag = DagType(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
+        dag = DagType(
+            doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title']
+        )
         for conn in dump['connections']:
             conns = [Connection(**kwargs) for kwargs in conn['conn_args']]
             dag.connect(instances[conn['src']], instances[conn['dst']], *conns)
 
         return dag
+
 
 # Library.collect()

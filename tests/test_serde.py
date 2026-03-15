@@ -3,10 +3,11 @@
 # Test serialisation / deserialisation.
 #
 
+import param
 import pytest
 
-from sier2 import Block, Dag, Connection, Library
-import param
+from sier2 import Block, Connection, Dag, Library
+
 
 class PassThrough(Block):
     """In and out parameters."""
@@ -16,6 +17,7 @@ class PassThrough(Block):
 
     def execute(self):
         self.out_p = self.in_p
+
 
 class Increment(Block):
     """Increment the input."""
@@ -29,6 +31,7 @@ class Increment(Block):
 
     def execute(self):
         self.out_i = self.in_i + self.incr
+
 
 class InputIncrement(Block):
     """Increment the input."""
@@ -46,11 +49,13 @@ class InputIncrement(Block):
     def execute(self):
         self.out_i = self.value + self.incr
 
+
 @pytest.fixture
 def dag():
     """Ensure that each test starts with a clear dag."""
 
     return Dag(doc='test-doc', title='tests')
+
 
 def test_serialise(dag):
     """Ensure that a dag can be serialised and restored.

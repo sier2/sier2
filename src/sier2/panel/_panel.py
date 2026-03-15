@@ -1,21 +1,17 @@
 import ctypes
-from datetime import datetime
 import html
-import panel as pn
 import sys
 import threading
-import warnings
-from typing import Callable
+from datetime import datetime
 
+import panel as pn
 import param.parameterized as paramp
-from param.parameters import DataFrame
 
-from .. import Block, BlockValidateError, BlockState, Dag, BlockError
-from .._dag import _InputValues
-from .._util import trim
-from ._feedlogger import getDagPanelLogger, getBlockPanelLogger
-from ._panel_util import _get_state_color, dag_doc
+from .. import Block, BlockError, BlockState, BlockValidateError, Dag
 from ._dag_chart import dag_pane
+from ._feedlogger import getBlockPanelLogger, getDagPanelLogger
+from ._panel_util import dag_doc
+
 # from .._panel._default import _card_for_block
 
 NTHREADS = 2
@@ -49,11 +45,13 @@ else:
         notifications=True,
     )
 
+
 def _hms(sec):
     h, sec = divmod(int(sec), 3600)
     m, sec = divmod(sec, 60)
 
     return f'{h:02}:{m:02}:{sec:02}'
+
 
 class _PanelContext:
     """A context manager to wrap the execution of a block within a dag.
@@ -74,7 +72,9 @@ class _PanelContext:
         self.block._block_state = state
         self.t0 = datetime.now()
         if self.dag_logger:
-            self.dag_logger.info('Execute', block_name=self.block.name, block_state=state)
+            self.dag_logger.info(
+                'Execute', block_name=self.block.name, block_state=state
+            )
 
         block_logger = getBlockPanelLogger(self.block.name)
         self.block.logger = block_logger
@@ -91,17 +91,29 @@ class _PanelContext:
         #     self.block._progress.active = False
 
         if exc_type is None:
-            state = BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
+            state = (
+                BlockState.WAITING
+                if self.block._wait_for_input
+                else BlockState.SUCCESSFUL
+            )
             self.block._block_state = state
             if self.dag_logger:
-                self.dag_logger.info(f'after {_hms(delta)}', block_name=self.block.name, block_state=state.value)
+                self.dag_logger.info(
+                    f'after {_hms(delta)}',
+                    block_name=self.block.name,
+                    block_state=state.value,
+                )
         elif isinstance(exc_type, KeyboardInterrupt):
             state = BlockState.INTERRUPTED
             self.block._block_state = state
             if not self.dag._is_pyodide:
                 self.dag._stopper.event.set()
             if self.dag_logger:
-                self.dag_logger.exception(f'KEYBOARD INTERRUPT after {_hms(delta)}', block_name=self.block.name, block_state=state)
+                self.dag_logger.exception(
+                    f'KEYBOARD INTERRUPT after {_hms(delta)}',
+                    block_name=self.block.name,
+                    block_state=state,
+                )
         else:
             state = BlockState.ERROR
             self.block._block_state = state
@@ -110,7 +122,7 @@ class _PanelContext:
                     self.dag_logger.exception(
                         f'after {_hms(delta)}',
                         block_name=self.block.name,
-                        block_state=state
+                        block_state=state,
                     )
 
                 # msg = f'While in {self.block.name}.execute(): {exc_val}'
@@ -120,32 +132,36 @@ class _PanelContext:
                 if not issubclass(exc_type, BlockError):
                     # Convert the error in the block to a BlockError.
                     #
-                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+                    raise BlockError(
+                        f'Block {self.block.name}: {str(exc_val)}'
+                    ) from exc_val
 
         if self.dag._on_context_exit:
             self.dag._on_context_exit()
 
         return False
 
+
 def _quit(session_context):
     print(session_context)
     sys.exit()
+
 
 def interrupt_thread(tid, exctype):
     """Raise exception exctype in thread tid."""
 
     r = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        ctypes.c_ulong(tid),
-        ctypes.py_object(exctype)
+        ctypes.c_ulong(tid), ctypes.py_object(exctype)
     )
-    if r==0:
+    if r == 0:
         raise ValueError('Invalid thread id')
-    elif r!=1:
+    elif r != 1:
         # "if it returns a number greater than one, you're in trouble,
         # and you should call it again with exc=NULL to revert the effect"
         #
         ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), None)
         raise SystemError('PyThreadState_SetAsyncExc failed')
+
 
 def _prepare_to_show(dag: Dag):
     # Replace the default text-based context with the panel-based context.
@@ -153,10 +169,7 @@ def _prepare_to_show(dag: Dag):
     dag._block_context = _PanelContext
 
     info_button = pn.widgets.ButtonIcon(
-        icon=INFO_SVG,
-        active_icon=INFO_SVG,
-        description='Dag Help',
-        align='center'
+        icon=INFO_SVG, active_icon=INFO_SVG, description='Dag Help', align='center'
     )
 
     # A place to stash the info FloatPanel.
@@ -174,18 +187,24 @@ def _prepare_to_show(dag: Dag):
         collapsed_sidebar=True,
         sidebar_width=440,
         logo=dag.logo,
-        favicon=dag.favicon
+        favicon=dag.favicon,
     )
 
     def display_info(_event):
         """Display a FloatPanel containing help for the dag and blocks."""
 
         text = dag_doc(dag)
-        config = {
-            'headerControls': {'maximize': 'remove'},
-            'contentOverflow': 'scroll'
-        }
-        fp = pn.layout.FloatPanel(text, name=dag.title, width=550, height=450, contained=False, position='center', theme='dark filleddark', config=config)
+        config = {'headerControls': {'maximize': 'remove'}, 'contentOverflow': 'scroll'}
+        fp = pn.layout.FloatPanel(
+            text,
+            name=dag.title,
+            width=550,
+            height=450,
+            contained=False,
+            position='center',
+            theme='dark filleddark',
+            config=config,
+        )
         info_fp_holder[:] = [fp]
 
     info_button.on_click(display_info)
@@ -207,9 +226,13 @@ def _prepare_to_show(dag: Dag):
             # Unfortunately, there is nothing special about them.
             #
             print('THREADS', current_tid, [t for t in threading.enumerate()])
-            all_threads = [t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')]
-            assert len(all_threads)<=NTHREADS, f'{all_threads=}'
-            other_thread = [t for t in all_threads if t.ident!=current_tid]
+            all_threads = [
+                t
+                for t in threading.enumerate()
+                if t.name.startswith('ThreadPoolExecutor')
+            ]
+            assert len(all_threads) <= NTHREADS, f'{all_threads=}'
+            other_thread = [t for t in all_threads if t.ident != current_tid]
 
             # It's possible that since the user might not have done anything yet,
             # another thread hasn't spun up.
@@ -234,7 +257,7 @@ def _prepare_to_show(dag: Dag):
         view_latest=True,
         scroll_button_threshold=20,
         auto_scroll_limit=1,
-        sizing_mode='stretch_width'
+        sizing_mode='stretch_width',
     )
     dag_logger = getDagPanelLogger(log_feed)
 
@@ -245,7 +268,7 @@ def _prepare_to_show(dag: Dag):
         #
         doc = dag.doc.strip()
         ix = doc.find('\n')
-        if ix>=0:
+        if ix >= 0:
             header = doc[:ix]
             doc = doc[ix:].strip()
         else:
@@ -255,10 +278,14 @@ def _prepare_to_show(dag: Dag):
         name_text = pn.widgets.StaticText(
             value=header,
             css_classes=['card-title'],
-            styles={'font-size':'1.17em', 'font-weight':'bold'}
+            styles={'font-size': '1.17em', 'font-weight': 'bold'},
         )
 
-        card = pn.Card(pn.pane.Markdown(doc, sizing_mode='stretch_width'), header=pn.Row(name_text), sizing_mode='stretch_width')
+        card = pn.Card(
+            pn.pane.Markdown(doc, sizing_mode='stretch_width'),
+            header=pn.Row(name_text),
+            sizing_mode='stretch_width',
+        )
         cards.append(card)
 
     # cards.extend(BlockCard(parent_template=template, dag=dag, block=gw, dag_logger=dag_logger) for gw in dag.get_sorted() if gw._visible)
@@ -269,7 +296,9 @@ def _prepare_to_show(dag: Dag):
         try:
             if dag_logger:
                 dag_logger.info('', block_name=None, block_state=None)
-                dag_logger.info('Execute dag', block_name='', block_state=BlockState.DAG)
+                dag_logger.info(
+                    'Execute dag', block_name='', block_state=BlockState.DAG
+                )
 
             # We want this block's execute() method to run first
             # after the user clicks the "Continue" button.
@@ -292,6 +321,7 @@ def _prepare_to_show(dag: Dag):
     # Be lazy to avoid a circular import.
     #
     from .._panel._default import _card_for_block
+
     for block in dag.get_sorted():
         if block._visible:
             card = _card_for_block(block, block.__panel__(), _with_light=True)
@@ -308,11 +338,12 @@ def _prepare_to_show(dag: Dag):
                 max_height=200,
             ),
             log_feed,
-            info_fp_holder
+            info_fp_holder,
         )
     )
 
     return template
+
 
 # class BlockCard(pn.Card):
 #     """A custom card to wrap around a block.
@@ -438,6 +469,7 @@ def _prepare_to_show(dag: Dag):
 
 #         self.header[-1] = self._get_state_light(_get_state_color(_block_state))
 
+
 def _sier2_label_formatter(pname: str):
     """Default formatter to turn parameter names into appropriate widget labels.
 
@@ -456,10 +488,19 @@ def _sier2_label_formatter(pname: str):
 
     return paramp.default_label_formatter(pname)
 
+
 class PanelDag(Dag):
     """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
 
-    def __init__(self, *, site: str='', title: str, doc: str, logo: str='', favicon: str|None=None):
+    def __init__(
+        self,
+        *,
+        site: str = '',
+        title: str,
+        doc: str,
+        logo: str = '',
+        favicon: str | None = None,
+    ):
         """
         Parameters
         ----------

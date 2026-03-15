@@ -1,16 +1,21 @@
-
 """A logger that logs to a panel.widget.Feed."""
 
-from datetime import datetime
 import html
 import logging
+
 import panel as pn
 
 from .._block import BlockState
 from ._panel_util import _get_state_color
 
-_INFO_FORMATTER = logging.Formatter('%(asctime)s %(block_state)s %(block_name)s %(message)s', datefmt='%H:%M:%S')
-_FORMATTER = logging.Formatter('%(asctime)s %(block_state)s %(block_name)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
+_INFO_FORMATTER = logging.Formatter(
+    '%(asctime)s %(block_state)s %(block_name)s %(message)s', datefmt='%H:%M:%S'
+)
+_FORMATTER = logging.Formatter(
+    '%(asctime)s %(block_state)s %(block_name)s - %(levelname)s - %(message)s',
+    datefmt='%H:%M:%S',
+)
+
 
 class PanelHandler(logging.Handler):
     """A handler that emits log strings to a panel template sidebar Feed pane."""
@@ -24,10 +29,12 @@ class PanelHandler(logging.Handler):
 
         color = _get_state_color(record.block_state)
 
-        record.block_name = f'[{html.escape(record.block_name)}]' if record.block_name else ''
+        record.block_name = (
+            f'[{html.escape(record.block_name)}]' if record.block_name else ''
+        )
         record.block_state = f'<span style="color:{color};">■</span>'
         record.msg = html.escape(record.msg)
-        fmt = _INFO_FORMATTER if record.levelno==logging.INFO else _FORMATTER
+        fmt = _INFO_FORMATTER if record.levelno == logging.INFO else _FORMATTER
 
         return fmt.format(record)
 
@@ -44,6 +51,7 @@ class PanelHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
+
 class DagPanelAdapter(logging.LoggerAdapter):
     """An adapter that logs messages from a dag.
 
@@ -51,22 +59,34 @@ class DagPanelAdapter(logging.LoggerAdapter):
     """
 
     def debug(self, msg, *args, block_name, block_state):
-        super().debug(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
+        super().debug(
+            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
+        )
 
     def info(self, msg, *args, block_name, block_state):
-        super().info(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
+        super().info(
+            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
+        )
 
     def warning(self, msg, *args, block_name, block_state):
-        super().warning(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
+        super().warning(
+            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
+        )
 
     def error(self, msg, *args, block_name, block_state):
-        super().error(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
+        super().error(
+            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
+        )
 
     def exception(self, msg, *args, block_name, block_state):
-        super().exception(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
+        super().exception(
+            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
+        )
 
     def critical(self, msg, *args, block_name, block_state):
-        super().critical(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
+        super().critical(
+            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
+        )
 
     def process(self, msg, kwargs):
         # print(f'ADAPTER {msg=} {kwargs=} {self.extra=}')
@@ -77,6 +97,7 @@ class DagPanelAdapter(logging.LoggerAdapter):
 
         return msg, kwargs
 
+
 _logger = logging.getLogger('block.panel')
 _logger.setLevel(logging.INFO)
 
@@ -85,6 +106,7 @@ _logger.setLevel(logging.INFO)
 # ph.setLevel(logging.INFO)
 
 # _logger.addHandler(ph)
+
 
 def getDagPanelLogger(log_feed):
     # _logger = logging.getLogger('block.panel')
@@ -100,7 +122,9 @@ def getDagPanelLogger(log_feed):
 
     return adapter
 
+
 ####
+
 
 class BlockPanelAdapter(logging.LoggerAdapter):
     """An adapter that logs messages from a block.
@@ -117,22 +141,46 @@ class BlockPanelAdapter(logging.LoggerAdapter):
         self.block_name = block_name
 
     def debug(self, msg, *args):
-        super().debug(msg, *args, extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK})
+        super().debug(
+            msg,
+            *args,
+            extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK},
+        )
 
     def info(self, msg, *args):
-        super().info(msg, *args, extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK})
+        super().info(
+            msg,
+            *args,
+            extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK},
+        )
 
     def warning(self, msg, *args):
-        super().warning(msg, *args, extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK})
+        super().warning(
+            msg,
+            *args,
+            extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK},
+        )
 
     def error(self, msg, *args):
-        super().error(msg, *args, extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK})
+        super().error(
+            msg,
+            *args,
+            extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK},
+        )
 
     def exception(self, msg, *args):
-        super().exception(msg, *args, extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK})
+        super().exception(
+            msg,
+            *args,
+            extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK},
+        )
 
     def critical(self, msg, *args):
-        super().critical(msg, *args, extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK})
+        super().critical(
+            msg,
+            *args,
+            extra={'block_name': self.block_name, 'block_state': BlockState.BLOCK},
+        )
 
     def process(self, msg, kwargs):
         # print(f'GP ADAPTER {msg=} {kwargs=} {self.extra=}')
@@ -142,6 +190,7 @@ class BlockPanelAdapter(logging.LoggerAdapter):
             kwargs['extra']['block_name'] = self.block_name
 
         return msg, kwargs
+
 
 def getBlockPanelLogger(block_name: str):
     """A logger for blocks.

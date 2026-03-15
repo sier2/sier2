@@ -12,6 +12,7 @@ from typing import Any
 #
 CONFIG_UPDATE = 'config_update'
 
+
 def _default_config_file():
     """Determine the location of the config file sier2.ini.
 
@@ -37,7 +38,7 @@ def _default_config_file():
     if ini:
         return Path(ini)
 
-    if os.name=='nt':
+    if os.name == 'nt':
         # Windows.
         #
         prdir = Path(os.environ['APPDATA']) / 'sier2'
@@ -57,6 +58,7 @@ def _default_config_file():
 
     return prdir / 'sier2.ini'
 
+
 class _Config:
     """This class is for internal use.
 
@@ -67,7 +69,13 @@ class _Config:
         self._clear()
 
     @staticmethod
-    def update(*, location: Path|str|None=None, config_block: str|None=None, update_arg: str|None=None, write_to_file: bool=False):
+    def update(
+        *,
+        location: Path | str | None = None,
+        config_block: str | None = None,
+        update_arg: str | None = None,
+        write_to_file: bool = False,
+    ):
         """Update the config.
 
         If ``location`` has a value, that config file will be used instead of the default.
@@ -127,7 +135,7 @@ class _Config:
         return self._location
 
     @location.setter
-    def location(self, config_file: Path|str):
+    def location(self, config_file: Path | str):
         if self._loaded:
             raise ValueError('Config is already loaded')
 
@@ -136,7 +144,7 @@ class _Config:
 
         self._location = config_file
 
-    def _update(self, ini: str, write_to_file: bool=False):
+    def _update(self, ini: str, write_to_file: bool = False):
         """Update the config file using ini, which contains the contents of another config file.
 
         The current config is also updated.
@@ -161,9 +169,13 @@ class _Config:
             else:
                 update_section = True
                 if CONFIG_UPDATE in config[section_name]:
-                    update_section = ast.literal_eval(config[section_name][CONFIG_UPDATE])
+                    update_section = ast.literal_eval(
+                        config[section_name][CONFIG_UPDATE]
+                    )
                     if not isinstance(update_section, bool):
-                        raise ValueError(f'Value of [{section_name}].{CONFIG_UPDATE} is not a bool')
+                        raise ValueError(
+                            f'Value of [{section_name}].{CONFIG_UPDATE} is not a bool'
+                        )
 
                 if update_section:
                     config[section_name].update(new_config[section_name])
@@ -198,7 +210,7 @@ class _Config:
         self._config.read_string(sconfig)
         self._loaded = True
 
-    def __getitem__(self, section_name: str|tuple[str, str]) -> Any|dict[str, Any]:
+    def __getitem__(self, section_name: str | tuple[str, str]) -> Any | dict[str, Any]:
         """If section_name is a string, get the config values for the given section name.
 
         The config file is lazily loaded. Non-existence of the file is normal.
@@ -234,7 +246,9 @@ class _Config:
                 v = section[key]
                 return ast.literal_eval(v)
             except ValueError:
-                raise ValueError(f'Cannot eval section [{section_name}], key {key}, value {v}')
+                raise ValueError(
+                    f'Cannot eval section [{section_name}], key {key}, value {v}'
+                )
 
         if section_name not in self._config:
             return {}
@@ -244,8 +258,11 @@ class _Config:
             try:
                 c[key] = ast.literal_eval(v)
             except ValueError:
-                raise ValueError(f'Cannot eval section [{section_name}], key {key}, value {v}')
+                raise ValueError(
+                    f'Cannot eval section [{section_name}], key {key}, value {v}'
+                )
 
         return c
+
 
 Config = _Config()

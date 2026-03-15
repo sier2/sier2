@@ -35,6 +35,15 @@ ignore_missing_imports = true
 [project.urls]
 Homepage = "https://github.com/sier2/sier2"
 
+#[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
 [build-system]
 requires = ["poetry-core>=2.1.1"]
 build-backend = "poetry.core.masonry.api"

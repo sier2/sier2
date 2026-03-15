@@ -1,6 +1,6 @@
-import sys
 from .._block import BlockState
 from .._util import trim
+
 
 def _get_state_color(gs: BlockState) -> str:
     """Convert a block state (as logged by the dag) to a color.
@@ -17,15 +17,15 @@ def _get_state_color(gs: BlockState) -> str:
         case BlockState.INPUT:
             color = '#f0c820'
         case BlockState.READY:
-            color='white'
+            color = 'white'
         case BlockState.EXECUTING:
-            color='steelblue'
+            color = 'steelblue'
         case BlockState.WAITING:
-            color='yellow'
+            color = 'yellow'
         case BlockState.SUCCESSFUL:
             color = 'green'
         case BlockState.INTERRUPTED:
-            color= 'orange'
+            color = 'orange'
         case BlockState.ERROR:
             color = 'red'
         case _:
@@ -33,9 +33,11 @@ def _get_state_color(gs: BlockState) -> str:
 
     return color
 
+
 ########
 # Documentation utilities
 ########
+
 
 def block_doc(block):
     """Generate Markdown documentation for a block.
@@ -61,6 +63,7 @@ def block_doc(block):
 
     return '---\n' + b_doc + '\n### Params\n' + '\n'.join(text)
 
+
 def dag_doc(dag):
     """Generate Markdown documentation for a dag and its blocks."""
 
@@ -78,6 +81,6 @@ def dag_doc(dag):
 
     # Force the first line of the dag doc to have a level 1 header.
     #
-    dag_text =f'# {dag.site} - {dag.title}\n\n# ' + trim(dag.doc).lstrip(' #')
+    dag_text = f'# {dag.site} - {dag.title}\n\n# ' + trim(dag.doc).lstrip(' #')
 
     return f'{dag_text}\n\n{block_docs}'

@@ -1,13 +1,13 @@
-import pytest
+#
 
-from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
-from sier2 import _library
-import param
+from sier2 import Block, Library
+
 
 class Block1(Block):
     """Any old block."""
 
     pass
+
 
 def test_library_get():
     """The block key must be the same whether the block is imported or obtained via the Library."""
@@ -23,4 +23,4 @@ def test_library_get():
     b_lib = Library.get_block('tests.test_library.Block1')
     # print(b_lib.block_key())
 
-    assert b.block_key()==b_lib.block_key()
+    assert b.block_key() == b_lib.block_key()
