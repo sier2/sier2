@@ -3,6 +3,7 @@ import pytest
 from sier2 import Block, Dag, Connection, BlockError
 import param
 
+
 class PassThrough(Block):
     """A block with one input and one output."""
 
@@ -11,6 +12,7 @@ class PassThrough(Block):
 
     def execute(self):
         self.out_p = self.in_p
+
 
 class Add(Block):
     """A block that adds an addend to its input."""
@@ -25,16 +27,19 @@ class Add(Block):
     def execute(self):
         self.out_a = self.in_a + self.addend
 
+
 class OneIn(Block):
     """A block with one input."""
 
     in_o = param.Integer()
+
 
 class TwoIn(Block):
     """A block with two inputs."""
 
     in_t1 = param.Integer()
     in_t2 = param.Integer()
+
 
 def test_params():
     class ParamBlock(Block):
@@ -53,11 +58,13 @@ def test_params():
     pb = ParamBlock(only_in=True)
     assert pb.pick_params() == ['in_a', 'in_b']
 
+
 @pytest.fixture
 def dag():
     """Ensure that each test starts with a clear dag."""
 
     return Dag(doc='test-dag', title='tests')
+
 
 def test_output_must_not_allow_refs(dag):
     class P(Block):
@@ -68,6 +75,7 @@ def test_output_must_not_allow_refs(dag):
 
     with pytest.raises(BlockError):
         dag.connect(P(), Q(), ['s'])
+
 
 def test_simple(dag):
     """Ensure that a value flows from the first input parameter, through the dag, to the last output parameter."""
@@ -85,6 +93,7 @@ def test_simple(dag):
     assert a.in_a == 1
     assert a.out_a == 2
     assert o.in_o == 2
+
 
 def test_disconnect(dag):
     """Ensure that when blocks are disconnected, they are no longer watching or being watched.
@@ -120,7 +129,7 @@ def test_disconnect(dag):
     # assert n_watchers(t, 't2_in') == 0
 
     dag.connect(p, a, Connection('out_p', 'in_a'))
-    dag.connect(a, t, Connection('out_a' ,'in_t1'))
+    dag.connect(a, t, Connection('out_a', 'in_t1'))
     dag.connect(p, t, Connection('out_p', 'in_t2'))
 
     # Ensure that the dag is working.
@@ -128,10 +137,10 @@ def test_disconnect(dag):
     p.in_p = 1
     dag.execute()
 
-    assert a.in_a == 1 # p -> a
-    assert a.out_a == 2 # p -> a
-    assert t.in_t1 == 2 # p -> a -> t
-    assert t.in_t2 == 1 # p -> t
+    assert a.in_a == 1  # p -> a
+    assert a.out_a == 2  # p -> a
+    assert t.in_t1 == 2  # p -> a -> t
+    assert t.in_t2 == 1  # p -> t
 
     assert n_watchers(p, 'out_p') == 2
     assert n_watchers(a, 'in_a') == 0
@@ -169,6 +178,7 @@ def test_disconnect(dag):
     assert a.out_a == 2
     assert t.in_t2 == 5
 
+
 def test_cannot_connect_twice(dag):
     """Ensure that two blocks cannot be connected more than once."""
 
@@ -177,7 +187,8 @@ def test_cannot_connect_twice(dag):
 
     dag.connect(p0, p1, Connection('out_p', 'in_p'))
     with pytest.raises(BlockError):
-        dag.connect(p0, p1, Connection('p_out' ,'p_in'))
+        dag.connect(p0, p1, Connection('p_out', 'p_in'))
+
 
 def test_not_same_names(dag):
     p0 = PassThrough(name='This')
@@ -185,6 +196,7 @@ def test_not_same_names(dag):
 
     with pytest.raises(BlockError):
         dag.connect(p0, p1, Connection('out_p', 'in_p'))
+
 
 def test_not_existing_name(dag):
     p0 = PassThrough(name='This')
@@ -195,6 +207,7 @@ def test_not_existing_name(dag):
     with pytest.raises(BlockError):
         dag.connect(p1, p2, Connection('out_p', 'in_p'))
 
+
 def test_self_loop(dag):
     """Ensure that blocks can't connect to themselves."""
 
@@ -202,6 +215,7 @@ def test_self_loop(dag):
 
     with pytest.raises(BlockError):
         dag.connect(p, p, Connection('out_p', 'in_p'))
+
 
 def test_loop1(dag):
     """Ensure that connecting a block doesn't create a loop in the dag."""
@@ -212,6 +226,7 @@ def test_loop1(dag):
     dag.connect(p, a, Connection('out_p', 'in_p'))
     with pytest.raises(BlockError):
         dag.connect(a, p, Connection('out_a', 'in_p'))
+
 
 def test_loop2(dag):
     """Ensure that loops aren't allowed."""
@@ -224,6 +239,7 @@ def test_loop2(dag):
     dag.connect(a1, a2, Connection('out_a', 'in_a'))
     with pytest.raises(BlockError):
         dag.connect(a2, p, Connection('out_a', 'in_p'))
+
 
 def test_loop3(dag):
     """Ensure that loops aren't allowed."""
@@ -239,6 +255,7 @@ def test_loop3(dag):
     with pytest.raises(BlockError):
         dag.connect(p3, p1, Connection('out_p', 'in_p'))
 
+
 def test_loop4(dag):
     """Ensure that loops aren't allowed."""
 
@@ -253,6 +270,7 @@ def test_loop4(dag):
     with pytest.raises(BlockError):
         dag.connect(p3, p1, Connection('out_p', 'in_p'))
 
+
 def test_nonloop1(dag):
     """Ensure that non-loops are allowed."""
 
@@ -260,6 +278,7 @@ def test_nonloop1(dag):
     dag.connect(gs[2], gs[3], Connection('out_p', 'in_p'))
     dag.connect(gs[1], gs[2], Connection('out_p', 'in_p'))
     dag.connect(gs[0], gs[1], Connection('out_p', 'in_p'))
+
 
 def test_must_connect(dag):
     """Ensure that new blocks are connected to existing blocks."""
@@ -273,6 +292,7 @@ def test_must_connect(dag):
     with pytest.raises(BlockError):
         dag.connect(p3, p4, Connection('out_p', 'in_p'))
 
+
 def test_sorted1(dag):
     gs = [PassThrough(name=f'PT{i}') for i in range(4)]
     dag.connect(gs[2], gs[3], Connection('out_p', 'in_p'))
@@ -282,6 +302,7 @@ def test_sorted1(dag):
     tsorted = [g.name for g in dag.get_sorted()]
 
     assert tsorted == ['PT0', 'PT1', 'PT2', 'PT3']
+
 
 def test_sorted2(dag):
     """Ensure that the ranks reflect the order in the dag."""
@@ -300,6 +321,7 @@ def test_sorted2(dag):
     tsorted = [g.name for g in dag.get_sorted()]
 
     assert tsorted == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']
+
 
 def test_sorted_not_depth_first(dag):
     """The current topological sort algorithm does not sort depth-first.
@@ -328,6 +350,7 @@ def test_sorted_not_depth_first(dag):
     assert tsorted != ['a', 'b', 'c', 'd', 'e', 'f', 'g']
     assert tsorted != ['a', 'e', 'f', 'g', 'b', 'c', 'd']
 
+
 def test_onlychanged(dag):
     """Ensure that params are triggered when set with the same value."""
 
@@ -346,18 +369,21 @@ def test_onlychanged(dag):
     assert a.in_a == 0
     assert a.out_a == 1
 
+
 def test_call_block():
     """Ensure that we can call a block directly."""
 
     a = Add(1)
     result = a(in_a=5)
 
-    assert result=={'out_a': 6}
+    assert result == {'out_a': 6}
+
 
 def test_init_called():
     class A(Block):
         in_a = param.Integer(doc='int a')
         out_a = param.Integer(doc='int a')
+
         def __init__(self):
             pass
             # Oops, didn't call super().__init__()
@@ -368,6 +394,7 @@ def test_init_called():
     with pytest.raises(BlockError, match=r'super\(\)\.__init__\(\)'):
         dag.connect(a, p, Connection('out_a', 'in_o'))
 
+
 def test_banners():
     class B(Block):
         """Test banners."""
@@ -376,11 +403,11 @@ def test_banners():
             super().__init__(banners=(top, bot))
 
     b = B('top', None)
-    assert b.banner_top_.rx.value=='top'
+    assert b.banner_top_.rx.value == 'top'
     assert b.banner_bot_ is None
 
     b.banners(('top2', None))
-    assert b.banner_top_.rx.value=='top2'
+    assert b.banner_top_.rx.value == 'top2'
 
     with pytest.raises(BlockError, match='uninitialised'):
         b.banners((None, 'bot'))

@@ -23,6 +23,7 @@ author = 'algol60'
 
 # The full version, including alpha/beta/rc tags
 import sier2
+
 release = sier2.__version__
 
 
