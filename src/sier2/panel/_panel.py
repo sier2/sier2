@@ -72,9 +72,7 @@ class _PanelContext:
         self.block._block_state = state
         self.t0 = datetime.now()
         if self.dag_logger:
-            self.dag_logger.info(
-                'Execute', block_name=self.block.name, block_state=state
-            )
+            self.dag_logger.info('Execute', block_name=self.block.name, block_state=state)
 
         block_logger = getBlockPanelLogger(self.block.name)
         self.block.logger = block_logger
@@ -91,11 +89,7 @@ class _PanelContext:
         #     self.block._progress.active = False
 
         if exc_type is None:
-            state = (
-                BlockState.WAITING
-                if self.block._wait_for_input
-                else BlockState.SUCCESSFUL
-            )
+            state = BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
             self.block._block_state = state
             if self.dag_logger:
                 self.dag_logger.info(
@@ -132,9 +126,7 @@ class _PanelContext:
                 if not issubclass(exc_type, BlockError):
                     # Convert the error in the block to a BlockError.
                     #
-                    raise BlockError(
-                        f'Block {self.block.name}: {str(exc_val)}'
-                    ) from exc_val
+                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
         if self.dag._on_context_exit:
             self.dag._on_context_exit()
@@ -150,9 +142,7 @@ def _quit(session_context):
 def interrupt_thread(tid, exctype):
     """Raise exception exctype in thread tid."""
 
-    r = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        ctypes.c_ulong(tid), ctypes.py_object(exctype)
-    )
+    r = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(tid), ctypes.py_object(exctype))
     if r == 0:
         raise ValueError('Invalid thread id')
     elif r != 1:
@@ -227,9 +217,7 @@ def _prepare_to_show(dag: Dag):
             #
             print('THREADS', current_tid, [t for t in threading.enumerate()])
             all_threads = [
-                t
-                for t in threading.enumerate()
-                if t.name.startswith('ThreadPoolExecutor')
+                t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')
             ]
             assert len(all_threads) <= NTHREADS, f'{all_threads=}'
             other_thread = [t for t in all_threads if t.ident != current_tid]
@@ -296,9 +284,7 @@ def _prepare_to_show(dag: Dag):
         try:
             if dag_logger:
                 dag_logger.info('', block_name=None, block_state=None)
-                dag_logger.info(
-                    'Execute dag', block_name='', block_state=BlockState.DAG
-                )
+                dag_logger.info('Execute dag', block_name='', block_state=BlockState.DAG)
 
             # We want this block's execute() method to run first
             # after the user clicks the "Continue" button.

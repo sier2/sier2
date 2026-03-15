@@ -29,9 +29,7 @@ class PanelHandler(logging.Handler):
 
         color = _get_state_color(record.block_state)
 
-        record.block_name = (
-            f'[{html.escape(record.block_name)}]' if record.block_name else ''
-        )
+        record.block_name = f'[{html.escape(record.block_name)}]' if record.block_name else ''
         record.block_state = f'<span style="color:{color};">■</span>'
         record.msg = html.escape(record.msg)
         fmt = _INFO_FORMATTER if record.levelno == logging.INFO else _FORMATTER
@@ -59,34 +57,22 @@ class DagPanelAdapter(logging.LoggerAdapter):
     """
 
     def debug(self, msg, *args, block_name, block_state):
-        super().debug(
-            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
-        )
+        super().debug(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
 
     def info(self, msg, *args, block_name, block_state):
-        super().info(
-            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
-        )
+        super().info(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
 
     def warning(self, msg, *args, block_name, block_state):
-        super().warning(
-            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
-        )
+        super().warning(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
 
     def error(self, msg, *args, block_name, block_state):
-        super().error(
-            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
-        )
+        super().error(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
 
     def exception(self, msg, *args, block_name, block_state):
-        super().exception(
-            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
-        )
+        super().exception(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
 
     def critical(self, msg, *args, block_name, block_state):
-        super().critical(
-            msg, *args, extra={'block_name': block_name, 'block_state': block_state}
-        )
+        super().critical(msg, *args, extra={'block_name': block_name, 'block_state': block_state})
 
     def process(self, msg, kwargs):
         # print(f'ADAPTER {msg=} {kwargs=} {self.extra=}')

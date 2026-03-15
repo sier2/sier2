@@ -113,9 +113,7 @@ def main():
 
     blocks = subparsers.add_parser('blocks', help='Show available blocks')
     blocks.add_argument('-v', '--verbose', action='store_true', help='Show help')
-    blocks.add_argument(
-        'block', nargs='?', help='Show all blocks ending with this string'
-    )
+    blocks.add_argument('block', nargs='?', help='Show all blocks ending with this string')
     blocks.set_defaults(func=blocks_cmd)
 
     dags = subparsers.add_parser('dags', help='Show available dags')

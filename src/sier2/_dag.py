@@ -118,9 +118,7 @@ class _BlockContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             self.block._block_state = (
-                BlockState.WAITING
-                if self.block._wait_for_input
-                else BlockState.SUCCESSFUL
+                BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
             )
         elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
@@ -135,9 +133,7 @@ class _BlockContext:
                 # they just stop execution.
                 #
                 if self.dag_logger:
-                    self.dag_logger.exception(
-                        block_name=self.block.name, block_state=state
-                    )
+                    self.dag_logger.exception(block_name=self.block.name, block_state=state)
 
                 # msg = f'While in {self.block.name}.execute(): {exc_val}'
                 # LOGGER.exception(msg)
@@ -147,9 +143,7 @@ class _BlockContext:
                 if not issubclass(exc_type, BlockError):
                     # Convert non-BlockErrors in the block to a BlockError.
                     #
-                    raise BlockError(
-                        f'Block {self.block.name}: {str(exc_val)}'
-                    ) from exc_val
+                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
 
         if self.dag._on_context_exit:
             self.dag._on_context_exit()
@@ -348,9 +342,7 @@ class Dag:
 
         # for g in self._for_each_once():
         for g in _for_each_once(self._block_pairs):
-            if (g is not src and g.name == src.name) or (
-                g is not dst and g.name == dst.name
-            ):
+            if (g is not src and g.name == src.name) or (g is not dst and g.name == dst.name):
                 raise BlockError('A block with this name already exists')
 
         for s, d in self._block_pairs:
@@ -359,8 +351,7 @@ class Dag:
 
         if self._block_pairs:
             connected = any(
-                src is s or src is d or dst is s or dst is d
-                for s, d in self._block_pairs
+                src is s or src is d or dst is s or dst is d for s, d in self._block_pairs
             )
             if not connected:
                 raise BlockError('A new block must connect to existing block')
@@ -562,9 +553,7 @@ class Dag:
             #
             is_input_block = item.dst._wait_for_input
             if can_execute:
-                with self._block_context(
-                    block=item.dst, dag=self, dag_logger=dag_logger
-                ) as g:
+                with self._block_context(block=item.dst, dag=self, dag_logger=dag_logger) as g:
                     logging_params = {'sier2_dag_': self, 'sier2_block_': f'{item.dst}'}
 
                     # If we need to wait for a user, just run prepare().
@@ -620,14 +609,10 @@ class Dag:
         # Check first to see if the dag would become disconnected.
         #
         maybe_pairs = [
-            (src, dst)
-            for src, dst in self._block_pairs
-            if src is not g and dst is not g
+            (src, dst) for src, dst in self._block_pairs if src is not g and dst is not g
         ]
         if not _is_connected(maybe_pairs):
-            raise BlockError(
-                'Disconnecting this block would result in a disconnected dag'
-            )
+            raise BlockError('Disconnecting this block would result in a disconnected dag')
 
         if self._block_queue:
             raise BlockError('Cannot disconnect blocks after executing the dag.')
@@ -836,9 +821,7 @@ def topological_sort(pairs):
 
     # Sort the current heads by name so they have a consistent ordering.
     #
-    S = deque(
-        sorted(set([s for s in srcs if s not in dsts]), key=lambda block: block.name)
-    )
+    S = deque(sorted(set([s for s in srcs if s not in dsts]), key=lambda block: block.name))
 
     while S:
         # A topological sort is non-unique; this is why.

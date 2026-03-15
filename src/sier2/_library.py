@@ -126,9 +126,7 @@ class Library:
 
         for entry_point, gi in _find_blocks():
             if gi.key in _block_library:
-                warnings.warn(
-                    f'Block plugin {entry_point}: key {gi.key} already in library'
-                )
+                warnings.warn(f'Block plugin {entry_point}: key {gi.key} already in library')
             else:
                 _block_library[gi.key] = None
 
@@ -136,9 +134,7 @@ class Library:
     def collect_dags():
         for entry_point, gi in _find_dags():
             if gi.key in _dag_library:
-                warnings.warn(
-                    f'Dag plugin {entry_point}: key {gi.key} already in library'
-                )
+                warnings.warn(f'Dag plugin {entry_point}: key {gi.key} already in library')
             else:
                 _dag_library.add(gi.key)
 
@@ -268,9 +264,7 @@ class Library:
         else:
             DagType = Dag
 
-        dag = DagType(
-            doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title']
-        )
+        dag = DagType(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
         for conn in dump['connections']:
             conns = [Connection(**kwargs) for kwargs in conn['conn_args']]
             dag.connect(instances[conn['src']], instances[conn['dst']], *conns)

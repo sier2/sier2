@@ -53,9 +53,7 @@ class _BokehDag:
         curdoc().theme = 'dark_minimal'
         fig.background_fill_color = COLOR_BG
 
-        hover = HoverTool(
-            tooltips=[('Name', '@name'), ('In', '@icount'), ('Out', '@ocount')]
-        )
+        hover = HoverTool(tooltips=[('Name', '@name'), ('In', '@icount'), ('Out', '@ocount')])
         fig.add_tools(hover)
 
         data = {

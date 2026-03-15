@@ -169,13 +169,9 @@ class _Config:
             else:
                 update_section = True
                 if CONFIG_UPDATE in config[section_name]:
-                    update_section = ast.literal_eval(
-                        config[section_name][CONFIG_UPDATE]
-                    )
+                    update_section = ast.literal_eval(config[section_name][CONFIG_UPDATE])
                     if not isinstance(update_section, bool):
-                        raise ValueError(
-                            f'Value of [{section_name}].{CONFIG_UPDATE} is not a bool'
-                        )
+                        raise ValueError(f'Value of [{section_name}].{CONFIG_UPDATE} is not a bool')
 
                 if update_section:
                     config[section_name].update(new_config[section_name])
@@ -246,9 +242,7 @@ class _Config:
                 v = section[key]
                 return ast.literal_eval(v)
             except ValueError:
-                raise ValueError(
-                    f'Cannot eval section [{section_name}], key {key}, value {v}'
-                )
+                raise ValueError(f'Cannot eval section [{section_name}], key {key}, value {v}')
 
         if section_name not in self._config:
             return {}
@@ -258,9 +252,7 @@ class _Config:
             try:
                 c[key] = ast.literal_eval(v)
             except ValueError:
-                raise ValueError(
-                    f'Cannot eval section [{section_name}], key {key}, value {v}'
-                )
+                raise ValueError(f'Cannot eval section [{section_name}], key {key}, value {v}')
 
         return c
 

@@ -20,9 +20,7 @@ def _get_state_light(color: str) -> pn.Spacer:
     )
 
 
-def _card_for_block(
-    block: Block, pane: pn.pane.Pane, _with_light: bool = False
-) -> pn.Card:
+def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool = False) -> pn.Card:
     """Wrap a block's __panel__() GUI in a panel.Card."""
 
     name_text = pn.widgets.StaticText(

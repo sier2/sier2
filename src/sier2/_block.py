@@ -156,9 +156,7 @@ class Block(param.Parameterized):
     ``self.display_options`` in your own ``__panel__()`` method if you like.
     """
 
-    _wait_for_input = param.Boolean(
-        default=False, label='Wait for input', doc=_WAIT_FOR_INPUT_DOC
-    )
+    _wait_for_input = param.Boolean(default=False, label='Wait for input', doc=_WAIT_FOR_INPUT_DOC)
     # _has_prepared = param.Boolean(default=False, label='Has prepared', doc=_HAS_PREPARED_DOC)
     _visible = param.Boolean(default=True, label='Visible', doc=_VISIBLE_DOC)
     _is_card = param.Boolean(
