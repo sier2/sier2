@@ -232,7 +232,14 @@ class Block(param.Parameterized):
         self._wait_for_input = wait_for_input
         self._visible = visible
         self.doc = doc
-        self.display_options = display_options
+        
+        # This allows us to set default display options when
+        # creating blocks. Default settings can be overridden by 
+        # passing new display_options
+        #
+        if not hasattr(self, 'display_options') or display_options:
+            self.display_options = display_options
+            
         self.only_in = only_in
         self.continue_label = continue_label
         self._is_card = is_card
