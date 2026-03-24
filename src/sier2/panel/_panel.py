@@ -176,8 +176,8 @@ def _prepare_to_show(dag: Dag):
         sidebar=pn.Column(sidebar_title),
         collapsed_sidebar=True,
         sidebar_width=440,
-        # logo=dag.logo,
-        # favicon=dag.favicon,
+        logo=dag.logo,
+        favicon=dag.favicon,
     )
 
     def display_info(_event):
