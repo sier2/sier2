@@ -180,6 +180,7 @@ class Block(param.Parameterized):
         wait_for_input: bool = False,
         visible: bool = True,
         doc: str | None = None,
+        author: dict[str, str] | None = None,
         display_options: list[str] | dict[str, Any] | None = None,
         only_in=False,
         continue_label='Continue',
@@ -196,6 +197,8 @@ class Block(param.Parameterized):
             If True (the default), the block will be visible in a GUI.
         doc: str|None
             Markdown documentation that may displayed in the user interface.
+        author: dict[str, str] | None
+            The block author. If present, a dictionary with 'name' and 'email' keys.
         display_options: list[str]|dict[str, Any]|None
             Display options to be used when displaying this block in a GUI.
         only_in: bool
@@ -232,14 +235,22 @@ class Block(param.Parameterized):
         self._wait_for_input = wait_for_input
         self._visible = visible
         self.doc = doc
-        
+
+        if author is not None:
+            if 'name' in author and 'email' in author:
+                self.author = {'name': author['name'], 'email': author['email']}
+            else:
+                raise ValueError('Author must contain name and email keys')
+        else:
+            self.author = None
+
         # This allows us to set default display options when
-        # creating blocks. Default settings can be overridden by 
+        # creating blocks. Default settings can be overridden by
         # passing new display_options
         #
         if not hasattr(self, 'display_options') or display_options:
             self.display_options = display_options
-            
+
         self.only_in = only_in
         self.continue_label = continue_label
         self._is_card = is_card

@@ -1,4 +1,4 @@
-from .._block import BlockState
+from .._block import Block, BlockState
 from .._util import trim
 
 
@@ -39,7 +39,7 @@ def _get_state_color(gs: BlockState) -> str:
 ########
 
 
-def block_doc(block):
+def block_doc(block: Block):
     """Generate Markdown documentation for a block.
 
     The documentation is taken from the docstring of the block class
@@ -60,6 +60,12 @@ def block_doc(block):
     text = ['| Name | Description |', '| ---- | ---- |']
     for name, doc in params:
         text.append(f'| {name} | {doc}')
+
+    if block.author:
+        author = block.author['name'] if block.author else 'Unknown'
+        email = block.author['email'] if block.author else 'Unknown'
+        text.append(f'\nAuthor: {author}<br>')
+        text.append(f'Email: {email}\n')
 
     return '---\n' + b_doc + '\n### Params\n' + '\n'.join(text)
 

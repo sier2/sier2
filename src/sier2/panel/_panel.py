@@ -315,6 +315,9 @@ def _prepare_to_show(dag: Dag):
             cards.append(card)
 
     template.main.append(pn.panel(pn.Column(*cards)))
+
+    author = dag.author['name'] if dag.author else 'Unknown'
+    email = dag.author['email'] if dag.author else 'Unknown'
     template.sidebar.append(
         pn.Column(
             switch,
@@ -325,6 +328,8 @@ def _prepare_to_show(dag: Dag):
             ),
             log_feed,
             info_fp_holder,
+            pn.widgets.StaticText(value=f'Author: {author}', margin=0),
+            pn.widgets.StaticText(value=f'Email: {email}', margin=0)
         )
     )
 
@@ -484,6 +489,7 @@ class PanelDag(Dag):
         site: str = '',
         title: str,
         doc: str,
+        author: dict[str, str] = None,
         logo: str = '',
         favicon: str | None = None,
     ):
@@ -503,7 +509,7 @@ class PanelDag(Dag):
         base64 encoded as URI).
         """
 
-        super().__init__(site=site, title=title, doc=doc)
+        super().__init__(site=site, title=title, doc=doc, author=author)
         paramp.label_formatter = _sier2_label_formatter
         self.logo = logo
         self.favicon = favicon

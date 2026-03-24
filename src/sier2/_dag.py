@@ -204,7 +204,7 @@ class Dag:
         site: str = 'Block',
         title: str,
         doc: str,
-        author: dict[str, str] = None,
+        author: dict[str, str]|None = None,
         show_doc: bool = True,
     ):
         """A new dag.
@@ -217,8 +217,8 @@ class Dag:
             A title to show in the header.
         doc: str
             Dag documentation.
-        author: str
-            The dag author.
+        author: dict[str, str] | None
+            The dag author. If present, a dictionary with 'name' and 'email' keys.
         show_doc: bool
             Show the dag docstring if True.
         """
