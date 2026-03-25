@@ -491,7 +491,7 @@ class PanelDag(Dag):
         doc: str,
         author: dict[str, str] = None,
         logo: str = '',
-        favicon: str | None = None,
+        favicon: str = '',
     ):
         """
         Parameters
@@ -504,7 +504,7 @@ class PanelDag(Dag):
             Dag documentation.
         logo: str
             URI of logo to add to the header (if local file, logo is base64 encoded as URI).
-        favicon: str|None
+        favicon: str
             URI of favicon to add to the document head (if local file, favicon is
         base64 encoded as URI).
         """
