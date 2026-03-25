@@ -1,5 +1,6 @@
 import ctypes
 import html
+import os
 import sys
 import threading
 from datetime import datetime
@@ -329,7 +330,7 @@ def _prepare_to_show(dag: Dag):
             log_feed,
             info_fp_holder,
             pn.widgets.StaticText(value=f'Author: {author}', margin=0),
-            pn.widgets.StaticText(value=f'Email: {email}', margin=0)
+            pn.widgets.StaticText(value=f'Email: {email}', margin=0),
         )
     )
 
@@ -505,8 +506,7 @@ class PanelDag(Dag):
         logo: str
             URI of logo to add to the header (if local file, logo is base64 encoded as URI).
         favicon: str
-            URI of favicon to add to the document head (if local file, favicon is
-        base64 encoded as URI).
+            URI of favicon to add to the document head (if local file, favicon is base64 encoded as URI).
         """
 
         super().__init__(site=site, title=title, doc=doc, author=author)
@@ -519,14 +519,45 @@ class PanelDag(Dag):
     def template(self):
         return _prepare_to_show(self)
 
-    def show(self):
+    def show(self, port: int = 0):
+        """Execute the dag and call show() on the Panel servable.
+
+        If the environment variable `DAG_PORT` is defined as a integer,
+        that value will override the value of the port argument.
+
+        Windows:
+
+        .. code-block:: powershell
+
+            $env:DAG_PORT=32001
+            python app.py
+            rm env:\\DAG_PORT
+
+        Linux:
+
+        .. code-block:: bash
+
+            DAG_PORT=32001 ./app.py
+
+        Parameters
+        ----------
+        port: int
+            The port to listen on.
+        """
         pn.state.on_session_destroyed(_quit)
+
+        dag_port = os.getenv('DAG_PORT')
+        if dag_port:
+            try:
+                port = int(dag_port)
+            except ValueError as e:
+                raise ValueError('Invalid DAG_PORT value') from e
 
         # Execute the dag.
         #
         self.execute()
 
-        self.template.show(threaded=False)
+        self.template.show(threaded=False, port=port)
 
     def servable(self):
         pn.state.on_session_destroyed(_quit)

@@ -204,7 +204,7 @@ class Dag:
         site: str = 'Block',
         title: str,
         doc: str,
-        author: dict[str, str]|None = None,
+        author: dict[str, str] | None = None,
         show_doc: bool = True,
     ):
         """A new dag.
