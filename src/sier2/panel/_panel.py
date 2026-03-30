@@ -414,7 +414,7 @@ def _prepare_to_show(dag: Dag):
 #             # The panel GUI is built after dag.execute() runs,
 #             # so the initial button must reflect the current _has_prepared state.
 #             #
-#             c_button = pn.widgets.Button(name=block.continue_label, button_type='primary', align='end', disabled=not block._has_prepared)
+#             c_button = pn.widgets.Button(name=block._continue_label, button_type='primary', align='end', disabled=not block._has_prepared)
 #             c_button.on_click(on_continue)
 
 #             # # Ensure that the button state reflects _has_prepared.

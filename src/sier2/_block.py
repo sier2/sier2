@@ -101,12 +101,21 @@ class Block(param.Parameterized):
 
     The block parameter ``wait_for_input`` allows a block to act as an "input" block,
     particularly when the block has a GUI interface. When set to True and dag execution
-    reaches this block, the block's ``prepare()`` method is called, then the dag stops executing.
-    This allows the user to interact with a user interface.
+    reaches this block, the block's ``prepare()`` method is called, then the dag stops
+    executing. This allows the user to interact with a user interface.
+
+    The ``wait_for_input`` parameter can also be specified as a class attribute.
+    This obviates having to define an ``__init__()`` just to set the attribute.
+    The class attribute can be set by the block writer, and overridden by a block
+    user using the parameter.
 
     The dag is then restarted using ``dag.execute_after_input(input_block)`` (typically by
     a "Continue" button in the GUI.) When the dag is continued at this block,
     the block's ``execute()`` method is called, and dag execution continues.
+
+    The value of the "Continue" label can be set using the class attribute
+    ``continue_label``, which can be overridden by the ``continue_label`` parameter
+    in ``__init__()``
 
     Input validation
     ~~~~~~~~~~~~~~~~
@@ -177,13 +186,13 @@ class Block(param.Parameterized):
     def __init__(
         self,
         *args,
-        wait_for_input: bool = False,
+        wait_for_input: bool | None = None,
         visible: bool = True,
         doc: str | None = None,
         author: dict[str, str] | None = None,
         display_options: list[str] | dict[str, Any] | None = None,
         only_in=False,
-        continue_label='Continue',
+        continue_label: str | None = None,
         banners: tuple[str | None, str | None] | None = None,
         is_card: bool = False,
         **kwargs,
@@ -192,7 +201,8 @@ class Block(param.Parameterized):
         Parameters
         ----------
         wait_for_input: bool
-            If True, ``prepare()`` is called and dag execution stops.
+            If True, ``prepare()`` is called and dag execution stops. Default False.
+            This can alternatively be specified by the class attribute `wait_for_input`.
         visible: bool
             If True (the default), the block will be visible in a GUI.
         doc: str|None
@@ -211,9 +221,10 @@ class Block(param.Parameterized):
 
             Setting ``only_in`` to True will cause only "in\\_"
             parameters to be displayed.
-        continue_label: bool
-            If wait_for_input is True, a "Continue" button is displayed.
+        continue_label: str | None
+            If this is a wait_for_input block, a "Continue" button is displayed.
             This changes the label displayed on the button.
+            This can alternatively be specified by the class attribute `continue_label`.
         banners: tuple[str|None, str|None]|None
             If specified, a ``panel.pane.HTML`` will be added to the top and bottom of
             the main area display using the first and second elements of the tuple. If
@@ -232,7 +243,24 @@ class Block(param.Parameterized):
         if not self.__doc__:
             raise BlockError(f'Class {self.__class__} must have a docstring')
 
-        self._wait_for_input = wait_for_input
+        # Allow class-level wait_for_input.
+        #
+        if wait_for_input is not None:
+            self._wait_for_input = wait_for_input
+        elif hasattr(type(self), 'wait_for_input'):
+            self._wait_for_input = bool(type(self).wait_for_input)
+        else:
+            self._wait_for_input = False
+
+        # Allow class-level continue_label.
+        #
+        if continue_label is not None:
+            self._continue_label = continue_label
+        elif hasattr(type(self), 'continue_label'):
+            self._continue_label = type(self).continue_label
+        else:
+            self._continue_label = 'Continue'
+
         self._visible = visible
         self.doc = doc
 
@@ -252,7 +280,6 @@ class Block(param.Parameterized):
             self.display_options = display_options
 
         self.only_in = only_in
-        self.continue_label = continue_label
         self._is_card = is_card
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)

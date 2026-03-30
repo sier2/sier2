@@ -28,6 +28,6 @@ def test_has_panel():
     """A block defines its own panel implementation."""
 
     b = SimpleBlock()
-    p = b.__panel__()
+    _p = b.__panel__()
 
     assert hasattr(b, '_panel')

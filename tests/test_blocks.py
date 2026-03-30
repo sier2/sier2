@@ -1,7 +1,7 @@
+import param
 import pytest
 
-from sier2 import Block, Dag, Connection, BlockError
-import param
+from sier2 import Block, BlockError, Connection, Dag
 
 
 class PassThrough(Block):

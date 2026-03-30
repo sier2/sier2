@@ -42,7 +42,7 @@ def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool = False)
         # (negated) is_input_valid_ state.
         #
         c_button = pn.widgets.Button(
-            name=block.continue_label,
+            name=block._continue_label,
             button_type='primary',
             align='end',
             disabled=not block.is_input_valid_,
