@@ -1,8 +1,8 @@
+import param
 import pytest
 
-from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
+from sier2 import Block, BlockError, BlockState, BlockValidateError, Connection, Dag, Library
 from sier2._dag import _set_downstream_state
-import param
 
 
 class PassThrough(Block):

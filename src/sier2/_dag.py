@@ -1,9 +1,11 @@
 import sys
 import threading
-from collections import deque
+from collections import defaultdict, deque
 from dataclasses import dataclass, field  # , KW_ONLY, field
 from importlib.metadata import entry_points
 from typing import Any
+
+import param
 
 from ._block import Block, BlockError, BlockState, BlockValidateError
 
@@ -296,6 +298,116 @@ class Dag:
         if not self._is_pyodide:
             self._stopper.event.clear()
 
+    def build(self, connections: list[tuple[param.Parameter, param.Parameter]]):
+        """Build a dag from a list of connections between output and input parameters.
+
+        Can only be called once.
+
+        This is an alternative to using several calls to connect().
+
+        .. code-block:: python
+
+            dag.build([
+                (b1.param.out1, b2.param.in1),
+                (b1.param.out2, b2.param.in2),
+                (b2.param.out_result, b3.param.in_display)
+            ])
+
+        """
+
+        if self._block_pairs:
+            raise BlockError('A dag can only be built once.')
+
+        if not connections:
+            raise BlockError('There must be at least one connection')
+
+        # Group watchers for each (src, dst) block.
+        # This optimises the number of watchers.
+        #
+        # If we just add a watcher per param in the loop, then
+        # param.update() won't batch the events.
+        #
+        src_out_params_dict = defaultdict(list)
+
+        # Ensure that the sort cache is cleared.
+        #
+        self._sort_cache = None
+
+        for ix, (src_param, dst_param) in enumerate(connections):
+            if not isinstance(src_param, param.Parameter):
+                raise BlockError(f'Source parameter at index {ix} is not a param')
+
+            if not isinstance(dst_param, param.Parameter):
+                raise BlockError(f'Destination parameter at index {ix} is not a param')
+
+            src = src_param.owner
+            dst = dst_param.owner
+
+            if not isinstance(src, Block):
+                raise BlockError(f'Source parameter at index{ix} does not belong to a Block object')
+
+            if not isinstance(dst, Block):
+                raise BlockError(
+                    f'Destination parameter at index{ix} does not belong to a Block object'
+                )
+
+            # Because this is probably the first place that the Block instance is used,
+            # this is a convenient place to check that the block was correctly initialised.
+            #
+            # Pick an arbitrary attribute that should be present.
+            #
+            for b in src, dst:
+                if not hasattr(b, 'doc'):
+                    raise BlockError(f'Did you call super().__init__() in {b}?')
+
+            if _DISALLOW_CYCLES:
+                if _has_cycle(self._block_pairs + [(src, dst)]):
+                    raise BlockError('This connection would create a cycle')
+
+            if src.name == dst.name:
+                raise BlockError('Cannot add two blocks with the same name')
+
+            for block in _for_each_once(self._block_pairs):
+                if (block is not src and block.name == src.name) or (
+                    block is not dst and block.name == dst.name
+                ):
+                    raise BlockError('A block with this name already exists')
+
+            # for s, d in self._block_pairs:
+            #     if src is s and dst is d:
+            #         raise BlockError('These blocks are already connected')
+
+            if self._block_pairs:
+                connected = any(
+                    src is s or src is d or dst is s or dst is d for s, d in self._block_pairs
+                )
+                if not connected:
+                    raise BlockError('A new block must connect to existing block')
+
+            if src_param.allow_refs:
+                raise BlockError(
+                    f'Source parameter {src}.{src_param.name} must not be "allow_refs=True"'
+                )
+
+            if dst._block_name_map.get((src.name, src_param.name)) == dst_param.name:
+                raise BlockError('The params at index {ix} are already connected')
+
+            dst._block_name_map[src.name, src_param.name] = dst_param.name
+            src_out_params_dict[src, dst].append(src_param.name)
+
+            if (src, dst) not in self._block_pairs:
+                self._block_pairs.append((src, dst))
+
+        # After we've gathered all the per-src-dst connections,
+        # watch the source params for each connection.
+        #
+        for (src, dst), src_out_params in src_out_params_dict.items():
+            src.param.watch(
+                lambda *events, dst=dst: self._param_event(dst, *events),
+                src_out_params,
+                onlychanged=False,
+            )
+
     def connect(self, src: Block, dst: Block, *connections: Connection | Connections):
         """Connect two Blocks within this dag.
 
@@ -414,7 +526,6 @@ class Dag:
     def _param_event(self, dst: Block, *events):
         """The callback for a watch event."""
 
-        # print(f'DAG EVENTS: {events} -> {dst.name}')
         for event in events:
             cls = event.cls.name
             name = event.name
