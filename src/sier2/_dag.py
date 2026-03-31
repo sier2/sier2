@@ -400,6 +400,10 @@ class Dag:
             if (src, dst) not in self._block_pairs:
                 self._block_pairs.append((src, dst))
 
+        # Load the block default values *before* we start watching params.
+        #
+        _load_block_defaults(self)
+
         # After we've gathered all the per-src-dst connections,
         # watch the source params for each connection.
         #
@@ -409,8 +413,6 @@ class Dag:
                 src_out_params,
                 onlychanged=False,
             )
-
-        _load_block_defaults(self)
 
     def connect(self, src: Block, dst: Block, *connections: Connection | Connections):
         """Connect two Blocks within this dag.
