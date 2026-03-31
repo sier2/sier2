@@ -153,16 +153,24 @@ in_dtr = [2022-01-01 12:34:56Z, 2022-12-01 12:34:56Z]
 
     # The existence of the SIER2_DAG_DEFAULTS environment variable
     # indicates that there is a defaults file.
+    # This is typically done at a command prompt before running the app.
+    # (More convenient on Linux than Windows.)
     #
     os.environ['SIER2_DAG_DEFAULTS'] = fnam
 
     try:
+        # The dag / app.
+        #
         types = Types(name='DefaultsBlock')
         b2 = PassThrough()
 
         # Because the environment variable is set, default loading happens by magic.
         #
-        dag.build([(types.param.out_int, b2.param.in_p)])
+        dag.build(
+            [
+                (types.param.out_int, b2.param.in_p),
+            ]
+        )
 
         assert types.in_int == 86
         assert types.in_num == 2.718
