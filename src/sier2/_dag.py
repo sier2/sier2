@@ -1061,33 +1061,44 @@ def _set_downstream_state(dag: Dag, block: Block, state: BlockState) -> set[Bloc
 
 
 def _load_block_defaults(dag: Dag):
+    ENV_VAR = 'SIER2_DAG_DEFAULTS'
 
-    config = os.environ.get('SIER2_DAG_DEFAULTS')
-    if not config:
+    default_toml = os.environ.get(ENV_VAR)
+    if not default_toml:
         return
 
-    with open(config, 'rb') as f:
-        default_values = tomllib.load(f)
+    try:
+        with open(default_toml, 'rb') as f:
+            default_values = tomllib.load(f)
+    except FileNotFoundError:
+        print(f'Environment variable {ENV_VAR} filepath {default_toml} not found', file=sys.stderr)
+        return
+    except tomllib.TOMLDecodeError as e:
+        print(f'TOML file {default_toml}: {e}', file=sys.stderr)
+        return
 
     # Go through the TOML tables.
-    # If a table does not match a block, say so.
+    # Look for a block name that is the table name with '-' replaced by ' '.
+    # If a table name does not match a block name, say so.
     # If a key does not match a block aparam, say so.
     # This is being done at development time, so be verbose to catch typos.
     #
     for block_name, block_values in default_values.items():
-        block = dag.block_by_name(block_name)
+        block = dag.block_by_name(block_name.replace('-', ' '))
         if block:
             for k, v in block_values.items():
                 if k in block.param:
-                    if isinstance(block.param[k], param.DateRange):
+                    if isinstance(block.param[k], param.Tuple):
                         v = tuple(v)
 
                     setattr(block, k, v)
                 else:
-                    print(f'No param "{k}" in block "{block_name}"')
+                    print(f'No param "{k}" in block "{block_name}"', file=sys.stderr)
         else:
             print(f'No block called "{block_name}"', file=sys.stderr)
 
+    # The other way arouond: look up blocks in the TOML.
+    #
     # for block in _for_each_once(dag._block_pairs):
     #     values = default_values.get(block.name)
     #     if values:
