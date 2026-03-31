@@ -1,5 +1,7 @@
+import os
 import sys
 import threading
+import tomllib
 from collections import defaultdict, deque
 from dataclasses import dataclass, field  # , KW_ONLY, field
 from importlib.metadata import entry_points
@@ -407,6 +409,8 @@ class Dag:
                 src_out_params,
                 onlychanged=False,
             )
+
+        _load_block_defaults(self)
 
     def connect(self, src: Block, dst: Block, *connections: Connection | Connections):
         """Connect two Blocks within this dag.
@@ -1052,3 +1056,42 @@ def _set_downstream_state(dag: Dag, block: Block, state: BlockState) -> set[Bloc
         block._block_state = state
 
     return downstream
+
+
+def _load_block_defaults(dag: Dag):
+
+    config = os.environ.get('SIER2_DAG_DEFAULTS')
+    if not config:
+        return
+
+    with open(config, 'rb') as f:
+        default_values = tomllib.load(f)
+
+    # Go through the TOML tables.
+    # If a table does not match a block, say so.
+    # If a key does not match a block aparam, say so.
+    # This is being done at development time, so be verbose to catch typos.
+    #
+    for block_name, block_values in default_values.items():
+        block = dag.block_by_name(block_name)
+        if block:
+            for k, v in block_values.items():
+                if k in block.param:
+                    if isinstance(block.param[k], param.DateRange):
+                        v = tuple(v)
+
+                    setattr(block, k, v)
+                else:
+                    print(f'No param "{k}" in block "{block_name}"')
+        else:
+            print(f'No block called "{block_name}"', file=sys.stderr)
+
+    # for block in _for_each_once(dag._block_pairs):
+    #     values = default_values.get(block.name)
+    #     if values:
+    #         for k, v in values.items():
+    #             if k in block.param:
+    #                 if isinstance(block.param[k], param.DateRange):
+    #                     v = tuple(v)
+
+    #                 setattr(block, k, v)
