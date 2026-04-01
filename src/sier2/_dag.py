@@ -202,6 +202,8 @@ _RESTART = ':restart:'
 class Dag:
     """A directed acyclic graph of blocks."""
 
+    SIER2_DAG_DEFAULTS = 'SIER2_DAG_DEFAULTS'
+
     def __init__(
         self,
         *,
@@ -315,6 +317,14 @@ class Dag:
                 (b2.param.out_result, b3.param.in_display)
             ])
 
+        If the environment variable `SIER2_DAG_DEFAULTS` is defined, it is the
+        path of a TOML file containing default values for block params.
+
+        Defaults are loaded by looking through the TOML tables.
+        Look for a block name that is the table name with '-' replaced by ' '.
+        If a table name does not match a block name, display a warning.
+        If a key does not match a block param, display a warning.
+        This is typically being done at development time, so be verbose to catch typos.
         """
 
         if self._block_pairs:
@@ -1061,9 +1071,8 @@ def _set_downstream_state(dag: Dag, block: Block, state: BlockState) -> set[Bloc
 
 
 def _load_block_defaults(dag: Dag):
-    ENV_VAR = 'SIER2_DAG_DEFAULTS'
 
-    default_toml = os.environ.get(ENV_VAR)
+    default_toml = os.environ.get(Dag.SIER2_DAG_DEFAULTS)
     if not default_toml:
         return
 
@@ -1071,7 +1080,7 @@ def _load_block_defaults(dag: Dag):
         with open(default_toml, 'rb') as f:
             default_values = tomllib.load(f)
     except FileNotFoundError:
-        print(f'Environment variable {ENV_VAR} filepath {default_toml} not found', file=sys.stderr)
+        print(f'Environment variable {Dag.SIER2_DAG_DEFAULTS} filepath {default_toml} not found', file=sys.stderr)
         return
     except tomllib.TOMLDecodeError as e:
         print(f'TOML file {default_toml}: {e}', file=sys.stderr)

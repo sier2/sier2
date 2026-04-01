@@ -205,7 +205,7 @@ def _prepare_to_show(dag: Dag):
     def on_switch(event):
         if switch.value:
             dag.stop()
-            reset()
+            # reset()
 
             # Which thread are we running on?
             #
@@ -234,11 +234,11 @@ def _prepare_to_show(dag: Dag):
 
     pn.bind(on_switch, switch, watch=True)
 
-    def reset():
-        """Experiment."""
-        col = template.main.objects[0]
-        for card in col:
-            status = card.header[0]
+    # def reset():
+    #     """Experiment: reset the status lights."""
+    #     col = template.main.objects[0]
+    #     for card in col:
+    #         status = card.header[0]
 
     # We use a Panel Feed widget to display log messages.
     #
@@ -484,6 +484,8 @@ def _sier2_label_formatter(pname: str):
 class PanelDag(Dag):
     """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
 
+    SIER2_SHOW_PORT = 'SIER2_SHOW_PORT'
+
     def __init__(
         self,
         *,
@@ -522,14 +524,14 @@ class PanelDag(Dag):
     def show(self, port: int = 0):
         """Execute the dag and call show() on the Panel servable.
 
-        If the environment variable `DAG_PORT` is defined as a integer,
+        If the environment variable `SIER2_SHOW_PORT` is defined as a integer,
         that value will override the value of the port argument.
 
         Windows:
 
         .. code-block:: powershell
 
-            $env:DAG_PORT=32001
+            $env:SIER2_SHOW_PORT=32001
             python app.py
             rm env:\\DAG_PORT
 
@@ -537,7 +539,7 @@ class PanelDag(Dag):
 
         .. code-block:: bash
 
-            DAG_PORT=32001 ./app.py
+            DAG_SIER2_SHOW_PORT=32001 ./app.py
 
         Parameters
         ----------
@@ -546,12 +548,12 @@ class PanelDag(Dag):
         """
         pn.state.on_session_destroyed(_quit)
 
-        dag_port = os.getenv('DAG_PORT')
+        dag_port = os.getenv(PanelDag.SIER2_SHOW_PORT)
         if dag_port:
             try:
                 port = int(dag_port)
             except ValueError as e:
-                raise ValueError('Invalid DAG_PORT value') from e
+                raise ValueError(f'Invalid {PanelDag.SIER2_SHOW_PORT} value') from e
 
         # Execute the dag.
         #
