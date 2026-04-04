@@ -72,8 +72,7 @@ class Connections:
             if isinstance(c, Connection):
                 yield c.src_param_name, c.dst_param_name
             elif isinstance(c, Connections):
-                for src, dst in c.items():
-                    yield src, dst
+                yield from c.items()
             else:
                 raise BlockError('Not a Connection or Connections')
 
@@ -147,7 +146,7 @@ class _BlockContext:
                 if not issubclass(exc_type, BlockError):
                     # Convert non-BlockErrors in the block to a BlockError.
                     #
-                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+                    raise BlockError(f'Block {self.block.name}: {exc_val!s}') from exc_val
 
         if self.dag._on_context_exit:
             self.dag._on_context_exit()
@@ -302,7 +301,7 @@ class Dag:
         if not self._is_pyodide:
             self._stopper.event.clear()
 
-    def build(self, connections: list[tuple[param.Parameter, param.Parameter]]):
+    def connections(self, connections: list[tuple[param.Parameter, param.Parameter]]):
         """Build a dag from a list of connections between output and input parameters.
 
         Can only be called once.
@@ -311,11 +310,14 @@ class Dag:
 
         .. code-block:: python
 
-            dag.build([
+            dag.connections([
                 (b1.param.out1, b2.param.in1),
                 (b1.param.out2, b2.param.in2),
                 (b2.param.out_result, b3.param.in_display)
             ])
+
+        Connections may be added in any order, but after all of the params
+        are processed, the dag must be connected.
 
         If the environment variable `SIER2_DAG_DEFAULTS` is defined, it is the
         path of a TOML file containing default values for block params.
@@ -372,9 +374,9 @@ class Dag:
                 if not hasattr(b, 'doc'):
                     raise BlockError(f'Did you call super().__init__() in {b}?')
 
-            if _DISALLOW_CYCLES:
+            if _DISALLOW_CYCLES:  # noqa: SIM102
                 if _has_cycle(self._block_pairs + [(src, dst)]):
-                    raise BlockError('This connection would create a cycle')
+                    raise BlockError(f'The connection at index {ix} would create a cycle')
 
             if src.name == dst.name:
                 raise BlockError('Cannot add two blocks with the same name')
@@ -389,12 +391,18 @@ class Dag:
             #     if src is s and dst is d:
             #         raise BlockError('These blocks are already connected')
 
-            if self._block_pairs:
-                connected = any(
-                    src is s or src is d or dst is s or dst is d for s, d in self._block_pairs
-                )
-                if not connected:
-                    raise BlockError('A new block must connect to existing block')
+            # We allow connections to be added in any order, we don't check
+            # that new connections must connect to an existing block (if any exist).
+            # This means that that dag could end up being disconnected;
+            # we'll check for that at the end.
+            #
+
+            # if self._block_pairs:
+            #     connected = any(
+            #         src is s or src is d or dst is s or dst is d for s, d in self._block_pairs
+            #     )
+            #     if not connected:
+            #         raise BlockError('A new block must connect to existing block')
 
             if src_param.allow_refs:
                 raise BlockError(
@@ -409,6 +417,9 @@ class Dag:
 
             if (src, dst) not in self._block_pairs:
                 self._block_pairs.append((src, dst))
+
+        if not _is_connected(self._block_pairs):
+            raise BlockError('Dag is not connected')
 
         # Load the block default values *before* we start watching params.
         #
@@ -461,7 +472,7 @@ class Dag:
             if not hasattr(b, 'doc'):
                 raise BlockError(f'Did you call super().__init__() in {b}?')
 
-        if _DISALLOW_CYCLES:
+        if _DISALLOW_CYCLES:  # noqa: SIM102
             if _has_cycle(self._block_pairs + [(src, dst)]):
                 raise BlockError('This connection would create a cycle')
 
@@ -659,7 +670,7 @@ class Dag:
             # The user has set the "stop executing" flag.
             # Continue to set params, but don't execute anything
             #
-            if not self._is_pyodide:
+            if not self._is_pyodide:  # noqa: SIM102
                 if self._stopper.is_stopped:
                     can_execute = False
 
@@ -744,14 +755,14 @@ class Dag:
         if self._block_queue:
             raise BlockError('Cannot disconnect blocks after executing the dag.')
 
-        for p, watchers in g.param.watchers.items():
+        for watchers in g.param.watchers.values():
             for watcher in watchers['value']:
                 # print(f'disconnect watcher {g.name}.{watcher}')
                 g.param.unwatch(watcher)
 
         for src, dst in self._block_pairs:
             if dst is g:
-                for p, watchers in src.param.watchers.items():
+                for watchers in src.param.watchers.values():
                     for watcher in watchers['value']:
                         # print(f'disconnect watcher {src.name}.{watcher}')
                         src.param.unwatch(watcher)
@@ -948,7 +959,7 @@ def topological_sort(pairs):
 
     # Sort the current heads by name so they have a consistent ordering.
     #
-    S = deque(sorted(set([s for s in srcs if s not in dsts]), key=lambda block: block.name))
+    S = deque(sorted({s for s in srcs if s not in dsts}, key=lambda block: block.name))
 
     while S:
         # A topological sort is non-unique; this is why.
@@ -1080,7 +1091,10 @@ def _load_block_defaults(dag: Dag):
         with open(default_toml, 'rb') as f:
             default_values = tomllib.load(f)
     except FileNotFoundError:
-        print(f'Environment variable {Dag.SIER2_DAG_DEFAULTS} filepath {default_toml} not found', file=sys.stderr)
+        print(
+            f'Environment variable {Dag.SIER2_DAG_DEFAULTS} filepath {default_toml} not found',
+            file=sys.stderr,
+        )
         return
     except tomllib.TOMLDecodeError as e:
         print(f'TOML file {default_toml}: {e}', file=sys.stderr)

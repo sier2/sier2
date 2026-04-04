@@ -59,7 +59,7 @@ def test_build1(dag):
     b1 = PassThrough()
     b2 = PassThrough()
 
-    dag.build([(b1.param.out_p, b2.param.in_p)])
+    dag.connections([(b1.param.out_p, b2.param.in_p)])
 
     b1.in_p = 86
     dag.execute()
@@ -71,7 +71,7 @@ def test_build2(dag):
     b1 = PassThrough2()
     b2 = PassThrough2()
 
-    dag.build([(b1.param.out_p1, b2.param.in_p1), (b1.param.out_p2, b2.param.in_p2)])
+    dag.connections([(b1.param.out_p1, b2.param.in_p1), (b1.param.out_p2, b2.param.in_p2)])
 
     b1.in_p1 = 86
     b1.in_p2 = 99
@@ -86,7 +86,7 @@ def test_build_dup_params(dag):
     b2 = PassThrough()
 
     with pytest.raises(BlockError):
-        dag.build([(b1.param.out_p, b2.param.in_p), (b1.param.out_p, b2.param.in_p)])
+        dag.connections([(b1.param.out_p, b2.param.in_p), (b1.param.out_p, b2.param.in_p)])
 
 
 def test_not_a_block_instance(dag):
@@ -94,14 +94,45 @@ def test_not_a_block_instance(dag):
     b1 = PassThrough()
 
     with pytest.raises(BlockError):
-        dag.build([(b1.param.out_p, PassThrough.param.in_p)])
+        dag.connections([(b1.param.out_p, PassThrough.param.in_p)])
 
 
 def test_not_a_param(dag):
     b1 = PassThrough()
 
     with pytest.raises(BlockError):
-        dag.build([('hello', b1.in_p)])
+        dag.connections([('hello', b1.in_p)])
+
+
+def test_connected(dag):
+    a = PassThrough()
+    b = PassThrough()
+    c = PassThrough()
+    d = PassThrough()
+
+    dag.connections({
+        (a.param.out_p, b.param.in_p),
+        (c.param.out_p, d.param.in_p),
+        (b.param.out_p, c.param.in_p),
+    })
+
+    a.in_p = 86
+    dag.execute()
+
+    assert d.out_p == 86
+
+
+def test_disconnected(dag):
+    a = PassThrough(name='a')
+    b = PassThrough(name='b')
+    c = PassThrough(name='c')
+    d = PassThrough(name='d')
+
+    with pytest.raises(BlockError, match='not connected'):
+        dag.connections([
+            (a.param.out_p, b.param.in_p),
+            (c.param.out_p, d.param.in_p),
+        ])
 
 
 def test_triangle(dag):
@@ -109,7 +140,10 @@ def test_triangle(dag):
     leg1 = PassThrough()
     leg2 = PassThrough()
 
-    dag.build([(root.param.out_p, leg1.param.in_p), (root.param.out_p, leg2.param.in_p)])
+    dag.connections([
+        (root.param.out_p, leg1.param.in_p),
+        (root.param.out_p, leg2.param.in_p),
+    ])
 
     root.in_p = 99
     dag.execute()
@@ -166,17 +200,15 @@ in_dtr = [2022-01-01 12:34:56Z, 2022-12-01 12:34:56Z]
 
         # Because the environment variable is set, default loading happens by magic.
         #
-        dag.build(
-            [
-                (types.param.out_int, b2.param.in_p),
-            ]
-        )
+        dag.connections([
+            (types.param.out_int, b2.param.in_p),
+        ])
 
         assert types.in_int == 86
         assert types.in_num == 2.718
         assert types.in_str == 'This is a string'
         assert types.in_bool
-        assert types.in_dt == datetime(2022, 12, 1, 12, 34, 56)
+        assert types.in_dt == datetime(2022, 12, 1, 12, 34, 56)  # noqa: DTZ001
         assert types.in_dtz == datetime(2022, 12, 1, 12, 34, 56, tzinfo=UTC)
         assert types.in_dtr == (
             datetime(2022, 1, 1, 12, 34, 56, tzinfo=UTC),

@@ -37,9 +37,11 @@ Homepage = "https://github.com/sier2/sier2"
 line-length = 100
 
 [tool.ruff.lint]
+preview = true
 extend-select = ["I"]
 
 [tool.ruff.format]
+preview = true
 quote-style = "preserve"
 line-ending = "lf"
 
