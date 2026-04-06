@@ -20,14 +20,13 @@ def blocks_cmd(args):
     curr_ep = None
     for entry_point, gi in _find_blocks():
         show = not args.block or gi.key.endswith(args.block)
-        if curr_ep is None or entry_point != curr_ep:
-            if show:
-                pkg = _pkg(entry_point.module)
-                s = f'In {pkg} v{version(pkg)}'
-                u = ''  # '\n' + '#' * len(s)
-                print(f'\n{BOLD}{s}{u}{NORM}')
-                # print(f'\x1b[1mIn {entry_point.module} v{version(entry_point.module)}:\x1b[0m')
-                curr_ep = entry_point
+        if (curr_ep is None or entry_point != curr_ep) and show:
+            pkg = _pkg(entry_point.module)
+            s = f'In {pkg} v{version(pkg)}'
+            u = ''  # '\n' + '#' * len(s)
+            print(f'\n{BOLD}{s}{u}{NORM}')
+            # print(f'\x1b[1mIn {entry_point.module} v{version(entry_point.module)}:\x1b[0m')
+            curr_ep = entry_point
 
         if show:
             dup = ' (DUPLICATE)' if gi.key in seen else ''
@@ -48,13 +47,12 @@ def dags_cmd(args):
     curr_ep = None
     for entry_point, gi in _find_dags():
         show = not args.dag or gi.key.endswith(args.dag)
-        if curr_ep is None or entry_point != curr_ep:
-            if show:
-                pkg = _pkg(entry_point.module)
-                s = f'In {pkg} v{version(pkg)}'
-                u = ''  # '\n' + '#' * len(s)
-                print(f'\n{BOLD}{s}{u}{NORM}')
-                curr_ep = entry_point
+        if (curr_ep is None or entry_point != curr_ep) and show:
+            pkg = _pkg(entry_point.module)
+            s = f'In {pkg} v{version(pkg)}'
+            u = ''  # '\n' + '#' * len(s)
+            print(f'\n{BOLD}{s}{u}{NORM}')
+            curr_ep = entry_point
 
         if show:
             dup = ' (DUPLICATE)' if gi.key in seen else ''

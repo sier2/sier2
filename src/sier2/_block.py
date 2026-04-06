@@ -1,8 +1,6 @@
-#
-
 import inspect
 from enum import StrEnum
-from typing import Any
+from typing import Any, Self
 
 import param
 
@@ -16,8 +14,6 @@ class BlockError(Exception):
     If this exception is raised, the executing dag sets its stop
     flag (which must be manually reset), and displays a stacktrace.
     """
-
-    pass
 
 
 class BlockState(StrEnum):
@@ -247,19 +243,23 @@ class Block(param.Parameterized):
         #
         if wait_for_input is not None:
             self._wait_for_input = wait_for_input
-        elif hasattr(type(self), 'wait_for_input'):
-            self._wait_for_input = bool(type(self).wait_for_input)
         else:
-            self._wait_for_input = False
+            attr = 'wait_for_input'
+            if hasattr(type(self), attr):
+                self._wait_for_input = bool(getattr(type(self), attr))
+            else:
+                self._wait_for_input = False
 
         # Allow class-level continue_label.
         #
         if continue_label is not None:
             self._continue_label = continue_label
-        elif hasattr(type(self), 'continue_label'):
-            self._continue_label = type(self).continue_label
         else:
-            self._continue_label = 'Continue'
+            attr = 'continue_label'
+            if hasattr(type(self), attr):
+                self._continue_label = str(getattr(type(self), attr))
+            else:
+                self._continue_label = 'Continue'
 
         self._visible = visible
         self.doc = doc
@@ -284,8 +284,8 @@ class Block(param.Parameterized):
         # self._block_state = BlockState.READY
         self.logger = _logger.get_logger(self.name)
 
-        self.banner_top_ = param.rx(banners[0]) if banners and banners[0] else None
-        self.banner_bot_ = param.rx(banners[1]) if banners and banners[1] else None
+        self.banner_top_ = param.rx(banners[0] if banners and banners[0] else None)
+        self.banner_bot_ = param.rx(banners[1] if banners and banners[1] else None)
 
         # Maintain a map of "block+output parameter being watched" -> "input parameter".
         # This is used by _block_event() to set the correct input parameter.
@@ -308,14 +308,16 @@ class Block(param.Parameterized):
         in case of refactoring or name clashes.
         """
 
-        im = inspect.getmodule(cls)
-
         if hasattr(cls, Block.SIER2_KEY):
             return getattr(cls, Block.SIER2_KEY)
 
+        im = inspect.getmodule(cls)
+        if im is None:
+            raise BlockError('Class is not a Block')
+
         return f'{im.__name__}.{cls.__qualname__}'
 
-    def get_config(self, *, block: 'Block' = None):
+    def get_config(self, *, block: Self | None = None):
         """Return a dictionary containing keys and values from the section specified by
         the block in the sier2 config file.
 
@@ -381,7 +383,7 @@ class Block(param.Parameterized):
 
         return names
 
-    def get_config_value(self, key: str, default: Any = None, *, block: 'Block' = None):
+    def get_config_value(self, key: str, default: Any = None, *, block: Self | None = None):
         """Return an individual value from the section specified by
         the block in the sier2 config file.
 
@@ -432,9 +434,6 @@ class Block(param.Parameterized):
         * ``events`` - the param events that caused execute() to be called.
         """
 
-        # print(f'** EXECUTE {self.__class__=}')
-        pass
-
     def banners(self, banners: tuple[str | None, str | None]):
         """Change one or both banners for this block.
 
@@ -452,8 +451,8 @@ class Block(param.Parameterized):
         if banners is None or len(banners) != 2:
             raise BlockError('The banners parameter must be a 2-tuple of strings')
 
-        if (banners[0] is not None and self.banner_top_ is None) or (
-            banners[1] is not None and self.banner_bot_ is None
+        if (banners[0] is not None and self.banner_top_.rx.value is None) or (
+            banners[1] is not None and self.banner_bot_.rx.value is None
         ):
             raise BlockError('Cannot change an uninitialised banner')
 
@@ -473,14 +472,16 @@ class Block(param.Parameterized):
         Otherwise, execute the block, then call `on_continue()` if it exists.
         """
 
-        if hasattr(self, '_dag_continue'):
-            self._dag_continue(event)
+        attr = '_dag_continue'
+        if hasattr(self, attr):
+            getattr(self, attr)(event)
         else:
             self.execute()
-            if hasattr(self, 'on_continue'):
-                self.on_continue(event)
+            attr = 'on_continue'
+            if hasattr(self, attr):
+                getattr(self, attr)(event)
 
-    def __call__(self, **kwargs: dict[str, Any]) -> dict[str, Any]:
+    def __call__(self, **kwargs) -> dict[str, Any]:
         """Allow a block to be called directly and return the output params as a dictionary.
 
         For example:
@@ -555,12 +556,13 @@ class Block(param.Parameterized):
                 )
         """
 
-        if not hasattr(self, '_panel'):
+        attr = '_panel'
+        if not hasattr(self, attr):
             from ._panel._default import add_panel_def
 
             add_panel_def(self)
 
-        return self._panel()
+        return getattr(self, attr)()
 
 
 class BlockValidateError(BlockError):

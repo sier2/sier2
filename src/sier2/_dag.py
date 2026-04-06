@@ -379,13 +379,13 @@ class Dag:
                     raise BlockError(f'The connection at index {ix} would create a cycle')
 
             if src.name == dst.name:
-                raise BlockError('Cannot add two blocks with the same name')
+                raise BlockError(f'Cannot add two blocks with the same name at index {ix}')
 
             for block in _for_each_once(self._block_pairs):
                 if (block is not src and block.name == src.name) or (
                     block is not dst and block.name == dst.name
                 ):
-                    raise BlockError('A block with this name already exists')
+                    raise BlockError(f'A block with the name at index {ix} already exists')
 
             # for s, d in self._block_pairs:
             #     if src is s and dst is d:
@@ -1009,7 +1009,7 @@ def _for_each_once(pairs):
                 yield g
 
 
-def _is_connected(pairs: list[Block]):
+def _is_connected(pairs: list[tuple[Block, Block]]):
     """Determine if the list of pairs forms a connected graph."""
 
     if not pairs:

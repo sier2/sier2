@@ -320,10 +320,19 @@ def test_banners():
 
     b = B('top', None)
     assert b.banner_top_.rx.value == 'top'
-    assert b.banner_bot_ is None
+    assert b.banner_bot_.rx.value is None
 
     b.banners(('top2', None))
     assert b.banner_top_.rx.value == 'top2'
 
     with pytest.raises(BlockError, match='uninitialised'):
         b.banners((None, 'bot'))
+
+
+def test_no_banners():
+    class B(Block):
+        """Test banners."""
+
+    b = B()
+    assert b.banner_top_.rx.value is None
+    assert b.banner_bot_.rx.value is None

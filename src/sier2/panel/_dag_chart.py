@@ -2,7 +2,7 @@ import math
 
 import panel as pn
 from bokeh.core.enums import RenderLevel
-from bokeh.models import ColumnDataSource, HoverTool
+from bokeh.models import ColumnDataSource, HoverTool, Range1d
 from bokeh.plotting import curdoc, figure
 
 from ._panel_util import _get_state_color
@@ -43,8 +43,8 @@ class _BokehDag:
             toolbar_location=None if plain else 'right',
             aspect_ratio=1,
             # Ranges must be equal to go with aspect_ratio=1.
-            x_range=(-1, n),
-            y_range=(-1, n),
+            x_range=Range1d(-1, n),
+            y_range=Range1d(-1, n),
         )
 
         if plain:
@@ -115,15 +115,15 @@ class _BokehDag:
                     # Below.
                     cx0, cy0 = x0, y0 - c
                     cx1, cy1 = x1 - c, y1
-                    x0, y0 = x0, y0 - OFFSET
-                    x1, y1 = x1 - OFFSET * 1.5, y1
+                    y0 = y0 - OFFSET
+                    x1 = x1 - OFFSET * 1.5
                     angle = -math.pi / 2
                 else:
                     # Above.
                     cx0, cy0 = x0 + c, y0
                     cx1, cy1 = x1, y1 + c
-                    x0, y0 = x0 + OFFSET, y0
-                    x1, y1 = x1, y1 + OFFSET * 1.5
+                    x0 = x0 + OFFSET
+                    y1 = y1 + OFFSET * 1.5
                     angle = -math.pi / 3
 
                 # # Plot the Bezier control points for debugging.

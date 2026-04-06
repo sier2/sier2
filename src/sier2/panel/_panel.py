@@ -71,7 +71,7 @@ class _PanelContext:
     def __enter__(self):
         state = BlockState.EXECUTING
         self.block._block_state = state
-        self.t0 = datetime.now()
+        self.t0 = datetime.now().astimezone()
         if self.dag_logger:
             self.dag_logger.info('Execute', block_name=self.block.name, block_state=state)
 
@@ -84,7 +84,7 @@ class _PanelContext:
         return self.block
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        delta = (datetime.now() - self.t0).total_seconds()
+        delta = (datetime.now().astimezone() - self.t0).total_seconds()
 
         # if self.block._progress:
         #     self.block._progress.active = False
@@ -127,7 +127,7 @@ class _PanelContext:
                 if not issubclass(exc_type, BlockError):
                     # Convert the error in the block to a BlockError.
                     #
-                    raise BlockError(f'Block {self.block.name}: {str(exc_val)}') from exc_val
+                    raise BlockError(f'Block {self.block.name}: {exc_val!s}') from exc_val
 
         if self.dag._on_context_exit:
             self.dag._on_context_exit()
@@ -154,7 +154,7 @@ def interrupt_thread(tid, exctype):
         raise SystemError('PyThreadState_SetAsyncExc failed')
 
 
-def _prepare_to_show(dag: Dag):
+def _prepare_to_show(dag: 'PanelDag'):
     # Replace the default text-based context with the panel-based context.
     #
     dag._block_context = _PanelContext
@@ -472,13 +472,10 @@ def _sier2_label_formatter(pname: str):
     caption starts with "In ".
 
     Removes the "in_" prefix from input parameters, then passes the param name
-    to paramp.default_label_formatter.
+    to the default label formatter.
     """
 
-    if pname.startswith('in_'):
-        pname = pname[3:]
-
-    return paramp.default_label_formatter(pname)
+    return paramp.default_label_formatter(pname.removeprefix('in_'))
 
 
 class PanelDag(Dag):
@@ -492,7 +489,7 @@ class PanelDag(Dag):
         site: str = '',
         title: str,
         doc: str,
-        author: dict[str, str] = None,
+        author: dict[str, str] | None = None,
         logo: str = '',
         favicon: str = '',
     ):
@@ -539,7 +536,7 @@ class PanelDag(Dag):
 
         .. code-block:: bash
 
-            DAG_SIER2_SHOW_PORT=32001 ./app.py
+            SIER2_SHOW_PORT=32001 ./app.py
 
         Parameters
         ----------

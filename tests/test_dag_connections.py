@@ -86,14 +86,17 @@ def test_build_dup_params(dag):
     b2 = PassThrough()
 
     with pytest.raises(BlockError):
-        dag.connections([(b1.param.out_p, b2.param.in_p), (b1.param.out_p, b2.param.in_p)])
+        dag.connections([
+            (b1.param.out_p, b2.param.in_p),
+            (b1.param.out_p, b2.param.in_p),
+        ])
 
 
 def test_not_a_block_instance(dag):
     """Check that a Block object is used, not the Block class."""
     b1 = PassThrough()
 
-    with pytest.raises(BlockError):
+    with pytest.raises(BlockError, match='does not belong to a Block object'):
         dag.connections([(b1.param.out_p, PassThrough.param.in_p)])
 
 
@@ -132,6 +135,39 @@ def test_disconnected(dag):
         dag.connections([
             (a.param.out_p, b.param.in_p),
             (c.param.out_p, d.param.in_p),
+        ])
+
+
+def test_already_connected(dag):
+    a = PassThrough(name='a')
+    b = PassThrough(name='b')
+
+    with pytest.raises(BlockError, match='already connected'):
+        dag.connections([
+            (a.param.out_p, b.param.in_p),
+            (a.param.out_p, b.param.in_p),
+        ])
+
+
+def test_same_name(dag):
+    a = PassThrough(name='a')
+    b = PassThrough(name='a')
+
+    with pytest.raises(BlockError, match='same name at index 0'):
+        dag.connections([
+            (a.param.out_p, b.param.in_p),
+        ])
+
+
+def test_same_name2(dag):
+    a = PassThrough(name='a')
+    b = PassThrough(name='b')
+    c = PassThrough(name='a')
+
+    with pytest.raises(BlockError, match='name at index 1 already exists'):
+        dag.connections([
+            (a.param.out_p, b.param.in_p),
+            (b.param.out_p, c.param.in_p),
         ])
 
 

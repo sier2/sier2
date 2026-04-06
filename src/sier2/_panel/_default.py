@@ -1,5 +1,5 @@
 import warnings
-from typing import Callable
+from collections.abc import Callable
 
 import panel as pn
 from param.parameters import DataFrame
@@ -28,7 +28,7 @@ def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool = False)
         css_classes=['card-title'],
         styles={'font-size': '1.17em', 'font-weight': 'bold'},
     )
-    spacer = pn.HSpacer(styles=dict(min_width='1px', min_height='1px'))
+    spacer = pn.HSpacer(styles={'min_width': '1px', 'min_height': '1px'})
 
     # Does this block have documentation to be displayed in the card?
     #
@@ -123,11 +123,13 @@ def _default_panel(self: Block) -> Callable[[Block], pn.Param]:
         # Ostensibly param uses the DataFrame widget if the tabulator extension
         # isn't present, but this doesn't seem to work properly.
         #
-        if any([isinstance(self.param[name], DataFrame) for name in display_options]):
-            if 'tabulator' not in pn.extension._loaded_extensions:
-                tabulator_warning = f'One of your blocks ({self.__class__.__name__}) requires Tabulator, a panel extension for showing data frames. You should explicitly load this with "pn.extension(\'tabulator\')" in your block'
-                warnings.warn(tabulator_warning)
-                pn.extension('tabulator')
+        if (
+            any(isinstance(self.param[name], DataFrame) for name in display_options)
+            and 'tabulator' not in pn.extension._loaded_extensions
+        ):
+            tabulator_warning = f'One of your blocks ({self.__class__.__name__}) requires Tabulator, a panel extension for showing data frames. You should explicitly load this with "pn.extension(\'tabulator\')" in your block'
+            warnings.warn(tabulator_warning)
+            pn.extension('tabulator')
 
         pane = pn.Param(self, parameters=display_options, show_name=False)
     elif not isinstance(display_options, dict):

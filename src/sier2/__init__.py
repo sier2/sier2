@@ -20,14 +20,14 @@ get_block_config.__module__ = 'sier2'
 __all__ = [
     'Block',
     'BlockError',
+    'BlockState',
     'BlockValidateError',
     'Config',
-    'BlockState',
     'Connection',
     'Connections',
     'Dag',
     'Info',
     'Library',
-    'get_block_config',
     '__version__',
+    'get_block_config',
 ]
