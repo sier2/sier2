@@ -1,7 +1,7 @@
 import param
 import pytest
 
-from sier2 import Block, BlockError, BlockState, BlockValidateError, Connection, Dag, Library
+from sier2 import Block, BlockError, BlockState, BlockValidateError, Dag, Library
 from sier2._dag import _set_downstream_state
 
 
@@ -16,43 +16,49 @@ class PassThrough(Block):
 
 
 @pytest.fixture
-def dag():
+def Dag_f():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-dag', title='tests')
+    return lambda connections: Dag(connections, doc='test-dag', title='tests')
 
 
-def test_load_doc(dag):
+def test_load_doc(Dag_f):
     """Ensure that a dag's doc is loaded."""
 
+    Library.clear()
+    Library.add_block(PassThrough)
+
+    dag = Dag_f([(PassThrough().param.out_p, PassThrough().param.in_p)])
     dump = dag.dump()
     dag2 = Library.load_dag(dump)
 
     assert dag2.doc == dag.doc
 
-
-def test_empty_dag(dag):
-    with pytest.raises(BlockError, match='Nothing to execute'):
-        dag.execute()
+    Library.clear()
 
 
-def test_no_connections(dag):
-    # class PassThrough(Block):
-    #     """Pass a value through unchanged."""
-
-    #     in_p = param.Integer(default=0)
-    #     out_p = param.Integer(default=0)
-
-    #     def execute(self):
-    #         self.out_p = self.in_p
-
-    b1 = PassThrough()
-    b2 = PassThrough()
-    with pytest.raises(BlockError):
-        dag.connect(b1, b2)
+def test_empty_dag(Dag_f):
+    with pytest.raises(BlockError, match='at least one connection'):
+        Dag_f([])
 
 
-def test_no_inputs(dag):
+# def test_no_connections(dag):
+#     # class PassThrough(Block):
+#     #     """Pass a value through unchanged."""
+
+#     #     in_p = param.Integer(default=0)
+#     #     out_p = param.Integer(default=0)
+
+#     #     def execute(self):
+#     #         self.out_p = self.in_p
+
+#     b1 = PassThrough()
+#     b2 = PassThrough()
+#     with pytest.raises(BlockError):
+#         dag.connect(b1, b2)
+
+
+def test_no_inputs(Dag_f):
     """Even though two blocks are connected, the first block is not required
     to send data to the second block."""
 
@@ -64,21 +70,24 @@ def test_no_inputs(dag):
     class OneIn(Block):
         """One input parameter."""
 
+        in_p = param.Integer(default=2)
+
         def execute(self):
             self.in_p = 3
 
-        in_p = param.Integer(default=2)
-
     oo = OneOut()
     oi = OneIn()
-    dag.connect(oo, oi, Connection('out_o', 'in_p'))
+    dag = Dag_f([
+        (oo.param.out_o, oi.param.in_p),
+    ])
+    # dag.connect(oo, oi, Connection('out_o', 'in_p'))
 
     dag.execute()
     assert oo.out_o == 1
     assert oi.in_p == 2
 
 
-def test_mismatched_types(dag):
+def test_mismatched_types(Dag_f):
     """Ensure that mismatched parameter values can't be assigned, and raise a BlockError."""
 
     class OneOut(Block):
@@ -96,13 +105,16 @@ def test_mismatched_types(dag):
 
     oo = OneOut()
     oi = OneIn()
-    dag.connect(oo, oi, Connection('out_o', 'in_o'))
+    # dag.connect(oo, oi, Connection('out_o', 'in_o'))
+    dag = Dag_f([
+        (oo.param.out_o, oi.param.in_o),
+    ])
 
-    with pytest.raises(BlockError):
+    with pytest.raises(BlockError, match='setting a parameter'):
         dag.execute()
 
 
-def test_block_exception(dag):
+def test_block_exception(Dag_f):
     """Ensure that exceptions in a block raise a BlockError."""
 
     class OneOut(Block):
@@ -123,13 +135,15 @@ def test_block_exception(dag):
 
     oo = OneOut()
     oi = OneIn()
-    dag.connect(oo, oi, Connection('out_o', 'in_o'))
+    dag = Dag_f([
+        (oo.param.out_o, oi.param.in_o),
+    ])
 
-    with pytest.raises(BlockError):
+    with pytest.raises(BlockError, match='This is an exception'):
         dag.execute()
 
 
-def test_first_no_input(dag):
+def test_first_no_input(Dag_f):
     """A dag with no input blocks will run all the way."""
 
     class Incr(Block):
@@ -143,59 +157,48 @@ def test_first_no_input(dag):
 
     p0 = Incr()
     p1 = Incr()
-    dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    dag = Dag_f([
+        (p0.param.out_p, p1.param.in_p),
+    ])
 
     dag.execute()
     assert p1.out_p == 2
 
 
-def test_first_input(dag):
+def test_first_input(Dag_f):
     """A dag where the first block is an input block does not need to be primed."""
-
-    VALUE = 99
 
     class Initial(Block):
         """Initial input block, no in_ params required."""
 
-        out_p = param.Integer()
+        INITIAL = 11
+        out_p = param.Integer(default=INITIAL)
+
+        VALUE = 99
 
         def __init__(self):
             super().__init__(wait_for_input=True)
 
         def execute(self):
-            self.out_p = VALUE
-            pass
-
-    # class PassThrough(Block):
-    #     """Pass a value through unchanged."""
-
-    #     in_p = param.Integer(default=0)
-    #     out_p = param.Integer(default=0)
-
-    #     def execute(self):
-    #         self.out_p = self.in_p
+            self.out_p = self.VALUE
 
     p0 = Initial()
     p1 = PassThrough()
-    dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    dag = Dag_f([
+        (p0.param.out_p, p1.param.in_p),
+    ])
     paused = dag.execute()
+    assert p0.out_p == Initial.INITIAL
+    assert p1.out_p == 0
     final = dag.execute_after_input(paused)
 
-    assert p1.out_p == VALUE
+    assert p0.out_p == Initial.VALUE
+    assert p1.out_p == Initial.VALUE
     assert final is None
 
 
-def test_input_block(dag):
+def test_input_block(Dag_f):
     """Ensure that dag execution stops at a user-input block."""
-
-    # class PassThrough(Block):
-    #     """Pass a value through unchanged."""
-
-    #     in_p = param.Integer()
-    #     out_p = param.Integer()
-
-    #     def execute(self):
-    #         self.out_p = self.in_p
 
     class PassThroughI(Block):
         """Pass value+1 through."""
@@ -218,10 +221,16 @@ def test_input_block(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p0, p1, Connection('out_p', 'in_p'))
-    dag.connect(p1, p2, Connection('out_p', 'in_p'))
-    dag.connect(p2, p3, Connection('out_p', 'in_p'))
-    dag.connect(p3, p4, Connection('out_p', 'in_p'))
+    # dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    # dag.connect(p1, p2, Connection('out_p', 'in_p'))
+    # dag.connect(p2, p3, Connection('out_p', 'in_p'))
+    # dag.connect(p3, p4, Connection('out_p', 'in_p'))
+    dag = Dag_f([
+        (p0.param.out_p, p1.param.in_p),
+        (p1.param.out_p, p2.param.in_p),
+        (p2.param.out_p, p3.param.in_p),
+        (p3.param.out_p, p4.param.in_p),
+    ])
 
     # Emulate user input, and execute the dag up to the input block.
     #
@@ -256,17 +265,8 @@ def test_input_block(dag):
     assert len(dag._block_queue) == 0
 
 
-def test_input_block_validation(dag):
+def test_input_block_validation(Dag_f):
     """Ensure that input validation works."""
-
-    # class PassThrough(Block):
-    #     """Pass a value through unchanged."""
-
-    #     in_p = param.Integer(default=0)
-    #     out_p = param.Integer(default=0)
-
-    #     def execute(self):
-    #         self.out_p = self.in_p
 
     class ValidateInput(Block):
         """Pass a value through unchanged."""
@@ -287,8 +287,12 @@ def test_input_block_validation(dag):
     p0 = PassThrough()
     p1 = ValidateInput()
     p2 = PassThrough()
-    dag.connect(p0, p1, Connection('out_p', 'in_p'))
-    dag.connect(p1, p2, Connection('out_p', 'in_p'))
+    # dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    # dag.connect(p1, p2, Connection('out_p', 'in_p'))
+    dag = Dag_f([
+        (p0.param.out_p, p1.param.in_p),
+        (p1.param.out_p, p2.param.in_p),
+    ])
 
     # Invalid input.
     #
@@ -318,7 +322,7 @@ def test_input_block_validation(dag):
     assert p2.out_p == 3
 
 
-def test_block_state(dag):
+def test_block_state(Dag_f):
     """Ensure that block states are set correctly."""
 
     class IncrementBlock(Block):
@@ -351,10 +355,16 @@ def test_block_state(dag):
     inc3 = IncrementBlock(name='inc3')
     inc4 = IncrementBlock(name='inc4')
 
-    dag.connect(inc0, inc1, Connection('out_p', 'in_p'))
-    dag.connect(inc1, iinc2, Connection('out_p', 'in_p'))
-    dag.connect(iinc2, inc3, Connection('out_p', 'in_p'))
-    dag.connect(inc3, inc4, Connection('out_p', 'in_p'))
+    # dag.connect(inc0, inc1, Connection('out_p', 'in_p'))
+    # dag.connect(inc1, iinc2, Connection('out_p', 'in_p'))
+    # dag.connect(iinc2, inc3, Connection('out_p', 'in_p'))
+    # dag.connect(inc3, inc4, Connection('out_p', 'in_p'))
+    dag = Dag_f([
+        (inc0.param.out_p, inc1.param.in_p),
+        (inc1.param.out_p, iinc2.param.in_p),
+        (iinc2.param.out_p, inc3.param.in_p),
+        (inc3.param.out_p, inc4.param.in_p),
+    ])
 
     inc0.in_p = 1
     b = dag.execute()
@@ -384,7 +394,7 @@ def test_block_state(dag):
     assert inc4._block_state == BlockState.SUCCESSFUL
 
 
-def test_multiple_heads_without_pause(dag):
+def test_multiple_heads_without_pause(Dag_f):
     class Increment(Block):
         """Increment the input."""
 
@@ -397,8 +407,12 @@ def test_multiple_heads_without_pause(dag):
     h1 = Increment(name='h1')
     h2 = Increment(name='h2')
     t = Increment(name='t')
-    dag.connect(h1, t, Connection('out_p', 'in_p'))
-    dag.connect(h2, t, Connection('out_p', 'in_p'))
+    # dag.connect(h1, t, Connection('out_p', 'in_p'))
+    # dag.connect(h2, t, Connection('out_p', 'in_p'))
+    dag = Dag_f([
+        (h1.param.out_p, t.param.in_p),
+        (h2.param.out_p, t.param.in_p),
+    ])
 
     h1.in_p = 1
     h2.in_p = 1
@@ -410,7 +424,7 @@ def test_multiple_heads_without_pause(dag):
     assert t.out_p == 3
 
 
-def test_multiple_heads_with_pause(dag):
+def test_multiple_heads_with_pause(Dag_f):
     class Has(Block):
         """An instrumented block."""
 
@@ -432,8 +446,12 @@ def test_multiple_heads_with_pause(dag):
     h1 = Has(name='h1', wait=True)
     h2 = Has(name='h2')
     t = Has(name='t')
-    dag.connect(h1, t, Connection('out_o', 'in_i'))
-    dag.connect(h2, t, Connection('out_o', 'in_i'))
+    # dag.connect(h1, t, Connection('out_o', 'in_i'))
+    # dag.connect(h2, t, Connection('out_o', 'in_i'))
+    dag = Dag_f([
+        (h1.param.out_o, t.param.in_i),
+        (h2.param.out_o, t.param.in_i),
+    ])
 
     b = dag.execute()
     assert b is h1
@@ -459,7 +477,7 @@ def test_multiple_heads_with_pause(dag):
     assert t.has_executed
 
 
-def _triangle_dag(dag):
+def _triangle_dag(Dag_f, base=False) -> Dag:
     """Create a triangular dag.
 
     a -> b -> c -> d.
@@ -474,15 +492,26 @@ def _triangle_dag(dag):
     f = PassThrough(name='f')
     g = PassThrough(name='g')
 
-    conn = Connection('out_p', 'in_p')
-    dag.connect(a, b, conn)
-    dag.connect(b, c, conn)
-    dag.connect(c, d, conn)
-    dag.connect(a, e, conn)
-    dag.connect(e, f, conn)
-    dag.connect(f, g, conn)
+    conns = [
+        (a.param.out_p, b.param.in_p),
+        (b.param.out_p, c.param.in_p),
+        (c.param.out_p, d.param.in_p),
+        (a.param.out_p, e.param.in_p),
+        (e.param.out_p, f.param.in_p),
+        (f.param.out_p, g.param.in_p),
+    ]
+    if base:
+        # Join the base corners of the triangle to a final block.
+        #
+        h = PassThrough(name='h')
+        conns.extend([
+            (d.param.out_p, h.param.in_p),
+            (g.param.out_p, h.param.in_p),
+        ])
 
-    return a, b, c, d, e, f, g
+    dag = Dag_f(conns)
+
+    return dag
 
 
 def _reset_blocks(dag: Dag):
@@ -496,79 +525,74 @@ def _reset_blocks(dag: Dag):
         dst._block_state = BlockState.READY
 
 
-def test_downstream_blocks1(dag):
-    a, b, c, d, e, f, g = _triangle_dag(dag)
+def test_downstream_blocks1(Dag_f):
+    dag = _triangle_dag(Dag_f)
+    a, b, c, d, e, f, g = [dag.block_by_name(name) for name in 'abcdefg']
     _reset_blocks(dag)
     downstream = _set_downstream_state(dag, a, BlockState.SUCCESSFUL)
-    assert downstream == set([b, c, d, e, f, g])
+    assert downstream == {b, c, d, e, f, g}
     assert all(i._block_state == BlockState.READY for i in [a])
     assert all(i._block_state == BlockState.SUCCESSFUL for i in [b, c, d, e, f, g])
 
 
-def test_downstream_blocks2(dag):
-    a, b, c, d, e, f, g = _triangle_dag(dag)
+def test_downstream_blocks2(Dag_f):
+    dag = _triangle_dag(Dag_f)
+    a, b, c, d, e, f, g = [dag.block_by_name(name) for name in 'abcdefg']
     _reset_blocks(dag)
     downstream = _set_downstream_state(dag, b, BlockState.SUCCESSFUL)
-    assert downstream == set([c, d])
+    assert downstream == {c, d}
     assert all(i._block_state == BlockState.READY for i in [a, b, e, f, g])
     assert all(i._block_state == BlockState.SUCCESSFUL for i in [c, d])
 
 
-def test_downstream_blocks3(dag):
-    a, b, c, d, e, f, g = _triangle_dag(dag)
+def test_downstream_blocks3(Dag_f):
+    dag = _triangle_dag(Dag_f)
+    a, b, c, d, e, f, g = [dag.block_by_name(name) for name in 'abcdefg']
     _reset_blocks(dag)
     downstream = _set_downstream_state(dag, c, BlockState.SUCCESSFUL)
-    assert downstream == set([d])
+    assert downstream == {d}
     assert all(i._block_state == BlockState.READY for i in [a, b, c, e, f, g])
     assert all(i._block_state == BlockState.SUCCESSFUL for i in [d])
 
 
-def test_downstream_blocks4(dag):
-    a, b, c, d, e, f, g = _triangle_dag(dag)
+def test_downstream_blocks4(Dag_f):
+    dag = _triangle_dag(Dag_f)
+    a, b, c, d, e, f, g = [dag.block_by_name(name) for name in 'abcdefg']
     _reset_blocks(dag)
     downstream = _set_downstream_state(dag, e, BlockState.SUCCESSFUL)
-    assert downstream == set([f, g])
+    assert downstream == {f, g}
     assert all(i._block_state == BlockState.READY for i in [a, b, c, d, e])
     assert all(i._block_state == BlockState.SUCCESSFUL for i in [f, g])
 
 
-def test_downstream_blocks5(dag):
-    a, b, c, d, e, f, g = _triangle_dag(dag)
+def test_downstream_blocks5(Dag_f):
+    dag = _triangle_dag(Dag_f)
+    a, b, c, d, e, f, g = [dag.block_by_name(name) for name in 'abcdefg']
     _reset_blocks(dag)
     downstream = _set_downstream_state(dag, f, BlockState.SUCCESSFUL)
-    assert downstream == set([g])
+    assert downstream == {g}
     assert all(i._block_state == BlockState.READY for i in [a, b, c, d, e, f])
     assert all(i._block_state == BlockState.SUCCESSFUL for i in [g])
 
 
-def test_downstream_blocks6(dag):
-    a, b, c, d, e, f, g = _triangle_dag(dag)
+def test_downstream_blocks6(Dag_f):
+    dag = _triangle_dag(Dag_f, base=True)
+    a, b, c, d, e, f, g, h = [dag.block_by_name(name) for name in 'abcdefgh']
 
-    # Join the base corners of the triangle to a final block.
-    #
-    h = PassThrough(name='h')
-    conn = Connection('out_p', 'in_p')
-    dag.connect(d, h, conn)
-    dag.connect(g, h, conn)
     _reset_blocks(dag)
     downstream = _set_downstream_state(dag, a, BlockState.SUCCESSFUL)
-    assert downstream == set([b, c, d, e, f, g, h])
+    assert downstream == {b, c, d, e, f, g, h}
     assert all(i._block_state == BlockState.READY for i in [a])
     assert all(i._block_state == BlockState.SUCCESSFUL for i in [b, c, d, e, f, g, h])
 
 
-def test_downstream_blocks7(dag):
-    a, b, c, d, e, f, g = _triangle_dag(dag)
+def test_downstream_blocks7(Dag_f):
+    dag = _triangle_dag(Dag_f, base=True)
+    a, b, c, d, e, f, g, h = [dag.block_by_name(name) for name in 'abcdefgh']
 
-    # Join the base corners of the triangle to a final block.
-    #
-    h = PassThrough(name='h')
-    conn = Connection('out_p', 'in_p')
-    dag.connect(d, h, conn)
-    dag.connect(g, h, conn)
     _reset_blocks(dag)
     downstream = _set_downstream_state(dag, b, BlockState.SUCCESSFUL)
-    assert downstream == set([c, d, h])
+    assert downstream == {c, d, h}
     assert all(i._block_state == BlockState.READY for i in [a, b, e, f, g])
     assert all(i._block_state == BlockState.SUCCESSFUL for i in [c, d, h])
 

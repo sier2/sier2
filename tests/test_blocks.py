@@ -1,7 +1,7 @@
 import param
 import pytest
 
-from sier2 import Block, BlockError, Connection, Dag
+from sier2 import Block, BlockError, Dag
 
 
 class PassThrough(Block):
@@ -60,13 +60,13 @@ def test_params():
 
 
 @pytest.fixture
-def dag():
+def Dag_f():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-dag', title='tests')
+    return lambda connections: Dag(connections, doc='test-dag', title='tests')
 
 
-def test_output_must_not_allow_refs(dag):
+def test_output_must_not_allow_refs(Dag_f):
     class P(Block):
         s = param.String()
 
@@ -74,18 +74,21 @@ def test_output_must_not_allow_refs(dag):
         s = param.String(allow_refs=True)
 
     with pytest.raises(BlockError):
-        dag.connect(P(), Q(), ['s'])
+        # dag.connect(P(), Q(), ['s'])
+        Dag_f([(P().param.s, Q().param.s)])
 
 
-def test_simple(dag):
+def test_simple(Dag_f):
     """Ensure that a value flows from the first input parameter, through the dag, to the last output parameter."""
 
     p = PassThrough()
     a = Add(1)
     o = OneIn()
 
-    dag.connect(p, a, Connection('out_p', 'in_a'))
-    dag.connect(a, o, Connection('out_a', 'in_o'))
+    dag = Dag_f([
+        (p.param.out_p, a.param.in_a),
+        (a.param.out_a, o.param.in_o),
+    ])
 
     p.in_p = 1
     dag.execute()
@@ -95,69 +98,80 @@ def test_simple(dag):
     assert o.in_o == 2
 
 
-def test_cannot_connect_twice(dag):
+def test_cannot_connect_twice(Dag_f):
     """Ensure that two blocks cannot be connected more than once."""
 
     p0 = PassThrough()
     p1 = PassThrough()
 
-    dag.connect(p0, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(BlockError):
-        dag.connect(p0, p1, Connection('p_out', 'p_in'))
+    with pytest.raises(BlockError, match='at index 1 are already connected'):
+        Dag_f([
+            (p0.param.out_p, p1.param.in_p),
+            (p0.param.out_p, p1.param.in_p),
+        ])
 
 
-def test_not_same_names(dag):
+def test_not_same_names(Dag_f):
     p0 = PassThrough(name='This')
     p1 = PassThrough(name='This')
 
-    with pytest.raises(BlockError):
-        dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    with pytest.raises(BlockError, match='same name at index 0'):
+        Dag_f([
+            (p0.param.out_p, p1.param.in_p),
+        ])
 
 
-def test_not_existing_name(dag):
+def test_not_existing_name(Dag_f):
     p0 = PassThrough(name='This')
     p1 = PassThrough(name='That')
     p2 = PassThrough(name='This')
 
-    dag.connect(p0, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(BlockError):
-        dag.connect(p1, p2, Connection('out_p', 'in_p'))
+    # dag.connect(p0, p1, Connection('out_p', 'in_p'))
+    with pytest.raises(BlockError, match='at index 1 duplicates an existing name'):
+        Dag_f([
+            (p0.param.out_p, p1.param.in_p),
+            (p1.param.out_p, p2.param.in_p),
+        ])
 
 
-def test_self_loop(dag):
+def test_self_loop(Dag_f):
     """Ensure that blocks can't connect to themselves."""
 
     p = PassThrough()
 
-    with pytest.raises(BlockError):
-        dag.connect(p, p, Connection('out_p', 'in_p'))
+    with pytest.raises(BlockError, match='same name at index 0'):
+        Dag_f([(p.param.out_p, p.param.in_p)])
 
 
-def test_loop1(dag):
+def test_loop1(Dag_f):
     """Ensure that connecting a block doesn't create a loop in the dag."""
 
     p = PassThrough()
     a = Add(1)
 
-    dag.connect(p, a, Connection('out_p', 'in_p'))
-    with pytest.raises(BlockError):
-        dag.connect(a, p, Connection('out_a', 'in_p'))
+    with pytest.raises(BlockError, match='index 1 would create a cycle'):
+        Dag_f([
+            (p.param.out_p, a.param.in_a),
+            (a.param.out_a, p.param.in_p),
+        ])
 
 
-def test_loop2(dag):
+def test_loop2(Dag_f):
     """Ensure that loops aren't allowed."""
 
     p = PassThrough()
     a1 = Add(1)
     a2 = Add(2)
 
-    dag.connect(p, a1, Connection('out_p', 'in_a'))
-    dag.connect(a1, a2, Connection('out_a', 'in_a'))
-    with pytest.raises(BlockError):
-        dag.connect(a2, p, Connection('out_a', 'in_p'))
+    with pytest.raises(BlockError, match='index 2 would create a cycle'):
+        Dag_f([
+            (p.param.out_p, a1.param.in_a),
+            (a1.param.out_a, a2.param.in_a),
+            (a2.param.out_a, p.param.in_p),
+        ])
 
 
-def test_loop3(dag):
+def test_loop3(Dag_f):
     """Ensure that loops aren't allowed."""
 
     p1 = PassThrough()
@@ -165,14 +179,16 @@ def test_loop3(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p1, p2, Connection('out_p', 'in_p'))
-    dag.connect(p2, p3, Connection('out_p', 'in_p'))
-    dag.connect(p4, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(BlockError):
-        dag.connect(p3, p1, Connection('out_p', 'in_p'))
+    with pytest.raises(BlockError, match='index 3 would create a cycle'):
+        Dag_f([
+            (p1.param.out_p, p2.param.in_p),
+            (p2.param.out_p, p3.param.in_p),
+            (p4.param.out_p, p1.param.in_p),
+            (p3.param.out_p, p1.param.in_p),
+        ])
 
 
-def test_loop4(dag):
+def test_loop4(Dag_f):
     """Ensure that loops aren't allowed."""
 
     p1 = PassThrough()
@@ -180,23 +196,28 @@ def test_loop4(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p2, p3, Connection('out_p', 'in_p'))
-    dag.connect(p1, p2, Connection('out_p', 'in_p'))
-    dag.connect(p4, p1, Connection('out_p', 'in_p'))
-    with pytest.raises(BlockError):
-        dag.connect(p3, p1, Connection('out_p', 'in_p'))
+    with pytest.raises(BlockError, match='index 3 would create a cycle'):
+        Dag_f([
+            (p2.param.out_p, p3.param.in_p),
+            (p1.param.out_p, p2.param.in_p),
+            (p4.param.out_p, p1.param.in_p),
+            (p3.param.out_p, p1.param.in_p),
+        ])
 
 
-def test_nonloop1(dag):
+def test_nonloop1(Dag_f):
     """Ensure that non-loops are allowed."""
 
     gs = [PassThrough(name=f'P{i}') for i in range(4)]
-    dag.connect(gs[2], gs[3], Connection('out_p', 'in_p'))
-    dag.connect(gs[1], gs[2], Connection('out_p', 'in_p'))
-    dag.connect(gs[0], gs[1], Connection('out_p', 'in_p'))
+
+    Dag_f([
+        (gs[2].param.out_p, gs[3].param.in_p),
+        (gs[1].param.out_p, gs[2].param.in_p),
+        (gs[0].param.out_p, gs[1].param.in_p),
+    ])
 
 
-def test_must_connect(dag):
+def test_must_connect(Dag_f):
     """Ensure that new blocks are connected to existing blocks."""
 
     p1 = PassThrough()
@@ -204,23 +225,28 @@ def test_must_connect(dag):
     p3 = PassThrough()
     p4 = PassThrough()
 
-    dag.connect(p1, p2, Connection('out_p', 'in_p'))
-    with pytest.raises(BlockError):
-        dag.connect(p3, p4, Connection('out_p', 'in_p'))
+    with pytest.raises(BlockError, match='not connected'):
+        Dag_f([
+            (p1.param.out_p, p2.param.in_p),
+            (p3.param.out_p, p4.param.in_p),
+        ])
 
 
-def test_sorted1(dag):
+def test_sorted1(Dag_f):
     gs = [PassThrough(name=f'PT{i}') for i in range(4)]
-    dag.connect(gs[2], gs[3], Connection('out_p', 'in_p'))
-    dag.connect(gs[1], gs[2], Connection('out_p', 'in_p'))
-    dag.connect(gs[0], gs[1], Connection('out_p', 'in_p'))
+
+    dag = Dag_f([
+        (gs[2].param.out_p, gs[3].param.in_p),
+        (gs[1].param.out_p, gs[2].param.in_p),
+        (gs[0].param.out_p, gs[1].param.in_p),
+    ])
 
     tsorted = [g.name for g in dag.get_sorted()]
 
     assert tsorted == ['PT0', 'PT1', 'PT2', 'PT3']
 
 
-def test_sorted2(dag):
+def test_sorted2(Dag_f):
     """Ensure that the ranks reflect the order in the dag."""
 
     g1 = PassThrough(name='PT1')
@@ -229,17 +255,19 @@ def test_sorted2(dag):
     g4 = PassThrough(name='PT4')
     g5 = PassThrough(name='PT5')
 
-    dag.connect(g4, g5, Connection('out_p', 'in_p'))
-    dag.connect(g3, g4, Connection('out_p', 'in_p'))
-    dag.connect(g2, g3, Connection('out_p', 'in_p'))
-    dag.connect(g1, g2, Connection('out_p', 'in_p'))
+    dag = Dag_f([
+        (g4.param.out_p, g5.param.in_p),
+        (g3.param.out_p, g4.param.in_p),
+        (g2.param.out_p, g3.param.in_p),
+        (g1.param.out_p, g2.param.in_p),
+    ])
 
     tsorted = [g.name for g in dag.get_sorted()]
 
     assert tsorted == ['PT1', 'PT2', 'PT3', 'PT4', 'PT5']
 
 
-def test_sorted_not_depth_first(dag):
+def test_sorted_not_depth_first(Dag_f):
     """The current topological sort algorithm does not sort depth-first.
 
     If the sort algorithm changes, change this test.
@@ -253,13 +281,14 @@ def test_sorted_not_depth_first(dag):
     f = PassThrough(name='f')
     g = PassThrough(name='g')
 
-    conn = Connection('out_p', 'in_p')
-    dag.connect(a, b, conn)
-    dag.connect(b, c, conn)
-    dag.connect(c, d, conn)
-    dag.connect(a, e, conn)
-    dag.connect(e, f, conn)
-    dag.connect(f, g, conn)
+    dag = Dag_f([
+        (a.param.out_p, b.param.in_p),
+        (b.param.out_p, c.param.in_p),
+        (c.param.out_p, d.param.in_p),
+        (a.param.out_p, e.param.in_p),
+        (e.param.out_p, f.param.in_p),
+        (f.param.out_p, g.param.in_p),
+    ])
 
     tsorted = [g.name for g in dag.get_sorted()]
 
@@ -267,13 +296,16 @@ def test_sorted_not_depth_first(dag):
     assert tsorted != ['a', 'e', 'f', 'g', 'b', 'c', 'd']
 
 
-def test_onlychanged(dag):
+def test_onlychanged(Dag_f):
     """Ensure that params are triggered when set with the same value."""
 
     p = PassThrough()
     a = Add(1)
 
-    dag.connect(p, a, Connection('out_p', 'in_a'))
+    # dag.connect(p, a, Connection('out_p', 'in_a'))
+    dag = Dag_f([
+        (p.param.out_p, a.param.in_a),
+    ])
 
     assert p.out_p == 0
     assert a.in_a == 0
@@ -297,6 +329,8 @@ def test_call_block():
 
 def test_init_called():
     class A(Block):
+        """."""
+
         in_a = param.Integer(doc='int a')
         out_a = param.Integer(doc='int a')
 
@@ -306,9 +340,8 @@ def test_init_called():
 
     a = A()
     p = PassThrough()
-    dag = Dag(title='Test', doc='Check for super().__init_()')
     with pytest.raises(BlockError, match=r'super\(\)\.__init__\(\)'):
-        dag.connect(a, p, Connection('out_a', 'in_o'))
+        Dag([(a.param.out_a, p.param.in_p)], title='Test', doc='Check for super().__init_()')
 
 
 def test_banners():

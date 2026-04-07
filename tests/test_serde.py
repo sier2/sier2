@@ -1,12 +1,10 @@
-#
-
 # Test serialisation / deserialisation.
 #
 
 import param
 import pytest
 
-from sier2 import Block, Connection, Dag, Library
+from sier2 import Block, Dag, Library
 
 
 class PassThrough(Block):
@@ -51,13 +49,13 @@ class InputIncrement(Block):
 
 
 @pytest.fixture
-def dag():
+def Dag_f():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-doc', title='tests')
+    return lambda connections: Dag(connections, doc='test-dag', title='tests')
 
 
-def test_serialise(dag):
+def test_serialise(Dag_f):
     """Ensure that a dag can be serialised and restored.
 
     We use pass-through blocks to start and end, and an input Block
@@ -68,9 +66,11 @@ def test_serialise(dag):
     incri2 = InputIncrement(2)
     incr3 = Increment(3)
     p2 = PassThrough()
-    dag.connect(p1, incri2, Connection('out_p', 'in_i'))
-    dag.connect(incri2, incr3, Connection('out_i', 'in_i'))
-    dag.connect(incr3, p2, Connection('out_i', 'in_p'))
+    dag = Dag_f([
+        (p1.param.out_p, incri2.param.in_i),
+        (incri2.param.out_i, incr3.param.in_i),
+        (incr3.param.out_i, p2.param.in_p),
+    ])
 
     first_name = p1.name
     ii_name = incri2.name
@@ -97,7 +97,7 @@ def test_serialise(dag):
 
     incr_blocks = [g for g in dump['blocks'] if g['block'].endswith('Increment')]
     assert len(incr_blocks) == 2
-    assert set([g['args']['incr'] for g in incr_blocks]) == set([2, 3])
+    assert {g['args']['incr'] for g in incr_blocks} == {2, 3}
 
     # Blocks must be in the library to be restored.
     #

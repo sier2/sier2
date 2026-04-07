@@ -1,5 +1,3 @@
-#
-
 # Test the default panel implementation.
 #
 

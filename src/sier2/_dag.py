@@ -17,67 +17,6 @@ _DISALLOW_CYCLES = True
 
 
 @dataclass
-class Connection:
-    """Define a connection between an output parameter and an input parameter.
-
-    For example:
-
-    .. code-block:: python
-
-        dag.connect(b1, b2, Connection('out_x', 'in_x'), Connection('out_y', 'in_y'))
-    """
-
-    src_param_name: str
-    dst_param_name: str
-
-    def __post_init__(self):
-        if not self.src_param_name.startswith('out_'):
-            raise BlockError('Output params must start with "out_"')
-
-        if not self.dst_param_name.startswith('in_'):
-            raise BlockError('Input params must start with "in_"')
-
-
-@dataclass
-class Connections:
-    """Using a dictionary, define connections between pairs of output parameters and input parameters.
-
-    This is a convenience class to replace multiple :class:`~sier2.Connection`
-    parameters in :func:`~sier2.Dag.connect`. For example:
-
-    .. code-block:: python
-
-        dag.connect(b1, b2, Connections({
-            'out_x': 'in_x',
-            'out_y': 'in_y'
-        })
-
-    is equivalent to:
-
-    .. code-block:: python
-
-        dag.connect(b1, b2, Connection('out_x', 'in_x'), Connection('out_y', 'in_y'))
-    """
-
-    connections: dict[str, str]
-
-    def items(self):
-        return self.connections.items()
-
-    @staticmethod
-    def conns(connections):
-        """Handle a mixture of Connection and Connections parameters."""
-
-        for c in connections:
-            if isinstance(c, Connection):
-                yield c.src_param_name, c.dst_param_name
-            elif isinstance(c, Connections):
-                yield from c.items()
-            else:
-                raise BlockError('Not a Connection or Connections')
-
-
-@dataclass
 class _InputValues:
     """Record a param value change.
 
@@ -205,6 +144,7 @@ class Dag:
 
     def __init__(
         self,
+        connections: list[tuple[param.Parameter, param.Parameter]],
         *,
         site: str = 'Block',
         title: str,
@@ -277,6 +217,8 @@ class Dag:
         #
         self._on_context_exit = None
 
+        self._connections(connections)
+
     @property
     def _is_pyodide(self) -> bool:
         return '_pyodide' in sys.modules
@@ -301,7 +243,7 @@ class Dag:
         if not self._is_pyodide:
             self._stopper.event.clear()
 
-    def connections(self, connections: list[tuple[param.Parameter, param.Parameter]]):
+    def _connections(self, connections: list[tuple[param.Parameter, param.Parameter]]):
         """Build a dag from a list of connections between output and input parameters.
 
         Can only be called once.
@@ -357,35 +299,47 @@ class Dag:
             src = src_param.owner
             dst = dst_param.owner
 
+            # Because this is probably the first place that the Block instance is used,
+            # this is a convenient place to check that the block was
+            # correctly initialised.
+            #
+            for b in src, dst:
+                if isinstance(b, param.parameterized.ParameterizedMetaclass):
+                    raise BlockError(f'Did you call super().__init__() in {b} at index {ix}?')
+
             if not isinstance(src, Block):
-                raise BlockError(f'Source parameter at index{ix} does not belong to a Block object')
+                raise BlockError(
+                    f'Source parameter at index {ix} does not belong to a Block object'
+                )
 
             if not isinstance(dst, Block):
                 raise BlockError(
-                    f'Destination parameter at index{ix} does not belong to a Block object'
+                    f'Destination parameter at index {ix} does not belong to a Block object'
                 )
 
-            # Because this is probably the first place that the Block instance is used,
-            # this is a convenient place to check that the block was correctly initialised.
-            #
-            # Pick an arbitrary attribute that should be present.
-            #
-            for b in src, dst:
-                if not hasattr(b, 'doc'):
-                    raise BlockError(f'Did you call super().__init__() in {b}?')
+            # # Because this is probably the first place that the Block instance is used,
+            # # this is a convenient place to check that the block was correctly initialised.
+            # #
+            # # Pick an arbitrary attribute that should be present.
+            # #
+            # for b in src, dst:
+            #     if not hasattr(b, 'doc'):
+            #         raise BlockError(f'Did you call super().__init__() in {b}?')
+
+            if src.name == dst.name:
+                raise BlockError(f'Cannot add two blocks with the same name at index {ix}')
 
             if _DISALLOW_CYCLES:  # noqa: SIM102
                 if _has_cycle(self._block_pairs + [(src, dst)]):
                     raise BlockError(f'The connection at index {ix} would create a cycle')
 
-            if src.name == dst.name:
-                raise BlockError(f'Cannot add two blocks with the same name at index {ix}')
-
             for block in _for_each_once(self._block_pairs):
                 if (block is not src and block.name == src.name) or (
                     block is not dst and block.name == dst.name
                 ):
-                    raise BlockError(f'A block with the name at index {ix} already exists')
+                    raise BlockError(
+                        f'A block with name "{block.name}" at index {ix} duplicates an existing name'
+                    )
 
             # for s, d in self._block_pairs:
             #     if src is s and dst is d:
@@ -410,7 +364,7 @@ class Dag:
                 )
 
             if dst._block_name_map.get((src.name, src_param.name)) == dst_param.name:
-                raise BlockError('The params at index {ix} are already connected')
+                raise BlockError(f'The params at index {ix} are already connected')
 
             dst._block_name_map[src.name, src_param.name] = dst_param.name
             src_out_params_dict[src, dst].append(src_param.name)
@@ -434,102 +388,6 @@ class Dag:
                 src_out_params,
                 onlychanged=False,
             )
-
-    def connect(self, src: Block, dst: Block, *connections: Connection | Connections):
-        """Connect two Blocks within this dag.
-
-        The source and destination :class:`~sier2.Block` instances are connected by providing
-        one or more :class:`~sier2.Connections` or :class:`~sier2.Connection` parameters,
-        defining connections between an output parameter (``out_``) in the source block,
-        and an input parameter (``in_``) in the destination block. For example:
-
-        .. code-block:: python
-
-            dag.connect(srcb, dstb, Connections({
-                'out_x': 'in_x',
-                'out_y': 'in_y'
-            })
-
-        Various consistency checks are done to maintain the integrity of the dag.
-        In particular, the blocks must not form a cycle in the dag:
-        if block A is connected to block B, then block B cannot
-        subsequently be connected directly or indirectly to block A.
-        """
-
-        # Ensure that the sort cache is cleared.
-        #
-        self._sort_cache = None
-
-        # if any(not isinstance(c, Connection) for c in connections):
-        #     raise BlockError('All arguments must be Connection instances')
-
-        # Because this is probably the first place that the Block instance is used,
-        # this is a convenient place to check that the block was correctly initialised.
-        #
-        # Pick an arbitrary attribute that should be present.
-        #
-        for b in src, dst:
-            if not hasattr(b, 'doc'):
-                raise BlockError(f'Did you call super().__init__() in {b}?')
-
-        if _DISALLOW_CYCLES:  # noqa: SIM102
-            if _has_cycle(self._block_pairs + [(src, dst)]):
-                raise BlockError('This connection would create a cycle')
-
-        if src.name == dst.name:
-            raise BlockError('Cannot add two blocks with the same name')
-
-        # for g in self._for_each_once():
-        for g in _for_each_once(self._block_pairs):
-            if (g is not src and g.name == src.name) or (g is not dst and g.name == dst.name):
-                raise BlockError('A block with this name already exists')
-
-        for s, d in self._block_pairs:
-            if src is s and dst is d:
-                raise BlockError('These blocks are already connected')
-
-        if self._block_pairs:
-            connected = any(
-                src is s or src is d or dst is s or dst is d for s, d in self._block_pairs
-            )
-            if not connected:
-                raise BlockError('A new block must connect to existing block')
-
-        # Group watchers by their attributes.
-        # This optimises the number of watchers.
-        #
-        # If we just add a watcher per param in the loop, then
-        # param.update() won't batch the events.
-        #
-        # src_out_params = defaultdict(list)
-        src_out_params = []
-
-        if len(connections) == 0:
-            raise BlockError('There must be at least one connection')
-
-        # for conn in connections:
-        for src_param_name, dst_param_name in Connections.conns(connections):
-            # dst_param = getattr(dst.param, conn.dst_param_name)
-            # if dst_param.allow_refs:
-            #     raise BlockError(f'Destination parameter {dst}.{inp} must be "allow_refs=True"')
-
-            src_param = getattr(src.param, src_param_name)
-            if src_param.allow_refs:
-                raise BlockError(
-                    f'Source parameter {src}.{src_param_name} must not be "allow_refs=True"'
-                )
-
-            dst._block_name_map[src.name, src_param_name] = dst_param_name
-            src_out_params.append(src_param_name)
-
-        src.param.watch(
-            lambda *events: self._param_event(dst, *events),
-            src_out_params,
-            onlychanged=False,
-        )
-        # src._block_out_params.extend(src_out_params)
-
-        self._block_pairs.append((src, dst))
 
     def add_to_bag(self, block: Block):
         """Add a block to the block bag."""
@@ -726,55 +584,58 @@ class Dag:
 
         return None
 
-    def disconnect(self, g: Block) -> None:
-        """Disconnect block g from other blocks in the dag.
+    # TODO add a "dissolve()" method that unwatches everything,
+    # so blocks can be reused in another dag.
 
-        All parameters (input and output) will be disconnected.
+    # def disconnect(self, g: Block) -> None:
+    #     """Disconnect block g from other blocks in the dag.
 
-        A :class:`~sier2.BlockError` will be raised if the disconnection would cause
-        a disconnected dag.
+    #     All parameters (input and output) will be disconnected.
 
-        Parameters
-        ----------
-        g: Block
-            The block to be disconnected.
-        """
+    #     A :class:`~sier2.BlockError` will be raised if the disconnection would cause
+    #     a disconnected dag.
 
-        # Ensure that the sort cache is cleared.
-        #
-        self._sort_cache = None
+    #     Parameters
+    #     ----------
+    #     g: Block
+    #         The block to be disconnected.
+    #     """
 
-        # Check first to see if the dag would become disconnected.
-        #
-        maybe_pairs = [
-            (src, dst) for src, dst in self._block_pairs if src is not g and dst is not g
-        ]
-        if not _is_connected(maybe_pairs):
-            raise BlockError('Disconnecting this block would result in a disconnected dag')
+    #     # Ensure that the sort cache is cleared.
+    #     #
+    #     self._sort_cache = None
 
-        if self._block_queue:
-            raise BlockError('Cannot disconnect blocks after executing the dag.')
+    #     # Check first to see if the dag would become disconnected.
+    #     #
+    #     maybe_pairs = [
+    #         (src, dst) for src, dst in self._block_pairs if src is not g and dst is not g
+    #     ]
+    #     if not _is_connected(maybe_pairs):
+    #         raise BlockError('Disconnecting this block would result in a disconnected dag')
 
-        for watchers in g.param.watchers.values():
-            for watcher in watchers['value']:
-                # print(f'disconnect watcher {g.name}.{watcher}')
-                g.param.unwatch(watcher)
+    #     if self._block_queue:
+    #         raise BlockError('Cannot disconnect blocks after executing the dag.')
 
-        for src, dst in self._block_pairs:
-            if dst is g:
-                for watchers in src.param.watchers.values():
-                    for watcher in watchers['value']:
-                        # print(f'disconnect watcher {src.name}.{watcher}')
-                        src.param.unwatch(watcher)
+    #     for watchers in g.param.watchers.values():
+    #         for watcher in watchers['value']:
+    #             # print(f'disconnect watcher {g.name}.{watcher}')
+    #             g.param.unwatch(watcher)
 
-        # Remove this block from the dag.
-        #
-        # self._block_pairs[:] = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
-        self._block_pairs[:] = maybe_pairs
+    #     for src, dst in self._block_pairs:
+    #         if dst is g:
+    #             for watchers in src.param.watchers.values():
+    #                 for watcher in watchers['value']:
+    #                     # print(f'disconnect watcher {src.name}.{watcher}')
+    #                     src.param.unwatch(watcher)
 
-        # Because this block is no longer watching anything, the name map can be cleared.
-        #
-        g._block_name_map.clear()
+    #     # Remove this block from the dag.
+    #     #
+    #     # self._block_pairs[:] = [(src, dst) for src, dst in self._block_pairs if src is not g and dst is not g]
+    #     self._block_pairs[:] = maybe_pairs
+
+    #     # Because this block is no longer watching anything, the name map can be cleared.
+    #     #
+    #     g._block_name_map.clear()
 
     def block_by_name(self, name) -> Block | None:
         """Get a specific block by name."""
@@ -1120,7 +981,7 @@ def _load_block_defaults(dag: Dag):
         else:
             print(f'No block called "{block_name}"', file=sys.stderr)
 
-    # The other way arouond: look up blocks in the TOML.
+    # The other way around: look up blocks in the TOML.
     #
     # for block in _for_each_once(dag._block_pairs):
     #     values = default_values.get(block.name)

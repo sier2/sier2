@@ -49,17 +49,17 @@ class Types(Block):
 
 
 @pytest.fixture
-def dag():
+def Dag_f():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-dag', title='tests')
+    return lambda connections: Dag(connections, doc='test-dag', title='tests')
 
 
-def test_build1(dag):
+def test_build1(Dag_f):
     b1 = PassThrough()
     b2 = PassThrough()
 
-    dag.connections([(b1.param.out_p, b2.param.in_p)])
+    dag = Dag_f([(b1.param.out_p, b2.param.in_p)])
 
     b1.in_p = 86
     dag.execute()
@@ -67,11 +67,11 @@ def test_build1(dag):
     assert b2.out_p == 86
 
 
-def test_build2(dag):
+def test_build2(Dag_f):
     b1 = PassThrough2()
     b2 = PassThrough2()
 
-    dag.connections([(b1.param.out_p1, b2.param.in_p1), (b1.param.out_p2, b2.param.in_p2)])
+    dag = Dag_f([(b1.param.out_p1, b2.param.in_p1), (b1.param.out_p2, b2.param.in_p2)])
 
     b1.in_p1 = 86
     b1.in_p2 = 99
@@ -81,39 +81,39 @@ def test_build2(dag):
     assert b2.out_p2 == 99
 
 
-def test_build_dup_params(dag):
+def test_build_dup_params(Dag_f):
     b1 = PassThrough()
     b2 = PassThrough()
 
-    with pytest.raises(BlockError):
-        dag.connections([
+    with pytest.raises(BlockError, match='params at index 1 are already connected'):
+        Dag_f([
             (b1.param.out_p, b2.param.in_p),
             (b1.param.out_p, b2.param.in_p),
         ])
 
 
-def test_not_a_block_instance(dag):
+def test_not_a_block_instance(Dag_f):
     """Check that a Block object is used, not the Block class."""
     b1 = PassThrough()
 
-    with pytest.raises(BlockError, match='does not belong to a Block object'):
-        dag.connections([(b1.param.out_p, PassThrough.param.in_p)])
+    with pytest.raises(BlockError, match='at index 0?'):
+        Dag_f([(b1.param.out_p, PassThrough.param.in_p)])
 
 
-def test_not_a_param(dag):
+def test_not_a_param(Dag_f):
     b1 = PassThrough()
 
-    with pytest.raises(BlockError):
-        dag.connections([('hello', b1.in_p)])
+    with pytest.raises(BlockError, match='Source parameter at index 0 is not a param'):
+        Dag_f([('hello', b1.in_p)])
 
 
-def test_connected(dag):
+def test_connected(Dag_f):
     a = PassThrough()
     b = PassThrough()
     c = PassThrough()
     d = PassThrough()
 
-    dag.connections({
+    dag = Dag_f({
         (a.param.out_p, b.param.in_p),
         (c.param.out_p, d.param.in_p),
         (b.param.out_p, c.param.in_p),
@@ -125,58 +125,58 @@ def test_connected(dag):
     assert d.out_p == 86
 
 
-def test_disconnected(dag):
+def test_disconnected(Dag_f):
     a = PassThrough(name='a')
     b = PassThrough(name='b')
     c = PassThrough(name='c')
     d = PassThrough(name='d')
 
     with pytest.raises(BlockError, match='not connected'):
-        dag.connections([
+        Dag_f([
             (a.param.out_p, b.param.in_p),
             (c.param.out_p, d.param.in_p),
         ])
 
 
-def test_already_connected(dag):
+def test_already_connected(Dag_f):
     a = PassThrough(name='a')
     b = PassThrough(name='b')
 
     with pytest.raises(BlockError, match='already connected'):
-        dag.connections([
+        Dag_f([
             (a.param.out_p, b.param.in_p),
             (a.param.out_p, b.param.in_p),
         ])
 
 
-def test_same_name(dag):
+def test_same_name(Dag_f):
     a = PassThrough(name='a')
     b = PassThrough(name='a')
 
     with pytest.raises(BlockError, match='same name at index 0'):
-        dag.connections([
+        Dag_f([
             (a.param.out_p, b.param.in_p),
         ])
 
 
-def test_same_name2(dag):
+def test_same_name2(Dag_f):
     a = PassThrough(name='a')
     b = PassThrough(name='b')
     c = PassThrough(name='a')
 
-    with pytest.raises(BlockError, match='name at index 1 already exists'):
-        dag.connections([
+    with pytest.raises(BlockError, match='name "a" at index 1 duplicates'):
+        Dag_f([
             (a.param.out_p, b.param.in_p),
             (b.param.out_p, c.param.in_p),
         ])
 
 
-def test_triangle(dag):
+def test_triangle(Dag_f):
     root = PassThrough()
     leg1 = PassThrough()
     leg2 = PassThrough()
 
-    dag.connections([
+    dag = Dag_f([
         (root.param.out_p, leg1.param.in_p),
         (root.param.out_p, leg2.param.in_p),
     ])
@@ -188,7 +188,7 @@ def test_triangle(dag):
     assert leg2.out_p == 99
 
 
-def test_load_defaults(dag):
+def test_load_defaults(Dag_f):
     """Demonstrate loading default values.
 
     During development, it is convenient to pre-load some default values to save typing
@@ -226,7 +226,7 @@ in_dtr = [2022-01-01 12:34:56Z, 2022-12-01 12:34:56Z]
     # This is typically done at a command prompt before running the app.
     # (More convenient on Linux than Windows.)
     #
-    os.environ['SIER2_DAG_DEFAULTS'] = fnam
+    os.environ[Dag.SIER2_DAG_DEFAULTS] = fnam
 
     try:
         # The dag / app.
@@ -236,7 +236,7 @@ in_dtr = [2022-01-01 12:34:56Z, 2022-12-01 12:34:56Z]
 
         # Because the environment variable is set, default loading happens by magic.
         #
-        dag.connections([
+        dag = Dag_f([
             (types.param.out_int, b2.param.in_p),
         ])
 
@@ -257,5 +257,5 @@ in_dtr = [2022-01-01 12:34:56Z, 2022-12-01 12:34:56Z]
     finally:
         # Undo the temporary things.
         #
-        os.unsetenv('SIER2_DAG_DEFAULTS')
+        del os.environ[Dag.SIER2_DAG_DEFAULTS]
         os.unlink(fnam)

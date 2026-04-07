@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from importlib.metadata import EntryPoint, entry_points
 from typing import Any, cast
 
-from . import Block, BlockError, Connection, Dag
+from . import Block, BlockError, Dag
 from ._util import _import_item
 
 # Store a mapping from a unique key to a Block class.
@@ -264,12 +264,23 @@ class Library:
         else:
             DagType = Dag
 
-        dag = DagType(doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
+        # @@
+        all_conns = []
         for conn in dump['connections']:
-            conns = [Connection(**kwargs) for kwargs in conn['conn_args']]
-            dag.connect(instances[conn['src']], instances[conn['dst']], *conns)
+            src = instances[conn['src']]
+            dst = instances[conn['dst']]
+            for c in conn['conn_args']:
+                all_conns.append((src.param[c['src_param_name']], dst.param[c['dst_param_name']]))
+
+        dag = DagType(
+            all_conns, doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title']
+        )
 
         return dag
+
+    @staticmethod
+    def clear():
+        _block_library.clear()
 
 
 # Library.collect()

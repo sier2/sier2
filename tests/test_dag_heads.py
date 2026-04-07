@@ -1,7 +1,7 @@
+import param
 import pytest
 
-from sier2 import Block, BlockState, Dag, Connection, BlockError, Library, BlockValidateError
-import param
+from sier2 import Block, Dag
 
 
 class BlockA(Block):
@@ -12,53 +12,56 @@ class BlockA(Block):
 
 
 @pytest.fixture
-def dag():
+def Dag_f():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-dag', title='tests')
+    return lambda connections: Dag(connections, doc='test-dag', title='tests')
 
 
-def test_ht1(dag):
+def test_ht1(Dag_f):
     h = BlockA(name='h')
     t = BlockA(name='t')
-    dag.connect(h, t, Connection('out_o', 'in_i'))
+    dag = Dag_f([(h.param.out_o, t.param.in_i)])
     heads, tails = dag.heads_and_tails()
 
-    assert heads == set([h])
-    assert tails == set([t])
+    assert heads == {h}
+    assert tails == {t}
 
 
-def test_ht2(dag):
+def test_ht2(Dag_f):
     h = BlockA(name='h')
     m = BlockA(name='m')
     t = BlockA(name='t')
-    dag.connect(h, m, Connection('out_o', 'in_i'))
-    dag.connect(m, t, Connection('out_o', 'in_i'))
+    dag = Dag_f([
+        (h.param.out_o, m.param.in_i),
+        (m.param.out_o, t.param.in_i),
+    ])
     heads, tails = dag.heads_and_tails()
 
-    assert heads == set([h])
-    assert tails == set([t])
+    assert heads == {h}
+    assert tails == {t}
 
 
-def test_ht3(dag):
+def test_ht3(Dag_f):
     h = BlockA(name='h')
     t1 = BlockA(name='t1')
     t2 = BlockA(name='t2')
-    dag.connect(h, t1, Connection('out_o', 'in_i'))
-    dag.connect(h, t2, Connection('out_o', 'in_i'))
+    dag = Dag_f([(h.param.out_o, t1.param.in_i), (h.param.out_o, t2.param.in_i)])
     heads, tails = dag.heads_and_tails()
 
-    assert heads == set([h])
-    assert tails == set([t1, t2])
+    assert heads == {h}
+    assert tails == {t1, t2}
 
 
-def test_ht4(dag):
+def test_ht4(Dag_f):
     h1 = BlockA(name='h')
     h2 = BlockA(name='h2')
     t = BlockA(name='t')
-    dag.connect(h1, t, Connection('out_o', 'in_i'))
-    dag.connect(h2, t, Connection('out_o', 'in_i'))
+    dag = Dag_f([
+        (h1.param.out_o, t.param.in_i),
+        (h2.param.out_o, t.param.in_i),
+    ])
     heads, tails = dag.heads_and_tails()
 
-    assert heads == set([h1, h2])
-    assert tails == set([t])
+    assert heads == {h1, h2}
+    assert tails == {t}

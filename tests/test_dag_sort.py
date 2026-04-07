@@ -1,9 +1,7 @@
-#
-
 import param
 import pytest
 
-from sier2 import Block, Connection, Dag
+from sier2 import Block, Dag
 
 
 class PassThrough(Block):
@@ -16,52 +14,30 @@ class PassThrough(Block):
         self.out_p = self.in_p
 
 
-cxn = Connection('out_p', 'in_p')
-
-
 @pytest.fixture
-def dag():
+def Dag_f():
     """Ensure that each test starts with a clear dag."""
 
-    return Dag(doc='test-dag', title='tests')
+    return lambda connections: Dag(connections, doc='test-dag', title='tests')
 
 
-def test_empty_sort(dag):
-    assert dag.get_sorted() == []
-
-
-def test_cache1(dag):
+def test_cache1(Dag_f):
     a = PassThrough()
     b = PassThrough()
-    dag.connect(a, b, cxn)
+    dag = Dag_f([
+        (a.param.out_p, b.param.in_p),
+    ])
 
     assert dag.get_sorted() == [a, b]
+    assert dag._sort_cache is not None
 
 
-def test_cache2(dag):
+def test_cache2(Dag_f):
     a = PassThrough()
     b = PassThrough()
-    dag.connect(b, a, cxn)
+    dag = Dag_f([
+        (b.param.out_p, a.param.in_p),
+    ])
 
     assert dag.get_sorted() == [b, a]
-
-
-def test_cache_rebuild(dag):
-    """Ensure that the sorted block cache is rebuilt correctly."""
-
-    assert dag._sort_cache is None
-
-    a = PassThrough()
-    b = PassThrough()
-    dag.connect(a, b, cxn)
-
-    assert dag.get_sorted() == [a, b]
-
-    c = PassThrough()
-    dag.connect(b, c, cxn)
-
-    assert dag._sort_cache is None
-
-    assert dag.get_sorted() == [a, b, c]
-
     assert dag._sort_cache is not None

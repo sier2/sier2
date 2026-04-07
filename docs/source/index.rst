@@ -63,25 +63,24 @@ The :func:`~sier2.Block.execute` method in each block is called automatically wh
 Creating a dag
 --------------
 
-A dag is created using an instance of :class:`sier2.Dag`.
-
-.. code-block:: python
-
-    dag = Dag(doc='Increment and display', title='Increment example')
-
-The dag is used to connect block instances using the :func:`sier2.Dag.connect` method.
+A dag is created using by passing a list of param connections to :class:`sier2.Dag`.
+Create the blocks, then create the dag by specifying connections between params.
 
 .. code-block:: python
 
     assign = Assign()
     incr = Increment()
     disp = Display()
-    dag.connect(assign, incr, Connection('out_value', 'in_val'))
-    dag.connect(incr, disp, Connection('out_val', 'in_result'))
+    dag = Dag([
+            (assign.param.out_value, incr.param.in_val),
+            (incr.param.out_val, disp.param.in_result)
+        ],
+        doc='Increment and display',
+        title='Increment example'
+    )
 
 This creates instances of the ``Assign``,  ``Increment``, and ``Display`` blocks,
-and connects them. A ``Connection`` specifies a pair of output (from the first block)
-and input (to the second block) parameters.
+and connects them.
 
 After creating the connections, the dag is watching the output parameters.
 Whenever an output parameter's value changes, the dag looks up the block that

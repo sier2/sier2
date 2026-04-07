@@ -6,6 +6,7 @@ import threading
 from datetime import datetime
 
 import panel as pn
+import param
 import param.parameterized as paramp
 
 from .. import Block, BlockError, BlockState, BlockValidateError, Dag
@@ -485,6 +486,7 @@ class PanelDag(Dag):
 
     def __init__(
         self,
+        connections: list[tuple[param.Parameter, param.Parameter]],
         *,
         site: str = '',
         title: str,
@@ -508,7 +510,7 @@ class PanelDag(Dag):
             URI of favicon to add to the document head (if local file, favicon is base64 encoded as URI).
         """
 
-        super().__init__(site=site, title=title, doc=doc, author=author)
+        super().__init__(connections=connections, site=site, title=title, doc=doc, author=author)
         paramp.label_formatter = _sier2_label_formatter
         self.logo = logo
         self.favicon = favicon
