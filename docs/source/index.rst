@@ -25,7 +25,7 @@ Simple Block implementations look like this.
 
 .. code-block:: python
 
-    from sier2 import Block, Dag, Connection
+    from sier2 import Block, Dag
     from sier2.panel import PanelDag
     import param
 
@@ -35,8 +35,7 @@ Simple Block implementations look like this.
         in_value = param.Integer(label='Initial value in')
         out_value = param.Integer(label='Initial value out')
 
-        def __init__(self):
-            super().__init__(wait_for_input=True)
+        wait_for_input = True
 
         def execute(self):
             self.out_value = self.in_value
@@ -98,18 +97,31 @@ to``in_value``. The dag can then be restarted at ``assign.execute()``.
     assign.in_value = int(input('Enter an initial integer value: '))
     dag.execute_after_input(b)
 
-The result is:
+The result (after entering "1") is:
 
 .. code-block:: text
 
     Result is 2.
 
-The dag script is very easily modified to become a GUI app.
+The dag script is very easily modified to become a GUI app: just replace
+``Dag`` with ``PanelDag``, then call ``dag.show()``.
 
 .. code-block:: python
 
-    # dag = Dag(doc='Increment and display', title='Increment example')
-    dag = PanelDag(doc='Increment and display', title='Increment example')
+    # dag = Dag([
+    #         (assign.param.out_value, incr.param.in_val),
+    #         (incr.param.out_val, disp.param.in_result)
+    #     ],
+    #     doc='Increment and display',
+    #     title='Increment example'
+    # )
+    dag = Dag([
+            (assign.param.out_value, incr.param.in_val),
+            (incr.param.out_val, disp.param.in_result)
+        ],
+        doc='Increment and display',
+        title='Increment example'
+    )
 
     ...
 

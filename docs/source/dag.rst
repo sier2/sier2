@@ -12,7 +12,3 @@ Dag
 
 .. autoattribute:: sier2.panel.PanelDag.SIER2_SHOW_PORT
     :annotation: An environment variable to indicate the port used to show the dag.
-
-.. autoclass:: sier2.Connection
-
-.. autoclass:: sier2.Connections
