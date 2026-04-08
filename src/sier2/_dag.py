@@ -217,7 +217,11 @@ class Dag:
         #
         self._on_context_exit = None
 
-        self._connections(connections)
+        try:
+            self._connections(connections)
+        except TypeError as e:
+            if str(e).startswith('cannot unpack non-iterable'):
+                raise BlockError('Connections must be 2-tuples') from e
 
     @property
     def _is_pyodide(self) -> bool:
@@ -274,8 +278,8 @@ class Dag:
         if self._block_pairs:
             raise BlockError('A dag can only be built once.')
 
-        if not connections:
-            raise BlockError('There must be at least one connection')
+        # if not connections:
+        #     raise BlockError('There must be at least one connection')
 
         # Group watchers for each (src, dst) block.
         # This optimises the number of watchers.
@@ -333,6 +337,8 @@ class Dag:
                 if _has_cycle(self._block_pairs + [(src, dst)]):
                     raise BlockError(f'The connection at index {ix} would create a cycle')
 
+            # Checking for the same name also checks for the same block.
+            #
             for block in _for_each_once(self._block_pairs):
                 if (block is not src and block.name == src.name) or (
                     block is not dst and block.name == dst.name
@@ -340,6 +346,15 @@ class Dag:
                     raise BlockError(
                         f'A block with name "{block.name}" at index {ix} duplicates an existing name'
                     )
+
+            # Check that these blocks aren't being watched already.
+            # Maybe they're in another dag?
+            #
+            if src.param.watchers:
+                raise BlockError(f'Source block at index {ix} has watchers')
+
+            if dst.param.watchers:
+                raise BlockError(f'Destination block at index {ix} has watchers')
 
             # for s, d in self._block_pairs:
             #     if src is s and dst is d:
@@ -398,6 +413,9 @@ class Dag:
 
         if block in self._block_bag:
             raise BlockError('This block is in the bag')
+
+        if block.param.watchers:
+            raise BlockError('This block has watchers')
 
         self._block_bag.append(block)
 

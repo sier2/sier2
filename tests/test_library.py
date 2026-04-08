@@ -1,12 +1,8 @@
-#
-
 from sier2 import Block, Library
 
 
 class Block1(Block):
     """Any old block."""
-
-    pass
 
 
 def test_library_get():

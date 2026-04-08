@@ -48,13 +48,6 @@ class InputIncrement(Block):
         self.out_i = self.value + self.incr
 
 
-@pytest.fixture
-def Dag_f():
-    """Ensure that each test starts with a clear dag."""
-
-    return lambda connections: Dag(connections, doc='test-dag', title='tests')
-
-
 def test_serialise(Dag_f):
     """Ensure that a dag can be serialised and restored.
 

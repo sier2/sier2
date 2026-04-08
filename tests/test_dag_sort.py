@@ -1,7 +1,6 @@
 import param
-import pytest
 
-from sier2 import Block, Dag
+from sier2 import Block
 
 
 class PassThrough(Block):
@@ -12,13 +11,6 @@ class PassThrough(Block):
 
     def execute(self):
         self.out_p = self.in_p
-
-
-@pytest.fixture
-def Dag_f():
-    """Ensure that each test starts with a clear dag."""
-
-    return lambda connections: Dag(connections, doc='test-dag', title='tests')
 
 
 def test_cache1(Dag_f):

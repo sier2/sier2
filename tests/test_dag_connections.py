@@ -48,13 +48,6 @@ class Types(Block):
         self.out_int = self.in_int
 
 
-@pytest.fixture
-def Dag_f():
-    """Ensure that each test starts with a clear dag."""
-
-    return lambda connections: Dag(connections, doc='test-dag', title='tests')
-
-
 def test_build1(Dag_f):
     b1 = PassThrough()
     b2 = PassThrough()

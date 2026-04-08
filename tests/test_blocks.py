@@ -59,23 +59,21 @@ def test_params():
     assert pb.pick_params() == ['in_a', 'in_b']
 
 
-@pytest.fixture
-def Dag_f():
-    """Ensure that each test starts with a clear dag."""
-
-    return lambda connections: Dag(connections, doc='test-dag', title='tests')
-
-
 def test_output_must_not_allow_refs(Dag_f):
-    class P(Block):
+    class ARFalse(Block):
+        """."""
+
         s = param.String()
 
-    class Q(Block):
+    class ARTrue(Block):
+        """."""
+
         s = param.String(allow_refs=True)
 
-    with pytest.raises(BlockError):
-        # dag.connect(P(), Q(), ['s'])
-        Dag_f([(P().param.s, Q().param.s)])
+    Dag_f([(ARFalse().param.s, ARTrue().param.s)])
+
+    with pytest.raises(BlockError, match='must not be "allow_refs=True"'):
+        Dag_f([(ARTrue().param.s, ARFalse().param.s)])
 
 
 def test_simple(Dag_f):
@@ -369,3 +367,14 @@ def test_no_banners():
     b = B()
     assert b.banner_top_.rx.value is None
     assert b.banner_bot_.rx.value is None
+
+
+def test_watched(Dag_f):
+    a = PassThrough()
+    b = PassThrough()
+    dag = Dag_f([(a.param.out_p, b.param.in_p)])  # noqa: F841
+    with pytest.raises(BlockError, match='at index 0 has watchers'):
+        Dag_f([(a.param.out_p, b.param.in_p)])
+
+    with pytest.raises(BlockError, match='at index 0 has watchers'):
+        Dag_f([(b.param.out_p, a.param.in_p)])

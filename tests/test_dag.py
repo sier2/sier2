@@ -15,13 +15,6 @@ class PassThrough(Block):
         self.out_p = self.in_p
 
 
-@pytest.fixture
-def Dag_f():
-    """Ensure that each test starts with a clear dag."""
-
-    return lambda connections: Dag(connections, doc='test-dag', title='tests')
-
-
 def test_load_doc(Dag_f):
     """Ensure that a dag's doc is loaded."""
 
@@ -38,8 +31,9 @@ def test_load_doc(Dag_f):
 
 
 def test_empty_dag(Dag_f):
-    with pytest.raises(BlockError, match='at least one connection'):
-        Dag_f([])
+    dag = Dag_f([])
+    with pytest.raises(BlockError, match='Nothing to execute'):
+        dag.execute()
 
 
 # def test_no_connections(dag):

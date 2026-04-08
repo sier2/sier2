@@ -11,13 +11,6 @@ class BlockA(Block):
     out_o = param.String()
 
 
-@pytest.fixture
-def Dag_f():
-    """Ensure that each test starts with a clear dag."""
-
-    return lambda connections: Dag(connections, doc='test-dag', title='tests')
-
-
 def test_ht1(Dag_f):
     h = BlockA(name='h')
     t = BlockA(name='t')

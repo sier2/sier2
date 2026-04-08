@@ -73,9 +73,6 @@ def test_class_wait_override():
     assert not pt._wait_for_input
 
 
-#
-
-
 def test_implicit_continue():
     class PassThrough(Block):
         """A block with one input and one output."""
