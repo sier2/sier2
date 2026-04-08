@@ -349,11 +349,13 @@ class Dag:
 
             # Check that these blocks aren't being watched already.
             # Maybe they're in another dag?
+            # Note: only check out params: the block may be watching its
+            # own in params for valid values.
             #
-            if src.param.watchers:
+            if any(k.startswith('out_') for k in src.param.watchers):
                 raise BlockError(f'Source block at index {ix} has watchers')
 
-            if dst.param.watchers:
+            if any(k.startswith('out_') for k in dst.param.watchers):
                 raise BlockError(f'Destination block at index {ix} has watchers')
 
             # for s, d in self._block_pairs:
