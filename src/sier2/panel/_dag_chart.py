@@ -188,8 +188,9 @@ class _BokehDag:
         patch = {'state': [(slice(len(topo_blocks)), colors)]}
         self.cds.patch(patch)
 
-    def update(self):
-        curdoc().add_next_tick_callback(self.update_)
+    def update(self, is_pyodide=False):
+        if not is_pyodide:
+            curdoc().add_next_tick_callback(self.update_)
 
 
 _bokeh_dag = _BokehDag()

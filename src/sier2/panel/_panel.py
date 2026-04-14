@@ -131,7 +131,7 @@ class _PanelContext:
                     raise BlockError(f'Block {self.block.name}: {exc_val!s}') from exc_val
 
         if self.dag._on_context_exit:
-            self.dag._on_context_exit()
+            self.dag._on_context_exit(is_pyodide=self.dag._is_pyodide)
 
         return False
 
