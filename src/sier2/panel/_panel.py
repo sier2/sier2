@@ -480,7 +480,14 @@ def _sier2_label_formatter(pname: str):
 
 
 class PanelDag(Dag):
-    """A Dag that displays blocks using Panel (https://panel.holoviz.org)."""
+    """A Dag that displays blocks using Panel (https://panel.holoviz.org).
+
+    Blocks are displayed in a column starting with the dag heads
+    (blocks with no inputs), and ordered using a topological sort,
+    i.e. parent blocks before child blocks. If a block has multiple children,
+    they are displayed in the same order that they first appeared in
+    the connections list.
+    """
 
     SIER2_SHOW_PORT = 'SIER2_SHOW_PORT'
 

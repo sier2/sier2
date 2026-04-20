@@ -138,7 +138,30 @@ _RESTART = ':restart:'
 
 
 class Dag:
-    """A directed acyclic graph of blocks."""
+    """A directed acyclic graph of blocks.
+
+    A dag is built by connecting "out" params to "in" params.
+
+    .. code-block:: python
+
+        Dag([
+            (b1.param.out_p1, b2.param.in_p1),
+            (b1.param.out_p2, b2.param.in_p2),
+            (b2.param.out_result, b3.param.in_display)
+        ], ...)
+
+    Connections may be added in any order, but after all of the params
+    are processed, the dag must be connected.
+
+    If the environment variable `SIER2_DAG_DEFAULTS` is defined, it is the
+    path of a TOML file containing default values for block params.
+
+    Defaults are loaded by looking through the TOML tables.
+    Look for a block name that is the table name with '-' replaced by ' '.
+    If a table name does not match a block name, display a warning.
+    If a key does not match a block param, display a warning.
+    This is typically being done at development time, so be verbose to catch typos.
+    """
 
     SIER2_DAG_DEFAULTS = 'SIER2_DAG_DEFAULTS'
 
@@ -223,6 +246,8 @@ class Dag:
             if str(e).startswith('cannot unpack non-iterable'):
                 raise BlockError('Connections must be 2-tuples') from e
 
+            raise
+
     @property
     def _is_pyodide(self) -> bool:
         return '_pyodide' in sys.modules
@@ -252,11 +277,9 @@ class Dag:
 
         Can only be called once.
 
-        This is an alternative to using several calls to connect().
-
         .. code-block:: python
 
-            dag.connections([
+            self._connections([
                 (b1.param.out1, b2.param.in1),
                 (b1.param.out2, b2.param.in2),
                 (b2.param.out_result, b3.param.in_display)
@@ -292,6 +315,8 @@ class Dag:
         # Ensure that the sort cache is cleared.
         #
         self._sort_cache = None
+
+        sort_key = 0
 
         for ix, (src_param, dst_param) in enumerate(connections):
             if not isinstance(src_param, param.Parameter):
@@ -333,7 +358,27 @@ class Dag:
             if src.name == dst.name:
                 raise BlockError(f'Cannot add two blocks with the same name at index {ix}')
 
+            # print(f'{src_param.name=} -> {dst_param.name=}')
+            if not src_param.name.startswith('out_'):
+                raise BlockError(f'Source block at index {ix} must start with "out_"')
+
+            if not dst_param.name.startswith('in_'):
+                raise BlockError(f'Destination block at index {ix} must start with "in_"')
+
+            # Set the sort keys.
+            #
+            if src._sort_key is None:
+                src._sort_key = sort_key
+                sort_key += 1
+
+            if dst._sort_key is None:
+                dst._sort_key = sort_key
+                sort_key += 1
+
             if _DISALLOW_CYCLES:  # noqa: SIM102
+                # _has_cycle() does a topological sort,
+                # which requires _sort_key to be set.
+                #
                 if _has_cycle(self._block_pairs + [(src, dst)]):
                     raise BlockError(f'The connection at index {ix} would create a cycle')
 
@@ -840,7 +885,7 @@ def topological_sort(pairs):
 
     # Sort the current heads by name so they have a consistent ordering.
     #
-    S = deque(sorted({s for s in srcs if s not in dsts}, key=lambda block: block.name))
+    S = deque(sorted({s for s in srcs if s not in dsts}, key=lambda block: block._sort_key))
 
     while S:
         # A topological sort is non-unique; this is why.
@@ -858,7 +903,8 @@ def topological_sort(pairs):
 
         # Also sort this next layer of blocks.
         #
-        S_next.sort(key=lambda block: block.name)
+        # S_next.sort(key=lambda block: block.name)
+        S_next.sort(key=lambda block: block._sort_key)
         S.extend(S_next)
 
     return L, remaining

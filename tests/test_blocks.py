@@ -63,17 +63,19 @@ def test_output_must_not_allow_refs(Dag_f):
     class ARFalse(Block):
         """."""
 
-        s = param.String()
+        in_s = param.String()
+        out_s = param.String()
 
     class ARTrue(Block):
         """."""
 
-        s = param.String(allow_refs=True)
+        in_s = param.String()
+        out_s = param.String(allow_refs=True)
 
-    Dag_f([(ARFalse().param.s, ARTrue().param.s)])
+    Dag_f([(ARFalse().param.out_s, ARTrue().param.in_s)])
 
     with pytest.raises(BlockError, match='must not be "allow_refs=True"'):
-        Dag_f([(ARTrue().param.s, ARFalse().param.s)])
+        Dag_f([(ARTrue().param.out_s, ARFalse().param.in_s)])
 
 
 def test_simple(Dag_f):

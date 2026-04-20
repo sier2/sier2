@@ -299,6 +299,12 @@ class Block(param.Parameterized):
         # #
         # self._block_out_params = []
 
+        # Record the order in which blocks are listed,
+        # so when the dag is sorted, blocks that were listed first
+        # are earlier in the sort.
+        #
+        self._sort_key: int|None = None
+
     @classmethod
     def block_key(cls):
         """The unique key of this block class.
