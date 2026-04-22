@@ -2,9 +2,8 @@
 #
 
 import param
-import pytest
 
-from sier2 import Block, Dag, Library
+from sier2 import Block, Library
 
 
 class PassThrough(Block):

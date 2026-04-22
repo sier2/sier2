@@ -99,12 +99,14 @@ def test_not_a_param(Dag_f):
     with pytest.raises(BlockError, match='Source parameter at index 0 is not a param'):
         Dag_f([('hello', b1.in_p)])
 
+
 def test_out_to_out(Dag_f):
     a = PassThrough()
     b = PassThrough()
 
     with pytest.raises(BlockError, match='Destination block at index 0 must start with "in_"'):
         Dag_f([(a.param.out_p, b.param.out_p)])
+
 
 def test_in_to_in(Dag_f):
     a = PassThrough()
@@ -113,12 +115,14 @@ def test_in_to_in(Dag_f):
     with pytest.raises(BlockError, match='Source block at index 0 must start with "out_"'):
         Dag_f([(a.param.in_p, b.param.in_p)])
 
+
 def test_in_to_out(Dag_f):
     a = PassThrough()
     b = PassThrough()
 
     with pytest.raises(BlockError, match='Source block at index 0 must start with "out_"'):
         Dag_f([(a.param.in_p, b.param.out_p)])
+
 
 def test_connected(Dag_f):
     a = PassThrough()

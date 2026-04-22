@@ -34,6 +34,7 @@ def test_cache2(Dag_f):
     assert dag.get_sorted() == [b, a]
     assert dag._sort_cache is not None
 
+
 def test_sort1(Dag_f):
     """Blocks with the same parent sort in the order in which they were listed."""
 
@@ -47,6 +48,7 @@ def test_sort1(Dag_f):
 
     sdag1 = [d.name for d in dag1.get_sorted()]
     assert sdag1 == ['a', 'b', 'c']
+
 
 def test_sort2(Dag_f):
     """Blocks with the same parent sort in the order in which they were listed."""

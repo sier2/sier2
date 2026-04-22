@@ -3,6 +3,7 @@ import html
 import os
 import sys
 import threading
+from collections.abc import Iterable
 from datetime import datetime
 
 import panel as pn
@@ -493,8 +494,9 @@ class PanelDag(Dag):
 
     def __init__(
         self,
-        connections: list[tuple[param.Parameter, param.Parameter]],
+        connections: Iterable[tuple[param.Parameter, param.Parameter]],
         *,
+        bag: Iterable[Block] | None = None,
         site: str = '',
         title: str,
         doc: str,
@@ -505,6 +507,10 @@ class PanelDag(Dag):
         """
         Parameters
         ----------
+        connections: Iterable[tuple[param.Parameter, param.Parameter]]
+            Connections between params that define the dag.
+        bag: Iterable[Block]
+            Blocks to be added to the dags bag.
         site: str
             Name of the site. Will be shown in the header. Default is '', i.e. not shown.
         title: str
@@ -517,7 +523,9 @@ class PanelDag(Dag):
             URI of favicon to add to the document head (if local file, favicon is base64 encoded as URI).
         """
 
-        super().__init__(connections=connections, site=site, title=title, doc=doc, author=author)
+        super().__init__(
+            connections=connections, bag=bag, site=site, title=title, doc=doc, author=author
+        )
         paramp.label_formatter = _sier2_label_formatter
         self.logo = logo
         self.favicon = favicon

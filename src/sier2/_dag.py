@@ -3,6 +3,7 @@ import sys
 import threading
 import tomllib
 from collections import defaultdict, deque
+from collections.abc import Iterable
 from dataclasses import dataclass, field  # , KW_ONLY, field
 from importlib.metadata import entry_points
 from typing import Any
@@ -167,8 +168,9 @@ class Dag:
 
     def __init__(
         self,
-        connections: list[tuple[param.Parameter, param.Parameter]],
+        connections: Iterable[tuple[param.Parameter, param.Parameter]],
         *,
+        bag: Iterable[Block] | None = None,
         site: str = 'Block',
         title: str,
         doc: str,
@@ -179,6 +181,10 @@ class Dag:
 
         Parameters
         ----------
+        connections: Iterable[tuple[param.Parameter, param.Parameter]]
+            Connections between params that define the dag.
+        bag: Iterable[Block]
+            Blocks to be added to the dags bag.
         site: str
             Name of the site.
         title: str
@@ -248,6 +254,10 @@ class Dag:
 
             raise
 
+        if bag:
+            for b in bag:
+                self._add_to_bag(b)
+
     @property
     def _is_pyodide(self) -> bool:
         return '_pyodide' in sys.modules
@@ -272,7 +282,7 @@ class Dag:
         if not self._is_pyodide:
             self._stopper.event.clear()
 
-    def _connections(self, connections: list[tuple[param.Parameter, param.Parameter]]):
+    def _connections(self, connections: Iterable[tuple[param.Parameter, param.Parameter]]):
         """Build a dag from a list of connections between output and input parameters.
 
         Can only be called once.
@@ -451,7 +461,7 @@ class Dag:
                 onlychanged=False,
             )
 
-    def add_to_bag(self, block: Block):
+    def _add_to_bag(self, block: Block):
         """Add a block to the block bag."""
 
         is_in_dag = any(block is src or block is dst for src, dst in self._block_pairs)
@@ -466,12 +476,12 @@ class Dag:
 
         self._block_bag.append(block)
 
-    def remove_from_bag(self, block: Block):
-        """Remove a lock from the block bag."""
+    # def remove_from_bag(self, block: Block):
+    #     """Remove a lock from the block bag."""
 
-        if block in self._block_bag:
-            ix = self._block_bag.find(block)
-            del self._block_bag[ix]
+    #     if block in self._block_bag:
+    #         ix = self._block_bag.find(block)
+    #         del self._block_bag[ix]
 
     def _param_event(self, dst: Block, *events):
         """The callback for a watch event."""

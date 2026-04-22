@@ -303,7 +303,7 @@ class Block(param.Parameterized):
         # so when the dag is sorted, blocks that were listed first
         # are earlier in the sort.
         #
-        self._sort_key: int|None = None
+        self._sort_key: int | None = None
 
     @classmethod
     def block_key(cls):

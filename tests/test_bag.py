@@ -14,14 +14,14 @@ class PassThrough(Block):
         self.out_p = self.in_p
 
 
-def test_add(Dag_f):
+def test_add(Dag_bag_f):
     a = PassThrough()
     b = PassThrough()
-    dag = Dag_f([(a.param.out_p, b.param.in_p)])
 
     bag_block = PassThrough()
     bag_block.in_p = 22
-    dag.add_to_bag(bag_block)
+
+    dag = Dag_bag_f([(a.param.out_p, b.param.in_p)], [bag_block])
 
     a.in_p = 33
     dag.execute()
@@ -29,34 +29,31 @@ def test_add(Dag_f):
     assert bag_block.out_p == 22
 
 
-def test_add_in_dag(Dag_f):
+def test_add_in_dag(Dag_bag_f):
     a = PassThrough()
     b = PassThrough()
-
-    dag = Dag_f([(a.param.out_p, b.param.in_p)])
-
     with pytest.raises(BlockError, match='in the dag'):
-        dag.add_to_bag(a)
+        Dag_bag_f([(a.param.out_p, b.param.in_p)], [a])
 
+    a = PassThrough()
+    b = PassThrough()
     with pytest.raises(BlockError, match='in the dag'):
-        dag.add_to_bag(b)
+        Dag_bag_f([(a.param.out_p, b.param.in_p)], [b])
 
 
-def test_watched(Dag_f):
+def test_watched(Dag_f, Dag_bag_f):
     a = PassThrough()
     b = PassThrough()
 
     dag1 = Dag_f([(a.param.out_p, b.param.in_p)])  # noqa: F841
-    dag2 = Dag_f([])
-
     with pytest.raises(BlockError, match='has watchers'):
-        dag2.add_to_bag(a)
+        Dag_bag_f([], [a])
 
 
-def test_empty_with_bag(Dag_f):
+def test_empty_with_bag(Dag_bag_f):
     a = PassThrough()
-    dag = Dag_f([])
-    dag.add_to_bag(a)
+    dag = Dag_bag_f([], [a])
+
     a.in_p = 44
     dag.execute()
 

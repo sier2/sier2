@@ -1,7 +1,6 @@
 import param
-import pytest
 
-from sier2 import Block, Dag
+from sier2 import Block
 
 
 class BlockA(Block):
