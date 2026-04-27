@@ -46,17 +46,11 @@ See the examples in ``examples`` (Python scripts) and ``examples-panel`` (script
 Pictorial representations of dags
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. raw:: html
+.. image:: resources/dag1.svg
 
-    <object data="resources/dag1.svg" type="image/svg+xml"></object>
+.. image:: resources/dag2.svg
 
-.. raw:: html
-
-    <object data="resources/dag2.svg" type="image/svg+xml"></object>
-
-.. raw:: html
-
-    <object data="resources/dag3.svg" type="image/svg+xml"></object>
+.. image:: resources/dag3.svg
 
 Documentation
 -------------
