@@ -38,7 +38,25 @@ A typical block implementation looks like this.
         def execute(self):
             self.out_int = self.in_int + 1
 
+The output params of a block can be connected to the input params of one or more blocks
+to form a dag (directed acyclic graph), which defines an application.
+
 See the examples in ``examples`` (Python scripts) and ``examples-panel`` (scripts that use `Panel <https://panel.holoviz.org/>`_ as a UI).
+
+Pictorial representations of dags
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. raw:: html
+
+    <object data="resources/dag1.svg" type="image/svg+xml"></object>
+
+.. raw:: html
+
+    <object data="resources/dag2.svg" type="image/svg+xml"></object>
+
+.. raw:: html
+
+    <object data="resources/dag3.svg" type="image/svg+xml"></object>
 
 Documentation
 -------------

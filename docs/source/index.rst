@@ -134,6 +134,8 @@ The dag app is now displayed in a web browser using `Panel <https://panel.holovi
 with the input params mapped to suitable Panel widgets. The blocks work as-is - only the
 code above needed to be modified.
 
+See below for pictorial representations of dags.
+
 The ``sier2-tutorial`` repository at `https://github.com/sier2/sier2-tutorial <https://github.com/sier2/sier2-tutorial>`_ contains a tutorial and many examples.
 
 .. toctree::
@@ -153,3 +155,15 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. raw:: html
+
+    <object data="_static/dag1.svg" type="image/svg+xml"></object>
+
+.. raw:: html
+
+    <object data="_static/dag2.svg" type="image/svg+xml"></object>
+
+.. raw:: html
+
+    <object data="_static/dag3.svg" type="image/svg+xml"></object>
