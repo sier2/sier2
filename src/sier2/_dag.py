@@ -60,9 +60,7 @@ class _BlockContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.block._block_state = (
-                BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
-            )
+            self.block._block_state = BlockState.WAITING if self.block._wait_for_input else BlockState.SUCCESSFUL
         elif exc_type is KeyboardInterrupt:
             self.block_state._block_state = BlockState.INTERRUPTED
             if not self.dag._is_pyodide:
@@ -258,6 +256,11 @@ class Dag:
             for b in bag:
                 self._add_to_bag(b)
 
+        # Debugging.
+        # Higher numbers display more internals.
+        #
+        self._debug = 0
+
     @property
     def _is_pyodide(self) -> bool:
         return '_pyodide' in sys.modules
@@ -347,14 +350,10 @@ class Dag:
                     raise BlockError(f'Did you call super().__init__() in {b} at index {ix}?')
 
             if not isinstance(src, Block):
-                raise BlockError(
-                    f'Source parameter at index {ix} does not belong to a Block object'
-                )
+                raise BlockError(f'Source parameter at index {ix} does not belong to a Block object')
 
             if not isinstance(dst, Block):
-                raise BlockError(
-                    f'Destination parameter at index {ix} does not belong to a Block object'
-                )
+                raise BlockError(f'Destination parameter at index {ix} does not belong to a Block object')
 
             # # Because this is probably the first place that the Block instance is used,
             # # this is a convenient place to check that the block was correctly initialised.
@@ -395,12 +394,8 @@ class Dag:
             # Checking for the same name also checks for the same block.
             #
             for block in _for_each_once(self._block_pairs):
-                if (block is not src and block.name == src.name) or (
-                    block is not dst and block.name == dst.name
-                ):
-                    raise BlockError(
-                        f'A block with name "{block.name}" at index {ix} duplicates an existing name'
-                    )
+                if (block is not src and block.name == src.name) or (block is not dst and block.name == dst.name):
+                    raise BlockError(f'A block with name "{block.name}" at index {ix} duplicates an existing name')
 
             # Check that these blocks aren't being watched already.
             # Maybe they're in another dag?
@@ -431,9 +426,7 @@ class Dag:
             #         raise BlockError('A new block must connect to existing block')
 
             if src_param.allow_refs:
-                raise BlockError(
-                    f'Source parameter {src}.{src_param.name} must not be "allow_refs=True"'
-                )
+                raise BlockError(f'Source parameter {src}.{src_param.name} must not be "allow_refs=True"')
 
             if dst._block_name_map.get((src.name, src_param.name)) == dst_param.name:
                 raise BlockError(f'The params at index {ix} are already connected')
@@ -599,7 +592,15 @@ class Dag:
 
         can_execute = True
         while self._block_queue:
-            # print(len(self._block_queue), self._block_queue)
+            if self._debug >= 1:
+                h = 'Block queue'
+                q = [b.dst.name for b in self._block_queue]
+                l = max(max(len(b) for b in q), len(h))
+                print(f'┌ {h} {"-" * (l - len(h))}┐', file=sys.stderr)
+                for b in q:
+                    print(f'│ {b:<{l}} │', file=sys.stderr)
+                print(f'└-{"-" * l}-┘', file=sys.stderr)
+
             # The user has set the "stop executing" flag.
             # Continue to set params, but don't execute anything
             #
@@ -608,6 +609,12 @@ class Dag:
                     can_execute = False
 
             item = self._block_queue.popleft()
+            if self._debug >= 2:
+                print('┌ Input values')
+                for i, (k, v) in enumerate(item.values.items()):
+                    c = '│' if i < len(item.values) - 1 else '└'
+                    print(f'{c} {k}: {v!r}', file=sys.stderr)
+
             is_restart = item.values.pop(_RESTART, False)
             try:
                 item.dst.param.update(item.values)
@@ -818,11 +825,7 @@ class Dag:
 
             # Get src params that have been connected to dst params.
             #
-            nmap = {
-                (gname, sname): dname
-                for (gname, sname), dname in d._block_name_map.items()
-                if gname == s.name
-            }
+            nmap = {(gname, sname): dname for (gname, sname), dname in d._block_name_map.items() if gname == s.name}
 
             for (gname, sname), dname in nmap.items():
                 args = {'src_param_name': sname, 'dst_param_name': dname}

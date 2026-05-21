@@ -1,8 +1,6 @@
 import logging
 
-_BLOCK_FORMATTER = logging.Formatter(
-    '%(asctime)s %(levelname)s [%(block_name)s] %(message)s', datefmt='%H:%M:%S'
-)
+_BLOCK_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s [%(block_name)s] %(message)s', datefmt='%H:%M:%S')
 # formatter = logging.Formatter('%(asctime)s %(levelname)s [%(block_name)s] - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
 
 # class BlockHandler(logging.StreamHandler):

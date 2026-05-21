@@ -161,9 +161,7 @@ def _prepare_to_show(dag: 'PanelDag'):
     #
     dag._block_context = _PanelContext
 
-    info_button = pn.widgets.ButtonIcon(
-        icon=INFO_SVG, active_icon=INFO_SVG, description='Dag Help', align='center'
-    )
+    info_button = pn.widgets.ButtonIcon(icon=INFO_SVG, active_icon=INFO_SVG, description='Dag Help', align='center')
 
     # A place to stash the info FloatPanel.
     #
@@ -219,9 +217,7 @@ def _prepare_to_show(dag: 'PanelDag'):
             # Unfortunately, there is nothing special about them.
             #
             print('THREADS', current_tid, [t for t in threading.enumerate()])
-            all_threads = [
-                t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')
-            ]
+            all_threads = [t for t in threading.enumerate() if t.name.startswith('ThreadPoolExecutor')]
             assert len(all_threads) <= NTHREADS, f'{all_threads=}'
             other_thread = [t for t in all_threads if t.ident != current_tid]
 
@@ -523,9 +519,7 @@ class PanelDag(Dag):
             URI of favicon to add to the document head (if local file, favicon is base64 encoded as URI).
         """
 
-        super().__init__(
-            connections=connections, bag=bag, site=site, title=title, doc=doc, author=author
-        )
+        super().__init__(connections=connections, bag=bag, site=site, title=title, doc=doc, author=author)
         paramp.label_formatter = _sier2_label_formatter
         self.logo = logo
         self.favicon = favicon

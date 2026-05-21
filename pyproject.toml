@@ -20,9 +20,10 @@ classifiers = [
     "Topic :: Software Development :: Libraries"
 ]
 
-[dependencies]
-panel = ">=1.6.2"
-param = ">=2.2.0"
+dependencies = [
+    "panel >=1.6.2",
+    "param >=2.2.0",
+]
 
 [[tool.mypy.overrides]]
 module = [
@@ -34,7 +35,7 @@ ignore_missing_imports = true
 Homepage = "https://github.com/sier2/sier2"
 
 [tool.ruff]
-line-length = 100
+line-length = 132
 
 [tool.ruff.lint]
 preview = true

@@ -23,11 +23,7 @@ def vis(dag: Dag, format: str, output: PathLike | None = None, **kwargs):
                 dot.node(node.name, fillcolor=color, fontname='Sans-Serif')
                 seen.add(node)
 
-        param_list = [
-            (sname, dname)
-            for (gname, sname), dname in dst._block_name_map.items()
-            if gname == src.name
-        ]
+        param_list = [(sname, dname) for (gname, sname), dname in dst._block_name_map.items() if gname == src.name]
         # print(param_list)
 
         label = '\\n'.join(f'{sname} → {dname}' for (sname, dname) in param_list)

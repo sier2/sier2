@@ -97,12 +97,8 @@ def _find(func_name: str) -> Iterable[tuple[EntryPoint, Info]]:
                     warnings.warn(f'In {entry_point.module}, {func} is not a function')
                 else:
                     info_list: list[Info] = func()
-                    if not isinstance(info_list, list) or any(
-                        not isinstance(s, Info) for s in info_list
-                    ):
-                        warnings.warn(
-                            f'In {entry_point.module}, {func} does not return a list of {Info.__name__} instances'
-                        )
+                    if not isinstance(info_list, list) or any(not isinstance(s, Info) for s in info_list):
+                        warnings.warn(f'In {entry_point.module}, {func} does not return a list of {Info.__name__} instances')
                     else:
                         for gi in info_list:
                             yield entry_point, gi
@@ -272,9 +268,7 @@ class Library:
             for c in conn['conn_args']:
                 all_conns.append((src.param[c['src_param_name']], dst.param[c['dst_param_name']]))
 
-        dag = DagType(
-            all_conns, doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title']
-        )
+        dag = DagType(all_conns, doc=dump['dag']['doc'], site=dump['dag']['site'], title=dump['dag']['title'])
 
         return dag
 

@@ -46,11 +46,14 @@ See the examples in ``examples`` (Python scripts) and ``examples-panel`` (script
 Pictorial representations of dags
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. image:: resources/dag1.svg
+.. figure:: resources/dag1.svg
+    :align: center
 
-.. image:: resources/dag2.svg
+.. figure:: resources/dag2.svg
+    :align: center
 
-.. image:: resources/dag3.svg
+.. figure:: resources/dag3.svg
+    :align: center
 
 Documentation
 -------------

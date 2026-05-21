@@ -379,12 +379,7 @@ class Block(param.Parameterized):
             name
             for name in self.param.values()
             if name.startswith('in_')
-            or not (
-                self.only_in
-                or name.startswith(('out_', '_'))
-                or name.endswith('_')
-                or name == 'name'
-            )
+            or not (self.only_in or name.startswith(('out_', '_')) or name.endswith('_') or name == 'name')
         ]
 
         return names
