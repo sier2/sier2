@@ -148,6 +148,7 @@ The ``sier2-tutorial`` repository at `https://github.com/sier2/sier2-tutorial <h
     config
     logging
     util
+    etc
 
 Indices and tables
 ==================

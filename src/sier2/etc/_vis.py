@@ -1,35 +1,48 @@
-from os import PathLike
-
-import graphviz
+from io import StringIO
 
 from sier2 import Dag
 
 
-def vis(dag: Dag, format: str, output: PathLike | None = None, **kwargs):
+def to_dot(dag: Dag, *, edge_label: str = 'label') -> str:
+    """Produce a graphviz DOT layout program from the given dag.
+
+    Parameters
+    ----------
+    dag: Dag
+        A dag.
+    edge_label: str
+        Specifies the label as "label" (good for -Tpng) or "tooltip" (good for -Tsvg).
+
+    Returns
+    -------
+    str
+        A DOT program that can be processed by dot.
+    """
+
+    if edge_label not in ['label', 'tooltip']:
+        raise ValueError('edge_label must be label or tooltip')
+
+    buf = StringIO()
+    p = lambda *args, **kwargs: print(*args, **kwargs, file=buf)
+
+    p('digraph {')
+    p('  graph [splines=true]')
+    p('  node [fillcolor="#00ff00", shape="rect", style="rounded,filled", fontnames="svg", fontname="Sans-Serif"]')
+    p('  edge [splines=true fontnames="svg", fontname="Sans-Serif"]')
 
     seen = set()
-
-    dot = graphviz.Digraph(
-        dag.title.replace(' ', '_'),
-        format=format,
-        graph_attr={'fontnames': 'svg'},
-        node_attr={'fillcolor': '#00ff00', 'shape': 'rect', 'style': 'rounded,filled'},
-    )
     for src, dst in dag._block_pairs:
         for node in [src, dst]:
-            if not node in seen:
-                # print(node._wait_for_input)
+            if node not in seen:
                 color = '#f0c8207f' if node._wait_for_input else '#4682b47f'
-                dot.node(node.name, fillcolor=color, fontname='Sans-Serif')
-                seen.add(node)
+                p(f'  {node.name} [label="{node.name}", fillcolor="{color}"]')
+            seen.add(node)
 
+    for src, dst in dag._block_pairs:
         param_list = [(sname, dname) for (gname, sname), dname in dst._block_name_map.items() if gname == src.name]
-        # print(param_list)
+        for sname, dname in param_list:
+            p(f'  {src.name} -> {dst.name} [{edge_label}="{sname} → {dname}", penwidth=2]')
 
-        label = '\\n'.join(f'{sname} → {dname}' for (sname, dname) in param_list)
-        dot.edge(src.name, dst.name, tooltip=label, penwidth='2')
+    p('}')
 
-    if output:
-        dot.render(output, **kwargs)
-
-    return dot.source
+    return buf.getvalue()

@@ -1,3 +1,3 @@
-from ._vis import vis
+from ._vis import to_dot
 
-__all__ = ['vis']
+__all__ = ['to_dot']
