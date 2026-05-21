@@ -28,7 +28,7 @@ def to_dot(dag: Dag, *, edge_label: str = 'label') -> str:
     p('digraph {')
     p('  graph [splines=true]')
     p('  node [fillcolor="#00ff00", shape="rect", style="rounded,filled", fontnames="svg", fontname="Sans-Serif"]')
-    p('  edge [splines=true fontnames="svg", fontname="Sans-Serif"]')
+    p('  edge [splines=true fontnames="svg", fontname="Sans-Serif", fontsize="10pt"]')
 
     seen = set()
     for src, dst in dag._block_pairs:
