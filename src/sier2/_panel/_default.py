@@ -56,7 +56,7 @@ def _card_for_block(block: Block, pane: pn.pane.Pane, _with_light: bool = False)
 
         block.param.watch_values(on_valid, 'is_input_valid_')
 
-        row = [doc, c_button] if doc else [c_button]
+        row = [c_button, doc] if doc else [c_button]
         w_ = pn.Column(pane, pn.Row(*row), sizing_mode='stretch_width')
     elif doc:
         w_ = pn.Column(block, doc)

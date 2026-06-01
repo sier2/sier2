@@ -251,26 +251,12 @@ def _prepare_to_show(dag: 'PanelDag'):
     cards = []
 
     if dag.show_doc:
-        # The first line of the dag doc is the card header.
+        # The card doesn't need a header: the dag author can do what they like
+        # with free-form Markdown.
         #
-        doc = dag.doc.strip()
-        ix = doc.find('\n')
-        if ix >= 0:
-            header = doc[:ix]
-            doc = doc[ix:].strip()
-        else:
-            header = doc
-            doc = ''
-
-        name_text = pn.widgets.StaticText(
-            value=header,
-            css_classes=['card-title'],
-            styles={'font-size': '1.17em', 'font-weight': 'bold'},
-        )
-
         card = pn.Card(
-            pn.pane.Markdown(doc, sizing_mode='stretch_width'),
-            header=pn.Row(name_text),
+            pn.pane.Markdown(dag.doc, sizing_mode='stretch_width'),
+            hide_header=True,
             sizing_mode='stretch_width',
         )
         cards.append(card)
