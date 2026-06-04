@@ -44,7 +44,7 @@ class PanelHandler(logging.Handler):
             self.log_feed.append(pn.pane.HTML(msg))
         except RecursionError:  # See issue 36272
             raise
-        except Exception:
+        except Exception:  # noqa: BLE001
             self.handleError(record)
 
 

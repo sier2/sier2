@@ -11,6 +11,7 @@ from typing import Any
 import param
 
 from ._block import Block, BlockError, BlockState, BlockValidateError
+from .debug import Debug
 
 # By default, loops in a dag aren't allowed.
 #
@@ -256,10 +257,9 @@ class Dag:
             for b in bag:
                 self._add_to_bag(b)
 
-        # Debugging.
-        # Higher numbers display more internals.
+        # Debugging; use Debug flags.
         #
-        self._debug = 0
+        self._debug = Debug(0)
 
     @property
     def _is_pyodide(self) -> bool:
@@ -592,14 +592,16 @@ class Dag:
 
         can_execute = True
         while self._block_queue:
-            if self._debug >= 1:
+            if self._debug & Debug.DAG_QUEUE:
+                # Print the block queue.
+                #
                 h = 'Block queue'
                 q = [b.dst.name for b in self._block_queue]
                 l = max(max(len(b) for b in q), len(h))
-                print(f'┌ {h} {"-" * (l - len(h))}┐', file=sys.stderr)
+                print(f'┌ {h} {"─" * (l - len(h))}┐', file=sys.stderr)
                 for b in q:
                     print(f'│ {b:<{l}} │', file=sys.stderr)
-                print(f'└-{"-" * l}-┘', file=sys.stderr)
+                print(f'└─{"─" * l}─┘', file=sys.stderr)
 
             # The user has set the "stop executing" flag.
             # Continue to set params, but don't execute anything
@@ -609,11 +611,21 @@ class Dag:
                     can_execute = False
 
             item = self._block_queue.popleft()
-            if self._debug >= 2:
-                print('┌ Input values')
-                for i, (k, v) in enumerate(item.values.items()):
-                    c = '│' if i < len(item.values) - 1 else '└'
-                    print(f'{c} {k}: {v!r}', file=sys.stderr)
+            if self._debug & Debug.BLOCK_PARAMS:
+                # Print the input values for this block;
+                # only those that have been set by an out_ param.
+                #
+                h = f'Block {item.dst.name} input values'
+                l = len(h)
+                print(f'┌ {h} ┐')
+                if item.values:
+                    for i, (k, v) in enumerate(item.values.items()):
+                        v = repr(v)
+                        sp = '\n' if len(v) > 80 or '\n' in v else ' '  # Try and be a little bit neat.
+                        print(f'│ {k}:{sp}{v}', file=sys.stderr)
+                else:
+                    print('│ (no input params)')
+                print(f'└─{"─" * l}─┘', file=sys.stderr)
 
             is_restart = item.values.pop(_RESTART, False)
             try:

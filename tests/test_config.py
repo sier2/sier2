@@ -49,7 +49,7 @@ string1 = one
     Config._load_string(INI)
 
     with pytest.raises(ValueError):
-        conf = Config['block.badvalue']
+        _conf = Config['block.badvalue']
 
 
 def test_bad_value():
@@ -65,7 +65,7 @@ int1 = 1
     assert int1 == 1
 
     with pytest.raises(ValueError):
-        string1 = Config['block.badvalue', 'string1']
+        _string1 = Config['block.badvalue', 'string1']
 
 
 def test_update():
