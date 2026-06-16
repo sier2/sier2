@@ -1,4 +1,5 @@
 import param
+import random
 
 from sier2 import Block
 
@@ -62,3 +63,19 @@ def test_sort2(Dag_f):
 
     sdag2 = [d.name for d in dag2.get_sorted()]
     assert sdag2 == ['a', 'c', 'b']
+
+def test_shuffled(Dag_f):
+    blocks = [PassThrough(name=chr(ord('a')+i)) for i in range(10)]
+    tail = PassThrough(name='tail')
+
+    rblocks = blocks[:]
+    random.shuffle(rblocks)
+
+    connections = []
+    for block in rblocks:
+        connections.append((block.param.out_p, tail.param.in_p))
+
+    dag = Dag_f(connections)
+    sdag = [b.name for b in dag.get_sorted()]
+
+    assert sdag == [b.name for b in rblocks] + [tail.name]
