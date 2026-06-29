@@ -530,7 +530,8 @@ class Dag:
         # must be called.
         #
         self._block_queue.appendleft(_InputValues(block, {_RESTART: True}))
-        self._execute(dag_logger=dag_logger)
+
+        return self._execute(dag_logger=dag_logger)
 
     def execute(self, *, dag_logger=None) -> Block | None:
         """Execute the dag.
@@ -569,14 +570,14 @@ class Dag:
         # Non-waiting blocks go first, waiting blocks next.
         #
         if self._block_bag:
-            blocks = sorted(self._block_bag, key=lambda block: block._wait_for_input)
+            blocks = sorted(self._block_bag, key=lambda block: (block._wait_for_input, block._sort_key))
             for block in blocks:
                 self._block_queue.append(_InputValues(block, {}))
 
         # Do the same for the heads of the dag.
         #
         heads, _ = self.heads_and_tails()
-        blocks = sorted(heads, key=lambda block: block._wait_for_input)
+        blocks = sorted(heads, key=lambda block: (block._wait_for_input, block._sort_key))
         for block in blocks:
             self._block_queue.append(_InputValues(block, {}))
 
@@ -766,7 +767,10 @@ class Dag:
         return _has_cycle(self._block_pairs)
 
     def heads_and_tails(self):
-        """A tuple of the heads (blocks with no source) and tails (blocks with no destination) of the dag."""
+        """A tuple of the heads (blocks with no source) and tails (blocks with no destination) of the dag.
+
+        Each element of the tuple is a set, so there is no implicit ordering.
+        """
 
         srcs = set()
         dsts = set()

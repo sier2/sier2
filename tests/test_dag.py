@@ -178,7 +178,7 @@ def test_first_input(Dag_f):
 
     p0 = Initial()
     p1 = PassThrough()
-    dag = Dag_f([
+    dag: Dag = Dag_f([
         (p0.param.out_p, p1.param.in_p),
     ])
     paused = dag.execute()

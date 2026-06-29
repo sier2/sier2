@@ -1,7 +1,8 @@
-import param
 import random
 
-from sier2 import Block
+import param
+
+from sier2 import Block, Dag
 
 
 class PassThrough(Block):
@@ -64,8 +65,9 @@ def test_sort2(Dag_f):
     sdag2 = [d.name for d in dag2.get_sorted()]
     assert sdag2 == ['a', 'c', 'b']
 
+
 def test_shuffled(Dag_f):
-    blocks = [PassThrough(name=chr(ord('a')+i)) for i in range(10)]
+    blocks = [PassThrough(name=chr(ord('a') + i)) for i in range(10)]
     tail = PassThrough(name='tail')
 
     rblocks = blocks[:]
@@ -79,3 +81,35 @@ def test_shuffled(Dag_f):
     sdag = [b.name for b in dag.get_sorted()]
 
     assert sdag == [b.name for b in rblocks] + [tail.name]
+
+
+def test_execute_heads(Dag_f):
+    """Check that head input blocks execute in the same order that they're sorted.
+
+    Also tests that execute() and execute_after_input() return blocks
+    where wait_for_input is True.
+    """
+
+    blocks = [PassThrough(name=chr(ord('a') + i), wait_for_input=True) for i in range(10)]
+    tail = PassThrough(name='tail')
+    tail.in_p = 99
+
+    rblocks = blocks[:]
+    random.shuffle(rblocks)
+
+    connections = []
+    for block in rblocks:
+        connections.append((block.param.out_p, tail.param.in_p))
+
+    dag: Dag = Dag_f(connections)
+
+    defined_order = [b.name for b in rblocks]
+
+    b = dag.execute()
+    execute_order = []
+    while b is not None:
+        execute_order.append(b.name)
+        b = dag.execute_after_input(b)
+
+    assert tail.out_p == 0
+    assert execute_order == defined_order
