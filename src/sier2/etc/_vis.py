@@ -30,18 +30,19 @@ def to_dot(dag: Dag, *, edge_label: str = 'label') -> str:
     p('  node [fillcolor="#00ff00", shape="rect", style="rounded,filled", fontnames="svg", fontname="Sans-Serif"]')
     p('  edge [splines=true fontnames="svg", fontname="Sans-Serif", fontsize="10pt"]')
 
+    escapeq = lambda s: s.replace('"', r'\"')
     seen = set()
     for src, dst in dag._block_pairs:
         for node in [src, dst]:
             if node not in seen:
                 color = '#f0c8207f' if node._wait_for_input else '#4682b47f'
-                p(f'  {node.name} [label="{node.name}", fillcolor="{color}"]')
+                p(f'  "{escapeq(node.name)}" [label="{escapeq(node.name)}", fillcolor="{color}"]')
             seen.add(node)
 
     for src, dst in dag._block_pairs:
         param_list = [(sname, dname) for (gname, sname), dname in dst._block_name_map.items() if gname == src.name]
         for sname, dname in param_list:
-            p(f'  {src.name} -> {dst.name} [{edge_label}="{sname} → {dname}", penwidth=2]')
+            p(f'  "{escapeq(src.name)}" -> "{escapeq(dst.name)}" [{edge_label}="{sname} → {dname}", penwidth=2]')
 
     p('}')
 
