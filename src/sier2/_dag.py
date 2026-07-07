@@ -36,6 +36,50 @@ class _InputValues:
     #
     values: dict[str, Any] = field(default_factory=dict)
 
+class _ExecutionQueue:
+    """A queue of _InputValues."""
+
+    def __init__(self):
+        # self.heapq = []
+        self.block_queue: deque[_InputValues] = deque()
+
+    def clear(self):
+        self.block_queue.clear()
+
+    def append(self, value: _InputValues):
+        self.block_queue.append(value)
+
+    def appendleft(self, value: _InputValues):
+        self.block_queue.appendleft(value)
+
+    def set_block_input(self, dst: Block, inp: str, new: Any):
+        """Record an input value for a param in a block.
+
+        When this block is subsequently executed, the values will be used
+        to update the param values in the block.
+        """
+
+        for item in self._block_queue:
+            if dst is item.dst:
+                item.values[inp] = new
+                break
+        else:
+            item = _InputValues(dst)
+            item.values[inp] = new
+            self._block_queue.append(item)
+
+    def popleft(self):
+        return self.block_queue.popleft()
+
+    def __iter__(self):
+        return iter(self.block_queue)
+
+    def __bool__(self):
+        return bool(self.block_queue)
+
+    def __len__(self):
+        return len(self.block_queue)
+
 
 class _BlockContext:
     """A context manager to wrap the execution of a block within a dag.
@@ -225,7 +269,8 @@ class Dag:
         # We watch output params to be notified when they are set.
         # Events are queued here.
         #
-        self._block_queue: deque[_InputValues] = deque()
+        # self._block_queue: deque[_InputValues] = deque()
+        self._block_queue = _ExecutionQueue()
 
         # The context manager class to use to run blocks.
         #
