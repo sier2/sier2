@@ -1,3 +1,4 @@
+import heapq
 import os
 import sys
 import threading
@@ -36,21 +37,29 @@ class _InputValues:
     #
     values: dict[str, Any] = field(default_factory=dict)
 
+    def __lt__(self, other):
+        """Allow comparisons for heapq."""
+
+        if not isinstance(other, _InputValues):
+            raise BlockError(f'Cannot compare with {type(other)}')
+
+        return self.dst._sort_key < other.dst._sort_key
+
+
 class _ExecutionQueue:
     """A queue of _InputValues."""
 
     def __init__(self):
-        # self.heapq = []
-        self.block_queue: deque[_InputValues] = deque()
+        self.block_queue: list[_InputValues] = []
 
     def clear(self):
         self.block_queue.clear()
 
     def append(self, value: _InputValues):
-        self.block_queue.append(value)
+        if value.dst._sort_key is None:
+            raise BlockError(f'Block {value.dst.name} does not have a sort key')
 
-    def appendleft(self, value: _InputValues):
-        self.block_queue.appendleft(value)
+        heapq.heappush(self.block_queue, value)
 
     def set_block_input(self, dst: Block, inp: str, new: Any):
         """Record an input value for a param in a block.
@@ -61,15 +70,18 @@ class _ExecutionQueue:
 
         for item in self._block_queue:
             if dst is item.dst:
+                # The block is in the queue; update the value.
+                #
                 item.values[inp] = new
                 break
         else:
+            # This block isn't in the queue; add it.
             item = _InputValues(dst)
             item.values[inp] = new
-            self._block_queue.append(item)
+            heapq.heappush(self.block_queue, item)
 
-    def popleft(self):
-        return self.block_queue.popleft()
+    def pop(self):
+        return heapq.heappop(self.block_queue)
 
     def __iter__(self):
         return iter(self.block_queue)
@@ -422,12 +434,12 @@ class Dag:
             # Set the sort keys.
             #
             if src._sort_key is None:
-                src._sort_key = sort_key
                 sort_key += 1
+                src._sort_key = sort_key
 
             if dst._sort_key is None:
-                dst._sort_key = sort_key
                 sort_key += 1
+                dst._sort_key = sort_key
 
             if _DISALLOW_CYCLES:  # noqa: SIM102
                 # _has_cycle() does a topological sort,
@@ -562,7 +574,7 @@ class Dag:
         Parameters
         ----------
         block: Block
-            The block to restart the dag at.
+            The block to restart the dag at. This must be the block that was returned from the most recent ``execute()`` or ``execute_after_input()``.
         dag_logger:
             A logger adapter that will accept log messages.
         """
@@ -571,10 +583,13 @@ class Dag:
             raise BlockError(f'A dag can only restart a paused Block, not {block.name}')
 
         # Prime the block queue, using _RESTART
-        # to indicate that this is a restart, and Block.execute()
+        # to indicate that this is a restart, and Block._execute()
         # must be called.
         #
-        self._block_queue.appendleft(_InputValues(block, {_RESTART: True}))
+        # Since this was the most recently popped block, it will push on to
+        # the top of the heap.
+        #
+        self._block_queue.append(_InputValues(block, {_RESTART: True}))
 
         return self._execute(dag_logger=dag_logger)
 
@@ -615,15 +630,22 @@ class Dag:
         # Non-waiting blocks go first, waiting blocks next.
         #
         if self._block_bag:
-            blocks = sorted(self._block_bag, key=lambda block: (block._wait_for_input, block._sort_key))
-            for block in blocks:
+            # Assign each bag block a sort key in the order that
+            # they were given. Use negative numbers to put them ahead of
+            # dag blocks. Start at -9999 to leave room for negative
+            # sort keys of head blocks.
+            #
+            for i, block in enumerate(self._block_bag):
+                block._sort_key = i - 9999
                 self._block_queue.append(_InputValues(block, {}))
 
         # Do the same for the heads of the dag.
         #
         heads, _ = self.heads_and_tails()
-        blocks = sorted(heads, key=lambda block: (block._wait_for_input, block._sort_key))
-        for block in blocks:
+        head_blocks: list[Block] = sorted(heads, key=lambda block: block._sort_key)
+        hlen = len(head_blocks)
+        for i, block in enumerate(head_blocks):
+            block._sort_key = i - hlen
             self._block_queue.append(_InputValues(block, {}))
 
         if not self._block_queue:
@@ -642,7 +664,7 @@ class Dag:
                 # Print the block queue.
                 #
                 h = 'Block queue'
-                q = [b.dst.name for b in self._block_queue]
+                q = [f'{b.dst._sort_key:5}.{b.dst.name}' for b in self._block_queue]
                 l = max(max(len(b) for b in q), len(h))
                 print(f'┌ {h} {"─" * (l - len(h))}┐', file=sys.stderr)
                 for b in q:
@@ -656,7 +678,7 @@ class Dag:
                 if self._stopper.is_stopped:
                     can_execute = False
 
-            item = self._block_queue.popleft()
+            item = self._block_queue.pop()
             if self._debug & Debug.BLOCK_PARAMS:
                 # Print the input values for this block;
                 # only those that have been set by an out_ param.
@@ -811,7 +833,7 @@ class Dag:
     def has_cycle(self):
         return _has_cycle(self._block_pairs)
 
-    def heads_and_tails(self):
+    def heads_and_tails(self) -> tuple[set[Block], set[Block]]:
         """A tuple of the heads (blocks with no source) and tails (blocks with no destination) of the dag.
 
         Each element of the tuple is a set, so there is no implicit ordering.
@@ -977,8 +999,7 @@ def topological_sort(pairs):
 
         # Also sort this next layer of blocks.
         #
-        # S_next.sort(key=lambda block: block.name)
-        S_next.sort(key=lambda block: block._sort_key)
+        # S_next.sort(key=lambda block: block._sort_key)
         S.extend(S_next)
 
     return L, remaining

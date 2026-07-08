@@ -437,32 +437,30 @@ def test_multiple_heads_with_pause(Dag_f):
             self.out_o = self.in_i
             self.has_executed = True
 
-    h1 = Has(name='h1', wait=True)
+    hw = Has(name='h1', wait=True)
     h2 = Has(name='h2')
     t = Has(name='t')
-    # dag.connect(h1, t, Connection('out_o', 'in_i'))
-    # dag.connect(h2, t, Connection('out_o', 'in_i'))
     dag = Dag_f([
-        (h1.param.out_o, t.param.in_i),
+        (hw.param.out_o, t.param.in_i),
         (h2.param.out_o, t.param.in_i),
     ])
 
     b = dag.execute()
-    assert b is h1
+    assert b is hw
 
-    assert h1.has_prepared
-    assert not h1.has_executed
+    assert hw.has_prepared
+    assert not hw.has_executed
 
-    assert h2.has_prepared
-    assert h2.has_executed
+    assert not h2.has_prepared
+    assert not h2.has_executed
 
     assert not t.has_prepared
     assert not t.has_executed
 
     dag.execute_after_input(b)
 
-    assert h1.has_prepared
-    assert h1.has_executed
+    assert hw.has_prepared
+    assert hw.has_executed
 
     assert h2.has_prepared
     assert h2.has_executed
