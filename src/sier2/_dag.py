@@ -311,8 +311,21 @@ class Dag:
             raise
 
         if bag:
-            for b in bag:
-                self._add_to_bag(b)
+            # Assign sort keys to bag blocks and put them in the bag.
+            # Do this here so __str__() gets correct values.
+            #
+            for i, block in enumerate(bag):
+                block._sort_key = i - 9999
+                self._add_to_bag(block)
+
+        # Reassign sort keys to the dag head blocks.
+        # Do this here so __str__() gets correct values.
+        #
+        heads, _ = self.heads_and_tails()
+        head_blocks: list[Block] = sorted(heads, key=lambda block: block._sort_key)
+        hlen = len(head_blocks)
+        for i, block in enumerate(head_blocks):
+            block._sort_key = i - hlen
 
         # Debugging; use Debug flags.
         #
@@ -635,17 +648,14 @@ class Dag:
             # dag blocks. Start at -9999 to leave room for negative
             # sort keys of head blocks.
             #
-            for i, block in enumerate(self._block_bag):
-                block._sort_key = i - 9999
+            for block in self._block_bag:
                 self._block_queue.append(_InputValues(block, {}))
 
         # Do the same for the heads of the dag.
+        # The heads have already had their sort keys assigned in __init__().
         #
         heads, _ = self.heads_and_tails()
-        head_blocks: list[Block] = sorted(heads, key=lambda block: block._sort_key)
-        hlen = len(head_blocks)
-        for i, block in enumerate(head_blocks):
-            block._sort_key = i - hlen
+        for block in heads:
             self._block_queue.append(_InputValues(block, {}))
 
         if not self._block_queue:
@@ -935,6 +945,23 @@ class Dag:
             'connections': connections,
         }
 
+    def __str__(self):
+        all = []
+        maxlen = -1
+        for b in self._block_bag:
+            heapq.heappush(all, _InputValues(b))
+            maxlen = max(maxlen, len(b.name))
+
+        for b in _for_each_once(self._block_pairs):
+            heapq.heappush(all, _InputValues(b))
+            maxlen = max(maxlen, len(b.name))
+
+        s = []
+        while all:
+            b = heapq.heappop(all).dst
+            s.append(f'{b._sort_key:5}.{b.name:{maxlen}} {type(b).name}')
+
+        return '\n'.join(s)
 
 def topological_sort(pairs):
     """Implement a topological sort as described at
